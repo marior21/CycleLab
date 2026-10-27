@@ -1,0 +1,56 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CycleLab — cover</title>
+<style>
+  html, body { margin: 0; background: var(--bg-000); }
+  .cover { position: relative; width: 960px; height: 288px; overflow: hidden; background: var(--bg-000); }
+  .cover svg { position: absolute; inset: 0; }
+  .b-warm { fill: var(--bg-400); }
+  .b-brand { fill: var(--brand); }
+  .b-power { fill: var(--power); }
+  .b-heart { fill: var(--heart); }
+  .b-cad { fill: var(--cadence); }
+  .tile { rx: var(--radius-sm); }
+  .dot { fill: var(--ink-faint); }
+  .text { position: absolute; left: 40px; bottom: 36px; max-width: 440px; }
+  .name { font: 700 88px/0.92 var(--font-display); color: var(--ink); letter-spacing: -0.01em; margin: 0; }
+  .tag { margin-top: 12px; font: 400 14px/20px var(--font-sans); color: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+  <svg width="960" height="288" viewBox="0 0 960 288" aria-hidden="true">
+    <!--
+      blocks: brand 128×208, power 96×232, heart 40×168, cadence 80×128 (bleeds right), bg-400 warm-up/recovery 64×72 and 32×88 — corners radius-sm
+      arrangement: a structured-workout profile — unequal bars bottom-aligned from x=480, bleeding off the bottom, gaps space-2
+      pattern: dot grid (precise, technical, 4px grid; the README's "rejillas horizontales en line") at a 24px pitch (space-6), three rows
+      steps and radii: space-2 gaps, space-6 dot pitch, space-8 widths; radius-sm
+    -->
+    <g>
+      <rect class="b-warm tile" x="480" y="216" width="64" height="80" />
+      <rect class="b-brand tile" x="552" y="80" width="128" height="216" />
+      <rect class="b-warm tile" x="688" y="200" width="32" height="96" />
+      <rect class="b-power tile" x="728" y="56" width="96" height="240" />
+      <rect class="b-heart tile" x="832" y="120" width="40" height="176" />
+      <rect class="b-cad tile" x="880" y="160" width="88" height="136" />
+    </g>
+    <g id="dots"></g>
+  </svg>
+  <div class="text">
+    <h1 class="name">CycleLab</h1>
+    <div class="tag">Potencia, pulso y forma para ciclistas que entrenan con datos.</div>
+  </div>
+</div>
+<script>
+  var g = document.getElementById('dots'), ns = 'http://www.w3.org/2000/svg';
+  for (var r = 0; r < 3; r++) for (var c = 0; c < 19; c++) {
+    var d = document.createElementNS(ns, 'circle');
+    d.setAttribute('cx', 504 + c * 24); d.setAttribute('cy', 20 + r * 24); d.setAttribute('r', 1.5); d.setAttribute('class', 'dot');
+    g.appendChild(d);
+  }
+</script>
+</body>
+</html>

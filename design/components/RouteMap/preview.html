@@ -1,0 +1,16 @@
+<!-- @dsCard group="Gráficos" height=260 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>RouteMap</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+var pts=demoSeries(240,function(i){var a=i/240*Math.PI*2;return [(Math.cos(a)*100+Math.sin(a*3)*18)*70,(Math.sin(a)*60+Math.cos(a*2)*14)*70]});
+function ring(r){return demoSeries(41,function(i){var f=i/40*Math.PI*2;return [-4000+Math.cos(f)*r*(1+.15*Math.sin(3*f)),2000+Math.sin(f)*r*.7]})}
+var features=[{type:'sea',closed:true,points:[[-12000,6200],[-4000,5600],[4000,6400],[12000,5800],[12000,20000],[-12000,20000]]},{type:'coast',points:[[-12000,6200],[-4000,5600],[4000,6400],[12000,5800]]},{type:'water',points:[[7400,-6000],[6800,-2000],[7600,2000],[7000,6000]]},{type:'road',points:[[7000,0],[12000,-3000]]}].concat([800,1800,2800,3800].map(function(r,i){return {type:i===3?'contour-major':'contour',closed:true,points:ring(r)}})).concat([{type:'label',at:pts[0],label:'Liérganes',major:true},{type:'peak',at:[-4000,2000],label:'Alto · 640 m'}]);
+ReactDOM.createRoot(document.getElementById("root")).render(h('div',{style:{maxWidth:420}},h(C.RouteMap,{points:pts,features:features,markers:[{index:60,label:'10'},{index:120,label:'20'},{index:180,label:'30'}],scale:true,height:220,highlight:[60,110],cursor:85,caption:'46,3 km · 347 m+'})));
+</script>
+</body>
+</html>

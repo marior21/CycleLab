@@ -1,0 +1,14 @@
+<!-- @dsCard group="Entrenador IA" height=300 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ToolResult</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+var rows=demoSeries(70,function(i){return {x:i/4,a:Math.round(252+Math.sin(i/3)*12),b:Math.round(243+Math.sin(i/3+.4)*12)}});
+ReactDOM.createRoot(document.getElementById("root")).render(h('div',{style:{display:'grid',gap:12,maxWidth:560}},h(C.ToolResult,{tool:'comparar_ascensiones',args:'puerto: "palombera", ultimos: 2',meta:'2 intentos · 0,4 s'},h(C.LineChart,{data:rows,height:140,legend:true,zeroBased:false,xFormat:function(v){return v+' km'},series:[{key:'a',label:'26 sept',color:'brand',unit:'W',width:2},{key:'b',label:'1 ago',color:'muted',unit:'W',dash:true}]})),h(C.ToolResult,{tool:'curva_potencia',args:'temporadas: [2026]',status:'running',meta:'consultando…'},h(C.Skeleton,{height:40}))));
+</script>
+</body>
+</html>

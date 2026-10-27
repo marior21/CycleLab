@@ -1,0 +1,14 @@
+<!-- @dsCard group="Filtros" height=64 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Segmented</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+function D(){var s=React.useState('90');return h(C.Segmented,{label:'Fechas',value:s[0],onChange:s[1],options:[{value:'30',label:'30 d'},{value:'90',label:'90 d'},{value:'all',label:'Temporada'}]});}
+ReactDOM.createRoot(document.getElementById("root")).render(h(D));
+</script>
+</body>
+</html>

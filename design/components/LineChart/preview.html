@@ -1,0 +1,15 @@
+<!-- @dsCard group="Gráficos" height=260 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>LineChart</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+var data=demoSeries(360,function(i){var t=i*10,w=(i>60&&i<108)||(i>132&&i<180)||(i>204&&i<252);return {x:t,p:Math.round((w?292:165)+Math.sin(i*1.7)*18),hr:Math.round(120+(w?38:12)+i*.03)}});
+function D(){var s=React.useState(null);return h(C.LineChart,{data:data,height:220,legend:true,selection:s[0],onSelect:s[1],xFormat:function(v){return Math.floor(v/60)+'′'},series:[{key:'p',label:'Potencia',color:'power',unit:'W'},{key:'hr',label:'FC',color:'heart',unit:'ppm',axis:'right'}],bands:[{from:247,to:289,color:'z4'}],refLines:[{value:275,label:'FTP 275 W'}]});}
+ReactDOM.createRoot(document.getElementById("root")).render(h(D));
+</script>
+</body>
+</html>

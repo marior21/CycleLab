@@ -1,0 +1,13 @@
+<!-- @dsCard group="Estados" height=200 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>StateBlock</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+ReactDOM.createRoot(document.getElementById("root")).render(h('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}},h(C.StateBlock,{kind:'loading',title:'Cargando actividad',detail:'Leyendo el archivo FIT…'}),h(C.StateBlock,{kind:'empty',title:'Sin actividades',detail:'Ningún entrenamiento coincide con los filtros.',action:h(C.Button,{size:'sm'},'Restablecer filtros')}),h(C.StateBlock,{kind:'error',title:'La herramienta falló',detail:'Timeout de 10 s.',action:h(C.Button,{size:'sm',icon:'sync'},'Reintentar')})));
+</script>
+</body>
+</html>

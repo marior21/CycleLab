@@ -1,0 +1,31 @@
+export const ICONS: Record<string, string> = {
+  dashboard: "M4 4h7v9H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 15h7v5H4z",
+  activity: "M3 12h4l3-7 4 14 3-7h4",
+  performance: "M4 4v16h16M7 15c2.5-6 5.5-8 13-9",
+  mountain: "M3 19l6-10 4 6 2-3 6 7z",
+  coach: "M5 5h14v10H10l-5 4z",
+  sync: "M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4",
+  search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4",
+  calendar: "M4 6h16v14H4zM4 10h16M8 3v5M16 3v5",
+  "chevron-right": "M9 6l6 6-6 6",
+  "chevron-down": "M6 9l6 6 6-6",
+  close: "M6 6l12 12M18 6L6 18",
+  send: "M4 12l16-8-6 16-2-7z",
+  alert: "M12 4l9 16H3zM12 10v4M12 17v.5",
+  check: "M5 12l4 4 10-10",
+  compare: "M8 4v16M16 4v16M4 8h8M12 16h8",
+  plus: "M12 5v14M5 12h14",
+  bolt: "M13 3L5 14h6l-1 7 8-11h-6z",
+  heart: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z",
+  cadence: "M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18zM12 12l4-4",
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
+  target:
+    "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  trend: "M4 16l5-5 4 4 7-7M15 8h5v5",
+  sun: "M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
+  moon: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z",
+  settings:
+    "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1",
+  route:
+    "M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 15V9a4 4 0 0 1 4-4h6M18 9v6a4 4 0 0 1-4 4H8",
+};

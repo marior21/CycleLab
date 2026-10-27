@@ -1,0 +1,812 @@
+<!-- @dsCard group="Prototipo" height=900 width=1440 subtitle="CycleLab · prototipo interactivo 1440 × 900 (datos de demostración)" page -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CycleLab — prototipo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: var(--bg-000); overflow: hidden; }
+  .app { display: flex; width: 100%; height: 900px; background: var(--bg-000); color: var(--ink); position: relative; overflow: hidden; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+  .topbar { height: var(--titlebar-height); flex: none; display: flex; align-items: center; gap: 12px; padding: 0 24px; border-bottom: 1px solid var(--line); background: var(--bg-000); }
+  .topbar h1 { margin: 0; font: 600 18px/24px var(--font-sans); }
+  .topbar .spacer { flex: 1; }
+  .scroll { flex: 1; min-height: 0; overflow: auto; }
+  .page { padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
+  .row { display: flex; gap: 16px; min-width: 0; }
+  .grow { flex: 1; min-width: 0; }
+  .strip { display: grid; gap: 0; background: var(--bg-200); border: 1px solid var(--line); border-radius: var(--radius-lg); }
+  .strip > * { padding: 14px 16px; border-left: 1px solid var(--line); }
+  .strip > *:first-child { border-left: 0; }
+  .lights { display: flex; gap: 8px; padding: 2px 0 14px; }
+  .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .wordmark { font: 700 22px/24px var(--font-display); letter-spacing: .01em; display: flex; align-items: baseline; gap: 6px; }
+  .wordmark span { color: var(--brand-ink); }
+  .athlete { display: flex; align-items: center; gap: 10px; padding: 8px; }
+  .athlete-av { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-400); display: grid; place-items: center; font: 600 11px/1 var(--font-sans); color: var(--ink-muted); }
+  .small { font-size: 12px; line-height: 16px; }
+  .label { font: 600 11px/14px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); }
+  .list-pane { width: 384px; flex: none; border-right: 1px solid var(--line); display: flex; flex-direction: column; background: var(--bg-100); min-height: 0; }
+  .list-pane .filters { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--line); }
+  .act-item { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); cursor: pointer; align-items: flex-start; }
+  .act-item:hover { background: var(--bg-300); }
+  .act-item[aria-selected="true"] { background: var(--bg-400); }
+  .act-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .act-name { font: 600 13px/18px var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .act-meta { font-size: 12px; line-height: 16px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .detail { flex: 1; min-width: 0; overflow: auto; }
+  .tight-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tight-metrics > :nth-child(4n+1) { border-left: 0; }
+  .tight-metrics > :nth-child(n+5) { border-top: 1px solid var(--line); }
+  .stack-charts > * + * { margin-top: 2px; }
+  .chart-label { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 16px; color: var(--ink-muted); margin: 6px 0 2px; }
+  .chart-label b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sel-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; padding: 10px 14px; border-radius: var(--radius-md); background: var(--bg-100); border: 1px solid var(--line); }
+  .goal { display: flex; flex-direction: column; gap: 10px; padding: 14px 0; border-top: 1px solid var(--line); }
+  .goal:first-child { border-top: 0; padding-top: 0; }
+  .goal-head { display: flex; align-items: baseline; gap: 8px; }
+  .goal-head b { font: 600 14px/20px var(--font-sans); }
+  .countdown { margin-left: auto; font: 600 22px/24px var(--font-display); font-variant-numeric: tabular-nums; }
+  .ai-drawer { position: absolute; top: 0; right: 0; bottom: 0; width: var(--ai-panel-width); background: var(--bg-200); border-left: 1px solid var(--line); box-shadow: var(--shadow-pop); display: flex; flex-direction: column; z-index: 20; transform: translateX(100%); transition: transform .22s ease; }
+  .ai-drawer[data-open="true"] { transform: none; }
+  @media (prefers-reduced-motion: reduce) { .ai-drawer { transition: none; } }
+  .chat { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  .chat-head { height: var(--titlebar-height); flex: none; display: flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; border-bottom: 1px solid var(--line); }
+  .chat-log { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .chat-input { padding: 12px 16px 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+  .chat-box { display: flex; align-items: flex-end; gap: 8px; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: var(--bg-100); padding: 8px 8px 8px 12px; }
+  .chat-box:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .chat-box textarea { flex: 1; resize: none; border: 0; outline: 0; background: transparent; color: var(--ink); font: 400 14px/20px var(--font-sans); min-height: 20px; max-height: 120px; padding: 6px 0; }
+  .chat-box textarea::placeholder { color: var(--ink-faint); }
+  .suggest { display: flex; flex-wrap: wrap; gap: 6px; }
+  .coach-page { display: flex; height: 100%; min-height: 0; }
+  .coach-side { width: 280px; flex: none; border-right: 1px solid var(--line); padding: 16px; display: flex; flex-direction: column; gap: 16px; background: var(--bg-100); overflow: auto; }
+  .coach-main { flex: 1; min-width: 0; display: flex; justify-content: center; background: var(--bg-200); }
+  .coach-main .chat { max-width: 820px; width: 100%; }
+  .tool-list { display: flex; flex-direction: column; gap: 6px; font: 500 11px/16px var(--font-mono); color: var(--ink-muted); }
+  .tool-list > div { display: flex; gap: 8px; align-items: flex-start; } .tool-list .cl-icon { margin-top: 2px; }
+  .climb-item { padding: 12px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .climb-item:hover { background: var(--bg-300); }
+  .climb-item[aria-selected="true"] { background: var(--bg-400); }
+  .climb-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .banner { display: flex; align-items: center; gap: 10px; padding: 8px 24px; font-size: 13px; line-height: 18px; border-bottom: 1px solid var(--line); background: var(--bg-100); }
+  .kbd { font: 500 11px/1 var(--font-mono); color: var(--ink-faint); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 3px 5px; }
+  .delta-good { color: var(--success); font-weight: 600; } .delta-bad { color: var(--danger); font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+(function () {
+var C = window.CycleLab, h = React.createElement, useState = React.useState, useMemo = React.useMemo, useEffect = React.useEffect, useRef = React.useRef;
+var Icon = C.Icon, Button = C.Button, Segmented = C.Segmented, Chip = C.Chip, Badge = C.Badge, Metric = C.Metric, Panel = C.Panel, Progress = C.Progress;
+var LineChart = C.LineChart, BarChart = C.BarChart, ZoneBar = C.ZoneBar, RouteMap = C.RouteMap, DataTable = C.DataTable, ChatMessage = C.ChatMessage, ToolResult = C.ToolResult, StateBlock = C.StateBlock, Skeleton = C.Skeleton, Legend = C.Legend;
+
+/* ================= Datos de demostración ================= */
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+var DAY = 86400000, TODAY = Date.UTC(2026, 9, 27);
+var ATH = { ftp: 275, lthr: 182, weight: 80 };
+var TYPES = { endurance: { label: 'Resistencia', tone: 'z2' }, intervals: { label: 'Intervalos', tone: 'z5' }, climb: { label: 'Ascensión', tone: 'z4' }, mtb: { label: 'BTT', tone: 'speed' } };
+var CLIMBS = [
+  { id: 'palombera', name: 'Puerto de Palombera', from: 'desde Barcenillas', km: 17.6, grade: 5.5, gain: 965 },
+  { id: 'lunada', name: 'Portillo de Lunada', from: 'desde San Roque de Riomiera', km: 11.0, grade: 7.0, gain: 770 },
+  { id: 'estacas', name: 'Estacas de Trueba', from: 'desde Vega de Pas', km: 8.9, grade: 6.4, gain: 570 },
+  { id: 'brenes', name: 'Collado de Brenes', from: 'desde Puente Viesgo', km: 6.2, grade: 6.1, gain: 380 }
+];
+var INTERVALS = [
+  { name: '4×8′ umbral', n: 4, work: 480, rec: 240, p: 292, cad: 92 },
+  { name: '3×12′ sweet spot', n: 3, work: 720, rec: 300, p: 258, cad: 90 },
+  { name: '5×5′ VO₂máx', n: 5, work: 300, rec: 300, p: 322, cad: 96 },
+  { name: '2×20′ umbral', n: 2, work: 1200, rec: 420, p: 280, cad: 90 },
+  { name: '6×3′ VO₂máx', n: 6, work: 180, rec: 180, p: 338, cad: 98 }
+];
+var END_NAMES = ['Fondo por el valle del Pas', 'Rodaje Z2 Costa Quebrada', 'Vuelta al Saja', 'Resistencia por Trasmiera', 'Fondo Besaya–Iguña', 'Rodaje largo Liébana'];
+var MTB_NAMES = ['BTT Monte Corona', 'Ruta del Soplao (recorrido corto)', 'BTT Sierra del Escudo', 'BTT pistas de Cabezón'];
+var PZ = [{ l: 'Z1', n: 'Recuperación', lo: 0, hi: .55 }, { l: 'Z2', n: 'Resistencia', lo: .55, hi: .75 }, { l: 'Z3', n: 'Tempo', lo: .75, hi: .9 }, { l: 'Z4', n: 'Umbral', lo: .9, hi: 1.05 }, { l: 'Z5', n: 'VO₂máx', lo: 1.05, hi: 1.2 }, { l: 'Z6', n: 'Anaeróbico', lo: 1.2, hi: 1.5 }, { l: 'Z7', n: 'Neuromuscular', lo: 1.5, hi: 9 }];
+var HZ = [{ l: 'Z1', n: 'Recuperación', lo: 0, hi: .81 }, { l: 'Z2', n: 'Aeróbico', lo: .81, hi: .9 }, { l: 'Z3', n: 'Tempo', lo: .9, hi: .94 }, { l: 'Z4', n: 'Subumbral', lo: .94, hi: 1 }, { l: 'Z5a', n: 'Supraumbral', lo: 1, hi: 1.03 }, { l: 'Z5b', n: 'Capacidad aeróbica', lo: 1.03, hi: 1.06 }, { l: 'Z5c', n: 'Anaeróbico', lo: 1.06, hi: 9 }];
+
+var R = rng(11);
+var ACTS = [], ATTEMPTS = [], climbIdx = 0;
+for (var k = 150; k >= 0; k--) {
+  var t = TODAY - k * DAY, dow = new Date(t).getUTCDay(), week = Math.floor((150 - k) / 7), recov = week % 4 === 3, form = (150 - k) / 150;
+  var type = null;
+  if (dow === 2) type = 'intervals';
+  else if (dow === 4) type = R() < .8 ? 'endurance' : null;
+  else if (dow === 6) type = week % 2 ? 'climb' : 'endurance';
+  else if (dow === 0) type = R() < .55 ? 'mtb' : (R() < .5 ? 'endurance' : null);
+  else if (dow === 3 && R() < .25) type = 'endurance';
+  if (!type) continue;
+  if (recov && type === 'intervals' && R() < .6) type = 'endurance';
+  var a = { id: 'a' + (150 - k), seed: 1000 + k, date: t + Math.round((7 + R() * 3) * 3600000), type: type, device: 'Edge 840' }, IF, dur, spd;
+  if (type === 'endurance') { dur = (dow === 6 ? 3.6 + R() * 1.6 : 1.5 + R()) * 3600; IF = .65 + R() * .05; spd = 27.5 + R() * 2; a.name = END_NAMES[Math.floor(R() * END_NAMES.length)]; a.elevPerKm = 10 + R() * 5; }
+  else if (type === 'intervals') { a.spec = INTERVALS[week % INTERVALS.length]; dur = (1.35 + R() * .35) * 3600; IF = .8 + R() * .06; spd = 27 + R() * 1.5; a.name = a.spec.name; a.elevPerKm = 5 + R() * 3; }
+  else if (type === 'climb') {
+    var cl = CLIMBS[climbIdx++ % CLIMBS.length];
+    dur = (3 + R() * 1.2) * 3600; IF = .74 + R() * .05; spd = 23 + R() * 2; a.name = cl.name; a.elevPerKm = 20 + R() * 5;
+    var ap = Math.round(ATH.ftp * (.87 + .07 * form + (R() - .5) * .035)), vam = ap / ATH.weight * 282 * (1 - (cl.grade - 6) * .015);
+    a.attempt = { id: 'x' + a.id, climb: cl.id, activityId: a.id, date: a.date, avgP: ap, time: Math.round(cl.gain / vam * 3600), hr: Math.round(ATH.lthr * (.93 + R() * .04)), cad: Math.round(77 + R() * 6), seed: a.seed };
+    ATTEMPTS.push(a.attempt);
+  } else { dur = (2 + R() * 1.2) * 3600; IF = .71 + R() * .06; spd = 14.5 + R() * 2; a.name = MTB_NAMES[Math.floor(R() * MTB_NAMES.length)]; a.elevPerKm = 26 + R() * 8; }
+  if (recov) { dur *= .78; IF -= .03; }
+  a.dur = Math.round(dur); a.IF = IF; a.np = Math.round(ATH.ftp * IF); a.tss = Math.round(dur / 3600 * IF * IF * 100);
+  a.avgP = Math.round(a.np * (type === 'mtb' ? .83 : type === 'intervals' ? .88 : .92));
+  a.hr = Math.round(ATH.lthr * (.5 + .42 * IF) + R() * 4);
+  a.cad = Math.round({ endurance: 86, intervals: 89, climb: 80, mtb: 74 }[type] + R() * 4);
+  a.dist = Math.round(spd * dur / 3600 * 10) / 10; a.elev = Math.round(a.dist * a.elevPerKm); a.kj = Math.round(a.avgP * dur / 1000);
+  ACTS.push(a);
+}
+ACTS.reverse();
+// Intentos de temporadas anteriores (2025)
+CLIMBS.forEach(function (cl, i) {
+  for (var j = 0; j < 3; j++) {
+    var ap = Math.round(ATH.ftp * (.82 + R() * .04)), vam = ap / ATH.weight * 282 * (1 - (cl.grade - 6) * .015), d = Date.UTC(2025, 4 + j * 2, 6 + i * 5);
+    ATTEMPTS.push({ id: 'h' + cl.id + j, climb: cl.id, date: d, avgP: ap, time: Math.round(cl.gain / vam * 3600), hr: Math.round(ATH.lthr * (.94 + R() * .04)), cad: Math.round(75 + R() * 5), seed: 5000 + i * 10 + j });
+  }
+});
+ATTEMPTS.sort(function (a, b) { return b.date - a.date; });
+
+// Carga: CTL / ATL / TSB
+var tssByDay = {}; ACTS.forEach(function (a) { var d = Math.floor(a.date / DAY); tssByDay[d] = (tssByDay[d] || 0) + a.tss; });
+var LOAD = [], ctl = 46, atl = 42;
+for (var k2 = 150; k2 >= 0; k2--) { var dd = Math.floor((TODAY - k2 * DAY) / DAY), tss = tssByDay[dd] || 0, tsb = ctl - atl; ctl += (tss - ctl) / 42; atl += (tss - atl) / 7; LOAD.push({ x: dd * DAY, tss: tss, ctl: Math.round(ctl * 10) / 10, atl: Math.round(atl * 10) / 10, tsb: Math.round(tsb * 10) / 10 }); }
+var NOW = LOAD[LOAD.length - 1];
+
+// Curva de potencia (modelo CP con decaimiento) por temporada
+var SEASONS = { 2026: { cp: 285, w: 17000, pmax: 1080 }, 2025: { cp: 268, w: 16500, pmax: 1040 }, 2024: { cp: 259, w: 16000, pmax: 1010 } };
+function mmp(t, s) { var m = SEASONS[s], tau = m.w / (m.pmax - m.cp), p = m.cp + m.w / (t + tau); if (t > 600) p *= 1 - .04 * Math.log(t / 600); return Math.round(p); }
+var CURVE = []; for (var lt = 0; lt <= Math.log(18000); lt += .08) { var tt = Math.round(Math.exp(lt)); if (CURVE.length && CURVE[CURVE.length - 1].x === tt) continue; CURVE.push({ x: tt, s2026: mmp(tt, 2026), s2025: mmp(tt, 2025), s2024: mmp(tt, 2024) }); }
+var KEY_DUR = [{ t: 5, l: '5 s' }, { t: 60, l: '1 min' }, { t: 300, l: '5 min' }, { t: 1200, l: '20 min' }, { t: 3600, l: '60 min' }, { t: 14400, l: '4 h' }];
+var MONTHS = ['nov', 'dic', 'ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct'];
+var R2 = rng(42);
+var BESTS = MONTHS.map(function (mo, i) { var f = .9 + .1 * Math.min(1, i / 10) + (R2() - .5) * .02, f25 = .88 + .09 * Math.min(1, i / 10) + (R2() - .5) * .02; return { x: i, m: mo, p300: Math.round(mmp(300, 2026) * f), p1200: Math.round(mmp(1200, 2026) * f), p3600: Math.round(mmp(3600, 2026) * f), p300_25: Math.round(mmp(300, 2025) * f25), p1200_25: Math.round(mmp(1200, 2025) * f25), p3600_25: Math.round(mmp(3600, 2025) * f25) }; });
+
+var GOALS = [
+  { id: 'soplao', name: 'Soplao BTT', date: Date.UTC(2027, 4, 22), kind: 'BTT · ~120 km · ~2.900 m+', ctl: 80, long: 5.5 * 3600, tone: 'speed' },
+  { id: 'cantabrona', name: 'La Cantabrona 2027', date: Date.UTC(2027, 5, 12), kind: 'Marcha de carretera · ~210 km · ~4.000 m+', ctl: 90, long: 6.5 * 3600, tone: 'z4' }
+];
+
+/* ---------- Streams de actividad ---------- */
+var STREAM_CACHE = {};
+function planFor(a, r) {
+  var segs = [], add = function (d, p, g, cad, label, kind) { segs.push({ d: d, p: p, g: g, cad: cad, label: label, kind: kind || 'other' }); };
+  if (a.type === 'intervals') {
+    var s = a.spec; add(900, 165, .005, 88, 'Calentamiento', 'warm');
+    for (var i = 0; i < s.n; i++) { add(s.work, Math.round(s.p * (1 + (r() - .5) * .03)), .01, s.cad, 'Serie ' + (i + 1), 'work'); if (i < s.n - 1) add(s.rec, 135, 0, 85, 'Recuperación', 'rec'); }
+    var used = segs.reduce(function (x, y) { return x + y.d; }, 0), rest = Math.max(600, a.dur - used - 600);
+    add(rest, 175, .005, 87, 'Resistencia', 'other'); add(600, 130, -.005, 84, 'Vuelta a la calma', 'cool');
+  } else if (a.type === 'climb') {
+    var cl = CLIMBS.filter(function (c) { return c.id === a.attempt.climb; })[0], climbT = a.attempt.time, rem = a.dur - climbT, app = Math.round(rem * .45);
+    for (var tt = 0; tt < app;) { var d = 600 + Math.round(r() * 600); add(Math.min(d, app - tt), 180 + Math.round((r() - .5) * 40), (r() - .4) * .03, 87, null); tt += d; }
+    add(climbT, a.attempt.avgP, cl.grade / 100, a.attempt.cad, cl.name, 'climb');
+    add(Math.round(cl.km / 45 * 3600), 25, -cl.grade / 100, 0, 'Descenso', 'down');
+    var back = a.dur - segs.reduce(function (x, y) { return x + y.d; }, 0);
+    for (var t2 = 0; t2 < back;) { var d2 = 600 + Math.round(r() * 600); add(Math.min(d2, back - t2), 170 + Math.round((r() - .5) * 40), (r() - .55) * .03, 86, null); t2 += d2; }
+  } else {
+    var mtb = a.type === 'mtb', base = mtb ? 190 : 185;
+    for (var t3 = 0; t3 < a.dur;) { var d3 = (mtb ? 240 : 480) + Math.round(r() * (mtb ? 420 : 720)), g = mtb ? (r() - .45) * .14 : (r() - .45) * .07; var p = g < -.01 ? 30 : base + g * (mtb ? 1400 : 2200); add(Math.min(d3, a.dur - t3), Math.round(p), g, g < -.01 ? 0 : (mtb ? 72 : 86), null); t3 += d3; }
+  }
+  return segs;
+}
+function getStream(a) {
+  if (STREAM_CACHE[a.id]) return STREAM_CACHE[a.id];
+  var r = rng(a.seed), segs = planFor(a, r), dt = 10, rows = [], hr = 98, elev = a.type === 'climb' ? 90 : 40, dist = 0, t = 0, laps = [];
+  segs.forEach(function (s) {
+    var n = Math.max(1, Math.round(s.d / dt)), i0 = rows.length;
+    for (var i = 0; i < n; i++) {
+      var noise = (r() + r() + r() - 1.5) * (a.type === 'mtb' ? 70 : s.kind === 'work' ? 18 : 30), p = s.p <= 40 ? (r() < .7 ? 0 : 40 * r()) : Math.max(0, s.p + noise);
+      if (s.kind === 'work' && i < 2) p = s.p * 1.1;
+      var hrT = 88 + (p / ATH.ftp) * (ATH.lthr - 88) * .96 + t / 3600 * 7; hr += (hrT - hr) * .09; hr = Math.min(hr, 192);
+      var v = s.g > .02 ? Math.min(12, p / (89 * 9.81 * (s.g + .006))) : s.g < -.01 ? 12 + r() * 2 : Math.cbrt(Math.max(p, 40) / .3);
+      if (a.type === 'mtb') v *= .55;
+      var cad = p < 15 ? 0 : Math.max(0, s.cad + (r() - .5) * 6);
+      elev = Math.max(0, elev + v * dt * s.g); dist += v * dt;
+      rows.push({ x: t, p: Math.round(p), hr: Math.round(hr), cad: Math.round(cad), elev: Math.round(elev), v: Math.round(v * 36) / 10, km: dist / 1000 });
+      t += dt;
+    }
+    if (s.label) laps.push({ id: 'l' + laps.length, label: s.label, kind: s.kind, i0: i0, i1: rows.length - 1 });
+  });
+  // Suavizado 30 s para mostrar potencia
+  for (var i = 0; i < rows.length; i++) { var s0 = Math.max(0, i - 1), s1 = Math.min(rows.length - 1, i + 1), sum = 0; for (var j = s0; j <= s1; j++) sum += rows[j].p; rows[i].ps = Math.round(sum / (s1 - s0 + 1)); }
+  if (!laps.length) { var step = Math.round(rows.length / Math.max(2, Math.round(a.dist / 20))); for (var q = 0, li = 1; q < rows.length - 1; q += step, li++) laps.push({ id: 'l' + li, label: 'Vuelta ' + li + ' · ' + Math.round(rows[q].km) + ' km', kind: 'auto', i0: q, i1: Math.min(rows.length - 1, q + step - 1) }); }
+  laps.forEach(function (l) { Object.assign(l, stats(rows, l.i0, l.i1)); });
+  var map = buildMap(a, rows, laps);
+  var out = { rows: rows, laps: laps, points: map.points, features: map.features, markers: map.markers, best: bestEfforts(rows) };
+  STREAM_CACHE[a.id] = out; return out;
+}
+/* Mapa simulado: bucle con curvas de carretera, zetas en el puerto, relieve alrededor de la cima, costa, río y poblaciones (todo ilustrativo). */
+var TOWNS = ['Cabezón de la Sal', 'Torrelavega', 'Puente Viesgo', 'Liérganes', 'Ramales', 'Ontaneda', 'Solares', 'Potes'];
+var VILLAGES = ['Ruente', 'Barcenillas', 'Sopeña', 'Selaya', 'Villacarriedo', 'Riaño', 'Bárcena', 'La Molina', 'Valle', 'Cos', 'Viaña', 'Saro', 'Carmona', 'Terán'];
+function buildMap(a, rows, laps) {
+  var r = rng(a.seed + 77), N = rows.length, D = Math.max(1, rows[N - 1].km * 1000), mtb = a.type === 'mtb';
+  var ph = [r() * 6.28, r() * 6.28, r() * 6.28, r() * 6.28], amp = [.25 + r() * .15, .12 + r() * .1, .06 + r() * .06, .03 + r() * .03]; // suma < 1: el bucle nunca se cruza
+  var climb = laps.filter(function (l) { return l.kind === 'climb'; })[0];
+  // Bucle base muestreado finamente; cada punto GPS se coloca por longitud de arco para que 1 km mida lo mismo en todo el recorrido.
+  var base = [], C = [0];
+  for (var b = 0; b <= 1200; b++) {
+    var th = b / 1200 * Math.PI * 2, rad = 1 + amp[0] * Math.cos(th + ph[0]) + amp[1] * Math.cos(2 * th + ph[1]) + amp[2] * Math.cos(3 * th + ph[2]) + amp[3] * Math.cos(5 * th + ph[3]);
+    base.push([Math.cos(th) * rad * (1 + .25 * Math.sin(th * 2 + ph[2])), Math.sin(th) * rad * .72]);
+    if (b) C.push(C[b - 1] + Math.hypot(base[b][0] - base[b - 1][0], base[b][1] - base[b - 1][1]));
+  }
+  var Lb = C[1200], unit = D / Lb, seg = 0, c0 = climb ? climb.i0 + Math.round((climb.i1 - climb.i0) * .45) : Infinity;
+  var pts = rows.map(function (row, i) {
+    var m = row.km * 1000, target = m / D * Lb;
+    while (seg < 1199 && C[seg + 1] < target) seg++;
+    var f = (target - C[seg]) / ((C[seg + 1] - C[seg]) || 1), A = base[seg], B = base[seg + 1];
+    var tx = B[0] - A[0], ty = B[1] - A[1], tl = Math.hypot(tx, ty) || 1;
+    // Curvas de carretera (m) y zetas en la mitad alta del puerto (±70 m cada 450 m)
+    var off = mtb ? Math.sin(m / 420 + ph[3]) * 140 + Math.sin(m / 170) * 35 : Math.sin(m / 900 + ph[0]) * 220 + Math.sin(m / 320 + ph[1]) * 70;
+    if (climb && i >= c0 && i <= climb.i1) { var ph2 = (m / 450) % 2; off += ((ph2 < 1 ? ph2 : 2 - ph2) - .5) * 140; }
+    return [A[0] + tx * f - ty / tl * off / unit, A[1] + ty * f + tx / tl * off / unit];
+  });
+  function length() { var L = 0; for (var j = 1; j < N; j++) L += Math.hypot(pts[j][0] - pts[j - 1][0], pts[j][1] - pts[j - 1][1]); return L; }
+  var k = D / (length() || 1); pts = pts.map(function (q) { return [q[0] * k, q[1] * k]; });
+  var minx = Infinity, maxx = -Infinity, miny = Infinity, maxy = -Infinity;
+  pts.forEach(function (q) { minx = Math.min(minx, q[0]); maxx = Math.max(maxx, q[0]); miny = Math.min(miny, q[1]); maxy = Math.max(maxy, q[1]); });
+  var span = Math.max(maxx - minx, maxy - miny), feats = [];
+  // Relieve: curvas de nivel alrededor de la cima
+  var top = 0, minE = Infinity; rows.forEach(function (row, i) { if (row.elev > rows[top].elev) top = i; minE = Math.min(minE, row.elev); });
+  var maxE = rows[top].elev, step = maxE - minE > 600 ? 100 : 50, sum = pts[top];
+  function ring(cx0, cy0, R, seed) { var o = []; for (var t = 0; t <= 48; t++) { var f = t / 48 * Math.PI * 2, w = 1 + .2 * Math.sin(2 * f + seed) + .1 * Math.sin(3 * f + seed * 2) + .05 * Math.sin(5 * f + seed * 3); o.push([cx0 + Math.cos(f) * R * w * 1.25, cy0 + Math.sin(f) * R * w * .8]); } return o; }
+  var levels = []; for (var lv = Math.ceil((minE + 1) / step) * step; lv <= maxE; lv += step) levels.push(lv);
+  levels.slice(-14).forEach(function (lv) { var tt = (maxE - lv) / (maxE - minE + 1); feats.push({ type: lv % (step * 5) === 0 ? 'contour-major' : 'contour', closed: true, points: ring(sum[0], sum[1], (.05 + tt * .75) * span, ph[2] + tt) }); });
+  var hx = minx + (maxx - minx) * (r() < .5 ? .15 : .85), hy = miny + (maxy - miny) * (r() < .5 ? .2 : .8);
+  for (var q2 = 0; q2 < 4; q2++) feats.push({ type: 'contour', closed: true, points: ring(hx, hy, (.04 + q2 * .07) * span, ph[3] + q2) });
+  // Costa al norte
+  var coastY = maxy + span * (a.type === 'climb' ? .45 : .12), coast = [];
+  for (var cxp = minx - span; cxp <= maxx + span; cxp += span / 20) coast.push([cxp, coastY + Math.sin(cxp / span * 9 + ph[0]) * span * .025 + Math.sin(cxp / span * 23) * span * .01]);
+  feats.unshift({ type: 'sea', closed: true, points: coast.concat([[maxx + span, coastY + span * 3], [minx - span, coastY + span * 3]]) }, { type: 'coast', points: coast });
+  // Río desde el valle de salida hasta el mar, con la carretera del valle
+  var river = [], rx = pts[0][0] + span * .06, ry = pts[0][1] - span * .4;
+  for (; ry < coastY + span * .02; ry += span / 30) { river.push([rx, ry]); rx += Math.sin(ry / span * 11 + ph[1]) * span * .025; }
+  feats.push({ type: 'road', points: river.map(function (q) { return [q[0] + span * .03, q[1]]; }) }, { type: 'water', points: river });
+  for (var rd = 0; rd < 2; rd++) { var ang = ph[rd] + rd * 2.4, road = []; for (var d = 0; d <= 1; d += .1) road.push([pts[0][0] + Math.cos(ang) * d * span * 1.2 + Math.sin(d * 7 + rd) * span * .02, pts[0][1] + Math.sin(ang) * d * span * 1.2]); feats.push({ type: 'road', points: road }); }
+  if (mtb) for (var tk = 0; tk < 3; tk++) { var ti = Math.floor(r() * N), tr0 = pts[ti], tr = []; for (var d2 = 0; d2 <= 1; d2 += .2) tr.push([tr0[0] + (d2 * .25 + Math.sin(d2 * 5) * .03) * span * (tk - 1), tr0[1] + d2 * .2 * span]); feats.push({ type: 'track', points: tr }); }
+  // Poblaciones y cima
+  // Puntos kilométricos
+  var every = D > 60000 ? 20 : D > 25000 ? 10 : 5, markers = [];
+  for (var km = every, ri = 0; km < D / 1000 - every / 3; km += every) { while (ri < N - 1 && rows[ri].km < km) ri++; markers.push({ index: ri, label: String(km) }); }
+  // Etiquetas hacia fuera del bucle para no pisar la ruta
+  var mx = (minx + maxx) / 2, my = (miny + maxy) / 2;
+  function outward(q, d) { var dx = q[0] - mx, dy = q[1] - my, l = Math.hypot(dx, dy) || 1; return { at: [q[0] + dx / l * d, q[1] + dy / l * d], anchor: dx < 0 ? 'end' : 'start' }; }
+  feats.push(Object.assign({ type: 'label', label: TOWNS[a.seed % TOWNS.length], major: true }, outward(pts[0], span * .015)));
+  for (var v = 0; v < 3; v++) { var vi = Math.floor((v + .62) / 3 * N * .9);
+    if (markers.some(function (mk0) { return Math.abs(mk0.index - vi) < N * .04; })) vi = Math.min(N - 1, vi + Math.round(N * .07));
+    var vp = pts[Math.min(N - 1, vi)]; feats.push(Object.assign({ type: 'label', label: VILLAGES[(a.seed + v * 5) % VILLAGES.length] }, outward(vp, span * .06))); }
+  if (climb) feats.push(Object.assign({ type: 'peak', label: climb.label + ' · ' + int(maxE) + ' m' }, outward(sum, span * .02), { at: sum }));
+  return { points: pts, features: feats, markers: markers };
+}
+function stats(rows, i0, i1) {
+  var n = i1 - i0 + 1, sp = 0, sh = 0, sc = 0, cn = 0, p4 = 0, mx = 0, gain = 0;
+  for (var i = i0; i <= i1; i++) { var r0 = rows[i]; sp += r0.p; sh += r0.hr; if (r0.cad) { sc += r0.cad; cn++; } p4 += Math.pow(r0.ps, 4); if (r0.p > mx) mx = r0.p; if (i > i0 && r0.elev > rows[i - 1].elev) gain += r0.elev - rows[i - 1].elev; }
+  return { dur: n * 10, avgP: Math.round(sp / n), np: Math.round(Math.pow(p4 / n, .25)), hr: Math.round(sh / n), cad: cn ? Math.round(sc / cn) : 0, max: mx, gain: Math.round(gain), dist: rows[i1].km - rows[i0].km };
+}
+function bestEfforts(rows) {
+  var pre = [0]; rows.forEach(function (r0, i) { pre.push(pre[i] + r0.p); });
+  return [{ t: 60, l: '1 min' }, { t: 300, l: '5 min' }, { t: 600, l: '10 min' }, { t: 1200, l: '20 min' }, { t: 3600, l: '60 min' }].map(function (d) {
+    var n = d.t / 10, best = 0, at = 0; if (n > rows.length) return Object.assign({ p: null }, d);
+    for (var i = n; i < pre.length; i++) { var v = (pre[i] - pre[i - n]) / n; if (v > best) { best = v; at = i - n; } }
+    return Object.assign({ p: Math.round(best), i0: at, i1: at + n - 1, season: mmp(d.t, 2026) }, d);
+  });
+}
+function zoneDist(rows, key, zones, ref) { var out = zones.map(function (z, i) { return { label: z.l, name: z.n, value: 0, color: 'z' + (i + 1) }; }); rows.forEach(function (r0) { var f = r0[key] / ref; for (var i = 0; i < zones.length; i++) if (f < zones[i].hi) { out[i].value += 10; break; } }); return out; }
+
+/* ---------- Formato ---------- */
+var DF = new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+var DFL = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+var DFS = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+var DFY = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+function fDate(t) { return DF.format(t).replace('.', ''); }
+function fDur(s) { s = Math.round(s); var hh = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60), ss = s % 60; return hh ? hh + ':' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0') : mm + ':' + String(ss).padStart(2, '0'); }
+function fHM(s) { var hh = Math.floor(s / 3600), mm = Math.round(s % 3600 / 60); return hh ? hh + ' h ' + String(mm).padStart(2, '0') : mm + ' min'; }
+function fClock(s) { var hh = Math.floor(s / 3600), mm = Math.floor(s % 3600 / 60); return hh + ':' + String(mm).padStart(2, '0'); }
+function n1(v) { return (Math.round(v * 10) / 10).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+function n2(v) { return v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function int(v) { return Math.round(v).toLocaleString('es-ES'); }
+function wkg(p) { return n2(p / ATH.weight); }
+function fSec(t) { return t < 60 ? t + ' s' : t < 3600 ? Math.round(t / 60) + ' min' : n1(t / 3600).replace(',0', '') + ' h'; }
+function pct(a, b) { return Math.round((a / b - 1) * 1000) / 10; }
+function climbOf(id) { return CLIMBS.filter(function (c) { return c.id === id; })[0]; }
+function actOf(id) { return ACTS.filter(function (a) { return a.id === id; })[0]; }
+var POWER_BANDS = PZ.slice(0, 6).map(function (z, i) { return { from: z.lo * ATH.ftp, to: z.hi * ATH.ftp, color: 'z' + (i + 1) }; });
+
+/* ================= Shell ================= */
+var NAV = [
+  { id: 'dashboard', label: 'Dashboard', icon: 'dashboard', shortcut: '⌘1' },
+  { id: 'activities', label: 'Actividades', icon: 'activity', shortcut: '⌘2' },
+  { id: 'performance', label: 'Rendimiento', icon: 'performance', shortcut: '⌘3' },
+  { id: 'climbs', label: 'Puertos', icon: 'mountain', shortcut: '⌘4' },
+  { id: 'coach', label: 'Entrenador IA', icon: 'coach', shortcut: '⌘5' }
+];
+var TITLES = { dashboard: 'Dashboard', activities: 'Actividades', performance: 'Rendimiento', climbs: 'Puertos', coach: 'Entrenador IA' };
+
+function App() {
+  var s = useState('activities'), screen = s[0], setScreen = s[1];
+  var ai = useState(false), aiOpen = ai[0], setAiOpen = ai[1];
+  var sel = useState(ACTS[0].id), actId = sel[0], setActId = sel[1];
+  var th = useState('dark'), theme = th[0], setTheme = th[1];
+  var sy = useState({ state: 'synced', at: TODAY + 9.2 * 3600000, n: 0 }), sync = sy[0], setSync = sy[1];
+  var chat = useChat();
+
+  useEffect(function () { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
+  useEffect(function () {
+    function onKey(e) {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      var n = parseInt(e.key, 10); if (n >= 1 && n <= 5) { e.preventDefault(); setScreen(NAV[n - 1].id); }
+      if (e.key.toLowerCase() === 'j') { e.preventDefault(); setAiOpen(function (o) { return !o; }); }
+    }
+    window.addEventListener('keydown', onKey); return function () { window.removeEventListener('keydown', onKey); };
+  }, []);
+  function doSync() {
+    setSync(function (x) { return Object.assign({}, x, { state: 'syncing' }); });
+    setTimeout(function () { setSync(function (x) { var fail = x.n % 2 === 1; return { state: fail ? 'error' : 'synced', at: fail ? x.at : x.at + 60000 * 7, n: x.n + 1, err: fail ? 'Garmin Connect no responde (429). Reintenta en unos minutos.' : null }; }); }, 1800);
+  }
+  function openActivity(id) { setActId(id); setScreen('activities'); }
+  function askAI(text) { setAiOpen(screen !== 'coach'); chat.send(text, { screen: screen, actId: actId }); }
+
+  var syncDetail = sync.state === 'syncing' ? 'Descargando actividades…' : sync.state === 'error' ? 'Último intento fallido · reintentar' : 'Última: hoy ' + new Date(sync.at).toISOString().slice(11, 16) + ' · ' + ACTS.length + ' actividades';
+  var header = h('div', null,
+    h('div', { className: 'lights', 'aria-hidden': true }, h('i', { style: { background: '#ff5f57' } }), h('i', { style: { background: '#febc2e' } }), h('i', { style: { background: '#28c840' } })),
+    h('div', { className: 'wordmark' }, 'CycleLab'));
+  var footer = [
+    h(C.SyncStatus, { key: 's', state: sync.state, detail: syncDetail, onClick: doSync }),
+    h('div', { key: 'a', className: 'athlete' }, h('div', { className: 'athlete-av' }, 'AD'),
+      h('div', { style: { minWidth: 0, flex: 1 } }, h('div', { className: 'small', style: { fontWeight: 600 } }, 'Atleta demo'), h('div', { className: 'small cl-faint' }, 'FTP 275 W · 80 kg · LTHR 182')),
+      h(Button, { variant: 'ghost', size: 'sm', icon: theme === 'dark' ? 'sun' : 'moon', 'aria-label': 'Cambiar tema', title: 'Cambiar tema', onClick: function () { setTheme(theme === 'dark' ? 'light' : 'dark'); } }))
+  ];
+
+  var body;
+  if (screen === 'dashboard') body = h(Dashboard, { openActivity: openActivity, go: setScreen, askAI: askAI });
+  else if (screen === 'activities') body = h(Activities, { actId: actId, setActId: setActId, askAI: askAI });
+  else if (screen === 'performance') body = h(Performance, { askAI: askAI });
+  else if (screen === 'climbs') body = h(Climbs, { openActivity: openActivity, askAI: askAI });
+  else body = h(CoachPage, { chat: chat });
+
+  return h('div', { className: 'app' },
+    h(C.Sidebar, { items: NAV, active: screen, onSelect: setScreen, header: header, footer: footer }),
+    h('main', { className: 'main' },
+      h('div', { className: 'topbar' }, h('h1', null, TITLES[screen]), h('div', { className: 'spacer' }),
+        h(Badge, { variant: 'outline', title: 'Todos los datos son ficticios' }, 'Datos de demostración'),
+        screen !== 'coach' ? h(Button, { variant: aiOpen ? 'secondary' : 'primary', icon: 'coach', onClick: function () { setAiOpen(!aiOpen); } }, 'Entrenador IA', h('span', { className: 'kbd', style: { marginLeft: 4, color: 'inherit', borderColor: 'currentColor', opacity: .7 } }, '⌘J')) : null),
+      sync.state === 'error' ? h('div', { className: 'banner', role: 'alert' }, h(Icon, { name: 'alert', style: { color: 'var(--danger)' } }), h('span', null, sync.err), h('div', { style: { flex: 1 } }), h(Button, { size: 'sm', onClick: doSync }, 'Reintentar'), h(Button, { size: 'sm', variant: 'ghost', onClick: function () { setSync(Object.assign({}, sync, { state: 'synced' })); } }, 'Descartar')) : null,
+      h('div', { className: 'scroll', style: screen === 'activities' || screen === 'climbs' || screen === 'coach' ? { overflow: 'hidden', display: 'flex' } : null }, body),
+      screen !== 'coach' ? h('aside', { className: 'ai-drawer', 'data-open': aiOpen, 'aria-hidden': !aiOpen, 'aria-label': 'Entrenador IA' },
+        aiOpen ? h(ChatPanel, { chat: chat, context: TITLES[screen] + (screen === 'activities' ? ' · ' + actOf(actId).name : ''), ctx: { screen: screen, actId: actId }, onClose: function () { setAiOpen(false); }, compact: true }) : null) : null));
+}
+
+/* ================= Dashboard ================= */
+function Dashboard(p) {
+  var r = useState('12'), range = r[0], setRange = r[1];
+  var weeks = +range;
+  var load = useMemo(function () { return LOAD.slice(-weeks * 7); }, [weeks]);
+  var weekly = useMemo(function () {
+    var out = []; for (var w = weeks - 1; w >= 0; w--) {
+      var end = TODAY - w * 7 * DAY + DAY, start = end - 7 * DAY, row = { x: 'S' + (weeks - w), start: start, endurance: 0, intervals: 0, climb: 0, mtb: 0, hours: 0 };
+      ACTS.forEach(function (a) { if (a.date >= start && a.date < end) { row[a.type] += a.tss; row.hours += a.dur / 3600; } });
+      row.x = DFS.format(start).replace('.', ''); row.h = Math.round(row.hours * 10) / 10; out.push(row);
+    } return out;
+  }, [weeks]);
+  var prev = LOAD[LOAD.length - 8], thisWeek = weekly[weekly.length - 1], lastWeek = weekly[weekly.length - 2];
+  var recent = ACTS.slice(0, 6), longest = ACTS.filter(function (a) { return a.date > TODAY - 56 * DAY; }).reduce(function (m, a) { return Math.max(m, a.dur); }, 0);
+  var tsbTone = NOW.tsb < -20 ? 'warning' : NOW.tsb > 5 ? 'info' : 'success';
+  return h('div', { className: 'page' },
+    h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: 12 } },
+      h('div', null, h('div', { className: 'label' }, DFL.format(TODAY)), h('div', { style: { font: '600 22px/28px var(--font-sans)', marginTop: 2 } }, 'Semana de carga 3 de 4 — buena forma para trabajar umbral')),
+      h('div', { style: { flex: 1 } }), h(Segmented, { label: 'Rango', value: range, onChange: setRange, options: [{ value: '6', label: '6 sem' }, { value: '12', label: '12 sem' }, { value: '20', label: '20 sem' }] })),
+    h('div', { className: 'strip', style: { gridTemplateColumns: 'repeat(5, minmax(0,1fr))' } },
+      h(Metric, { size: 'l', label: 'Forma (TSB)', accent: 'form', value: (NOW.tsb > 0 ? '+' : '') + n1(NOW.tsb), sub: h(Badge, { tone: tsbTone }, NOW.tsb < -20 ? 'Fatiga alta' : NOW.tsb > 5 ? 'Fresco' : 'Productiva') }),
+      h(Metric, { label: 'Fitness (CTL)', accent: 'fitness', value: n1(NOW.ctl), delta: Math.round((NOW.ctl - prev.ctl) * 10) / 10, sub: 'vs. hace 7 días' }),
+      h(Metric, { label: 'Fatiga (ATL)', accent: 'fatigue', value: n1(NOW.atl), delta: Math.round((NOW.atl - prev.atl) * 10) / 10, lowerIsBetter: true, sub: 'vs. hace 7 días' }),
+      h(Metric, { label: 'FTP', accent: 'power', value: '275', unit: 'W', sub: wkg(275) + ' W/kg · test 12 oct' }),
+      h(Metric, { label: 'Carga esta semana', value: int(thisWeek.endurance + thisWeek.intervals + thisWeek.climb + thisWeek.mtb), unit: 'TSS', sub: n1(thisWeek.hours) + ' h · semana anterior ' + int(lastWeek.endurance + lastWeek.intervals + lastWeek.climb + lastWeek.mtb) })),
+    h('div', { className: 'row' },
+      h(Panel, { className: 'grow', title: 'Carga de entrenamiento', subtitle: 'CTL 42 d · ATL 7 d · TSB = CTL − ATL de ayer', actions: h(Button, { size: 'sm', variant: 'ghost', icon: 'coach', onClick: function () { p.askAI('¿Cómo va mi forma para La Cantabrona?'); } }, 'Analizar') },
+        h(LineChart, { data: load, x: 'x', height: 236, legend: true, zeroBased: false, xFormat: function (v) { return DFS.format(v).replace('.', ''); }, tooltipTitle: function (v) { return fDate(v); },
+          series: [{ key: 'ctl', label: 'Fitness (CTL)', color: 'fitness', width: 2 }, { key: 'atl', label: 'Fatiga (ATL)', color: 'fatigue', dash: true }, { key: 'tsb', label: 'Forma (TSB)', color: 'form', area: true, areaOpacity: .12 }],
+          refLines: [{ value: 0, color: 'faint' }] })),
+      h(Panel, { title: 'Objetivos', subtitle: 'Fechas orientativas', style: { width: 380, flex: 'none' } },
+        GOALS.map(function (g) {
+          var days = Math.round((g.date - TODAY) / DAY);
+          return h('div', { key: g.id, className: 'goal' },
+            h('div', { className: 'goal-head' }, h(Icon, { name: 'target', style: { color: C.utils.toneColor(g.tone) } }), h('b', null, g.name), h('span', { className: 'countdown' }, days, h('span', { className: 'small cl-muted', style: { fontFamily: 'var(--font-sans)', fontWeight: 500, marginLeft: 4 } }, 'días'))),
+            h('div', { className: 'small cl-faint', style: { marginTop: -6 } }, DFY.format(g.date) + ' · ' + g.kind),
+            h(Progress, { label: 'Fitness objetivo', valueLabel: n1(NOW.ctl) + ' / ' + g.ctl + ' CTL', value: NOW.ctl, max: g.ctl, tone: g.tone }),
+            h(Progress, { label: 'Salida más larga (8 sem)', valueLabel: fHM(longest) + ' / ' + fHM(g.long), value: longest, max: g.long, tone: g.tone }));
+        }))),
+    h('div', { className: 'row' },
+      h(Panel, { className: 'grow', title: 'Carga semanal por tipo', subtitle: 'TSS por semana' },
+        h(BarChart, { data: weekly, x: 'x', height: 200, legend: true, tooltipTitle: function (v, d) { return 'Semana del ' + v + ' · ' + n1(d.hours) + ' h'; },
+          series: [{ key: 'endurance', label: 'Resistencia', color: 'z2' }, { key: 'intervals', label: 'Intervalos', color: 'z5' }, { key: 'climb', label: 'Ascensión', color: 'z4' }, { key: 'mtb', label: 'BTT', color: 'speed' }] })),
+      h(Panel, { className: 'grow', title: 'Evolución de potencia', subtitle: 'Mejor potencia mensual · últimos 12 meses', actions: h(Button, { size: 'sm', variant: 'ghost', iconRight: 'chevron-right', onClick: function () { p.go('performance'); } }, 'Rendimiento') },
+        h(LineChart, { data: BESTS, x: 'x', height: 200, legend: true, zeroBased: false, xTicks: [0, 2, 4, 6, 8, 10, 11], xFormat: function (v) { return MONTHS[v]; },
+          series: [{ key: 'p300', label: '5 min', color: 'z5', unit: 'W' }, { key: 'p1200', label: '20 min', color: 'power', unit: 'W', width: 2 }, { key: 'p3600', label: '60 min', color: 'z2', unit: 'W' }] }))),
+    h(Panel, { flush: true, title: 'Últimas actividades', subtitle: 'Sincronizadas desde Garmin Connect', actions: h(Button, { size: 'sm', variant: 'ghost', iconRight: 'chevron-right', onClick: function () { p.go('activities'); } }, 'Ver todas') },
+      h(DataTable, { rows: recent, onSelect: function (id) { p.openActivity(id); }, columns: ACT_COLUMNS })));
+}
+var ACT_COLUMNS = [
+  { key: 'date', label: 'Fecha', render: function (a) { return fDate(a.date); }, width: 110 },
+  { key: 'name', label: 'Actividad', render: function (a) { return h('span', { style: { fontWeight: 600 } }, a.name); } },
+  { key: 'type', label: 'Tipo', render: function (a) { return h(Badge, { tone: TYPES[a.type].tone }, TYPES[a.type].label); } },
+  { key: 'dur', label: 'Duración', align: 'right', render: function (a) { return fDur(a.dur); } },
+  { key: 'dist', label: 'Distancia', align: 'right', render: function (a) { return n1(a.dist) + ' km'; } },
+  { key: 'elev', label: 'Desnivel', align: 'right', render: function (a) { return int(a.elev) + ' m'; } },
+  { key: 'np', label: 'NP', align: 'right', render: function (a) { return a.np + ' W'; } },
+  { key: 'hr', label: 'FC media', align: 'right', render: function (a) { return a.hr + ' ppm'; } },
+  { key: 'tss', label: 'TSS', align: 'right' }
+];
+
+/* ================= Actividades ================= */
+var RANGES = [{ value: '30', label: '30 d' }, { value: '90', label: '90 d' }, { value: 'all', label: 'Temporada' }];
+function Activities(p) {
+  var rg = useState('90'), range = rg[0], setRange = rg[1];
+  var ty = useState(['endurance', 'intervals', 'climb', 'mtb']), types = ty[0], setTypes = ty[1];
+  var q = useState(''), query = q[0], setQuery = q[1];
+  var cmp = useState([]), checked = cmp[0], setChecked = cmp[1];
+  var cm = useState(false), comparing = cm[0], setComparing = cm[1];
+  var ld = useState(false), loading = ld[0], setLoading = ld[1];
+  var list = ACTS.filter(function (a) { return (range === 'all' || a.date > TODAY - (+range) * DAY) && types.indexOf(a.type) >= 0 && (!query || a.name.toLowerCase().indexOf(query.toLowerCase()) >= 0); });
+  function toggleType(t) { setTypes(types.indexOf(t) >= 0 ? types.filter(function (x) { return x !== t; }) : types.concat([t])); }
+  function select(id) { setComparing(false); setLoading(true); p.setActId(id); setTimeout(function () { setLoading(false); }, 320); }
+  function toggleCheck(id) { setChecked(checked.indexOf(id) >= 0 ? checked.filter(function (x) { return x !== id; }) : checked.concat([id]).slice(-2)); }
+  var counts = {}; ACTS.forEach(function (a) { if (range === 'all' || a.date > TODAY - (+range) * DAY) counts[a.type] = (counts[a.type] || 0) + 1; });
+  var a = actOf(p.actId);
+  return h(React.Fragment, null,
+    h('div', { className: 'list-pane' },
+      h('div', { className: 'filters' },
+        h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } },
+          h('div', { className: 'chat-box', style: { flex: 1, padding: '0 10px', alignItems: 'center', borderRadius: 'var(--radius-md)', height: 32 } }, h(Icon, { name: 'search', style: { color: 'var(--ink-faint)' } }),
+            h('input', { value: query, onChange: function (e) { setQuery(e.target.value); }, placeholder: 'Buscar actividad', 'aria-label': 'Buscar actividad', style: { flex: 1, border: 0, outline: 0, background: 'transparent', color: 'var(--ink)', font: '400 13px var(--font-sans)' } })),
+          h(Segmented, { label: 'Fechas', value: range, onChange: setRange, options: RANGES })),
+        h('div', { style: { display: 'flex', gap: 6, flexWrap: 'wrap' } }, Object.keys(TYPES).map(function (t) { return h(Chip, { key: t, active: types.indexOf(t) >= 0, color: TYPES[t].tone, count: counts[t] || 0, onClick: function () { toggleType(t); } }, TYPES[t].label); })),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 8, minHeight: 26 } },
+          h('span', { className: 'small cl-faint', style: { flex: 1 } }, checked.length ? checked.length + ' de 2 seleccionadas para comparar' : list.length + ' actividades · marca dos para comparar'),
+          checked.length ? h(Button, { size: 'sm', variant: 'ghost', onClick: function () { setChecked([]); setComparing(false); } }, 'Limpiar') : null,
+          h(Button, { size: 'sm', variant: checked.length === 2 ? 'primary' : 'secondary', icon: 'compare', disabled: checked.length !== 2, onClick: function () { setComparing(true); } }, 'Comparar'))),
+      h('div', { style: { overflow: 'auto', flex: 1 }, role: 'listbox', 'aria-label': 'Actividades' },
+        list.length ? list.map(function (x) {
+          var chk = checked.indexOf(x.id) >= 0;
+          return h('div', { key: x.id, className: 'act-item', role: 'option', tabIndex: 0, 'aria-selected': x.id === p.actId && !comparing, onClick: function () { select(x.id); }, onKeyDown: function (e) { if (e.key === 'Enter') select(x.id); } },
+            h('span', { className: 'cl-check', role: 'checkbox', 'aria-checked': chk, 'aria-label': 'Comparar ' + x.name, tabIndex: 0, style: { marginTop: 1 }, onClick: function (e) { e.stopPropagation(); toggleCheck(x.id); }, onKeyDown: function (e) { if (e.key === ' ') { e.preventDefault(); e.stopPropagation(); toggleCheck(x.id); } } }, chk ? h(Icon, { name: 'check', size: 12 }) : null),
+            h('div', { style: { minWidth: 0, flex: 1 } },
+              h('div', { style: { display: 'flex', gap: 8, alignItems: 'center' } }, h('div', { className: 'act-name', style: { flex: 1 } }, x.name), h('span', { className: 'act-meta' }, fDate(x.date))),
+              h('div', { style: { display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 } }, h(Badge, { tone: TYPES[x.type].tone }, TYPES[x.type].label), h('span', { className: 'act-meta' }, fDur(x.dur) + ' · ' + n1(x.dist) + ' km · ' + int(x.elev) + ' m · ' + x.np + ' W NP'))));
+        }) : h(StateBlock, { kind: 'empty', title: 'Sin actividades', detail: 'Ningún entrenamiento coincide con los filtros. Amplía el rango de fechas o activa más tipos.', action: h(Button, { size: 'sm', onClick: function () { setTypes(Object.keys(TYPES)); setRange('all'); setQuery(''); } }, 'Restablecer filtros') }))),
+    h('div', { className: 'detail' },
+      comparing && checked.length === 2 ? h(Compare, { a: actOf(checked[0]), b: actOf(checked[1]), onClose: function () { setComparing(false); } }) :
+        loading ? h(DetailSkeleton) : h(ActivityDetail, { key: a.id, a: a, askAI: p.askAI })));
+}
+function DetailSkeleton() {
+  return h('div', { className: 'page', 'aria-busy': true },
+    h(Skeleton, { height: 22, width: 320 }), h(Skeleton, { height: 14, width: 220 }),
+    h('div', { className: 'strip', style: { gridTemplateColumns: 'repeat(8,1fr)' } }, [0, 1, 2, 3, 4, 5, 6, 7].map(function (i) { return h('div', { key: i }, h(Skeleton, { height: 10, width: 60 }), h('div', { style: { height: 8 } }), h(Skeleton, { height: 22, width: 70 })); })),
+    h('div', { className: 'row' }, h('div', { style: { width: 360 } }, h(Skeleton, { height: 240, radius: 6 })), h('div', { className: 'grow' }, h(Skeleton, { height: 240, radius: 6 }))),
+    h(Skeleton, { height: 300, radius: 6 }));
+}
+function ActivityDetail(p) {
+  var a = p.a, st = useMemo(function () { return getStream(a); }, [a]);
+  var hv = useState(null), hover = hv[0], setHover = hv[1];
+  // La selección se guarda como rango de índices para que sobreviva al cambio de eje (tiempo ↔ distancia).
+  var sl = useState(null), range = sl[0], setRange = sl[1];
+  var lp = useState(null), lapId = lp[0], setLap = lp[1];
+  var zt = useState('power'), zType = zt[0], setZType = zt[1];
+  var ax = useState('time'), axis = ax[0], setAxis = ax[1];
+  var zm = useState(false), zoom = zm[0], setZoom = zm[1];
+  var rows = st.rows, xk = axis === 'km' ? 'km' : 'x';
+  function idxAt(v) { var lo = 0, hi = rows.length - 1; while (hi - lo > 1) { var m = (lo + hi) >> 1; if (rows[m][xk] < v) lo = m; else hi = m; } return v - rows[lo][xk] <= rows[hi][xk] - v ? lo : hi; }
+  var selStats = range ? stats(rows, range[0], range[1]) : null;
+  var lapsShown = st.laps.filter(function (l) { return l.kind !== 'rec'; });
+  function selectLap(l) { setLap(l ? l.id : null); setRange(l ? [l.i0, l.i1] : null); }
+  function pickLap(l) { selectLap(lapId === l.id ? null : l); }
+  function onSelect(r) { setLap(null); setRange(r ? [idxAt(r[0]), idxAt(r[1])] : null); }
+  var latest = useRef(); latest.current = { lapId: lapId, laps: lapsShown, select: selectLap };
+  useEffect(function () {
+    function onKey(e) {
+      var t = e.target, tag = t && t.tagName;
+      if (e.metaKey || e.ctrlKey || e.altKey || tag === 'INPUT' || tag === 'TEXTAREA' || (t && t.isContentEditable)) return;
+      var L = latest.current, i = L.laps.findIndex(function (l) { return l.id === L.lapId; });
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        var n = e.key === 'ArrowRight' ? (i < 0 ? 0 : Math.min(L.laps.length - 1, i + 1)) : (i < 0 ? L.laps.length - 1 : Math.max(0, i - 1));
+        L.select(L.laps[n]);
+      } else if (e.key === 'Escape' && L.lapId !== undefined) L.select(null);
+    }
+    window.addEventListener('keydown', onKey); return function () { window.removeEventListener('keydown', onKey); };
+  }, []);
+  var lapsRef = useRef(null);
+  useEffect(function () { var tr = lapsRef.current && lapsRef.current.querySelector('tr[aria-selected="true"]'); if (tr && tr.scrollIntoView) tr.scrollIntoView({ block: 'nearest' }); }, [lapId]);
+  var common = { data: rows, x: xk, hoverIndex: hover, onHover: function (i) { setHover(i); }, onSelect: onSelect, selection: range ? [rows[range[0]][xk], rows[range[1]][xk]] : null,
+    xFormat: axis === 'km' ? function (v) { return Math.round(v) + ' km'; } : fClock, tooltipTitle: function (v, r) { return axis === 'km' ? 'km ' + n1(r.km) + ' · ' + fDur(r.x) : fDur(r.x) + ' · ' + n1(r.km) + ' km'; } };
+  var zones = useMemo(function () { return zType === 'power' ? zoneDist(rows, 'p', PZ, ATH.ftp) : zoneDist(rows, 'hr', HZ, ATH.lthr); }, [rows, zType]);
+  var lapLabel = lapId ? lapsShown.filter(function (l) { return l.id === lapId; })[0].label : null;
+  return h('div', { className: 'page' },
+    h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 12 } },
+      h('div', { style: { minWidth: 0 } },
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } }, h('div', { style: { font: '600 20px/26px var(--font-sans)' } }, a.name), h(Badge, { tone: TYPES[a.type].tone }, TYPES[a.type].label)),
+        h('div', { className: 'small cl-faint', style: { marginTop: 2 } }, DFL.format(a.date) + ' · ' + new Date(a.date).toISOString().slice(11, 16) + ' · Garmin ' + a.device + ' · potenciómetro + banda pectoral')),
+      h('div', { style: { flex: 1 } }),
+      h(Button, { icon: 'coach', onClick: function () { p.askAI(a.type === 'intervals' ? 'Analiza los intervalos de esta sesión' : a.type === 'climb' ? 'Compara mis últimas subidas a ' + a.name : 'Resume esta actividad'); } }, 'Preguntar a la IA')),
+    h('div', { className: 'strip tight-metrics' },
+      h(Metric, { size: 's', label: 'Duración', value: fDur(a.dur) }),
+      h(Metric, { size: 's', label: 'Distancia', value: n1(a.dist), unit: 'km' }),
+      h(Metric, { size: 's', label: 'Desnivel', value: int(a.elev), unit: 'm' }),
+      h(Metric, { size: 's', label: 'Pot. normalizada', accent: 'power', value: a.np, unit: 'W', sub: wkg(a.np) + ' W/kg' }),
+      h(Metric, { size: 's', label: 'IF · TSS', value: n2(a.IF) + ' · ' + a.tss }),
+      h(Metric, { size: 's', label: 'FC media', accent: 'heart', value: a.hr, unit: 'ppm', sub: Math.round(a.hr / ATH.lthr * 100) + '% LTHR' }),
+      h(Metric, { size: 's', label: 'Cadencia', accent: 'cadence', value: a.cad, unit: 'rpm' }),
+      h(Metric, { size: 's', label: 'Trabajo', value: int(a.kj), unit: 'kJ' })),
+    h('div', { className: 'row' },
+      h(Panel, { className: 'grow', title: 'Recorrido', subtitle: 'Mapa simulado · relieve, costa y poblaciones ilustrativos', actions: h(Button, { size: 'sm', variant: zoom && range ? 'secondary' : 'ghost', icon: 'target', disabled: !range, 'aria-pressed': zoom && !!range, onClick: function () { setZoom(!zoom); } }, zoom && range ? 'Ver ruta completa' : 'Ajustar al tramo') },
+        h(RouteMap, { points: st.points, features: st.features, markers: st.markers, scale: true, height: 300, highlight: range, zoomToHighlight: zoom, cursor: hover, caption: n1(a.dist) + ' km · ' + int(a.elev) + ' m+ · km cada ' + (st.markers.length > 1 ? st.markers[1].label - st.markers[0].label : 10) })),
+      h(Panel, { title: 'Tiempo en zonas', style: { width: 340, flex: 'none' }, subtitle: zType === 'power' ? 'Potencia · FTP 275 W' : 'Frecuencia cardíaca · LTHR 182 ppm', actions: h(Segmented, { label: 'Métrica de zonas', value: zType, onChange: setZType, options: [{ value: 'power', label: 'Potencia' }, { value: 'hr', label: 'FC' }] }) },
+        h(ZoneBar, { zones: zones, format: function (v) { return fHM(v); } }))),
+    h(Panel, { title: 'Análisis', subtitle: 'Arrastra para seleccionar un tramo · ← → recorre los intervalos · Esc limpia', actions: [
+        range ? h(Button, { key: 'c', size: 'sm', variant: 'ghost', icon: 'close', onClick: function () { selectLap(null); } }, 'Limpiar') : null,
+        h(Segmented, { key: 'x', label: 'Eje X', value: axis, onChange: setAxis, options: [{ value: 'time', label: 'Tiempo' }, { value: 'km', label: 'Distancia' }] })] },
+      h('div', { 'aria-live': 'polite' }, selStats ? h('div', { className: 'sel-bar', style: { marginBottom: 8 } },
+        h('span', { className: 'label', style: { color: 'var(--brand-ink)' } }, lapLabel || 'Selección'),
+        h(Metric, { size: 's', label: 'Duración', value: fDur(selStats.dur) }),
+        h(Metric, { size: 's', label: 'Pot. media', accent: 'power', value: selStats.avgP, unit: 'W', sub: wkg(selStats.avgP) + ' W/kg' }),
+        h(Metric, { size: 's', label: 'NP', value: selStats.np, unit: 'W' }),
+        h(Metric, { size: 's', label: 'FC media', accent: 'heart', value: selStats.hr, unit: 'ppm' }),
+        h(Metric, { size: 's', label: 'Cadencia', accent: 'cadence', value: selStats.cad, unit: 'rpm' }),
+        h(Metric, { size: 's', label: 'Distancia', value: n1(selStats.dist), unit: 'km', sub: 'km ' + n1(rows[range[0]].km) + '–' + n1(rows[range[1]].km) + ' · +' + selStats.gain + ' m' })) : null),
+      h('div', { className: 'stack-charts' },
+        h('div', { className: 'chart-label' }, h('i', { className: 'cl-swatch', style: { background: 'var(--power)' } }), 'Potencia (30 s)', hover != null ? h('b', null, rows[hover].ps + ' W') : null, h('span', { className: 'cl-faint' }, '· bandas de zona Z1–Z6')),
+        h(LineChart, Object.assign({}, common, { height: 150, bands: POWER_BANDS, series: [{ key: 'ps', label: 'Potencia', color: 'power', unit: 'W', width: 1.25 }], hideXAxis: true })),
+        h('div', { className: 'chart-label' }, h('i', { className: 'cl-swatch', style: { background: 'var(--heart)' } }), 'Frecuencia cardíaca', hover != null ? h('b', null, rows[hover].hr + ' ppm') : null),
+        h(LineChart, Object.assign({}, common, { height: 96, zeroBased: false, series: [{ key: 'hr', label: 'FC', color: 'heart', unit: 'ppm' }], refLines: [{ value: ATH.lthr, label: 'LTHR 182' }], hideXAxis: true })),
+        h('div', { className: 'chart-label' }, h('i', { className: 'cl-swatch', style: { background: 'var(--cadence)' } }), 'Cadencia', hover != null ? h('b', null, rows[hover].cad + ' rpm') : null),
+        h(LineChart, Object.assign({}, common, { height: 72, series: [{ key: 'cad', label: 'Cadencia', color: 'cadence', unit: 'rpm', width: 1 }], hideXAxis: true, yTicks: 2 })),
+        h('div', { className: 'chart-label' }, h('i', { className: 'cl-swatch', style: { background: 'var(--elevation)' } }), 'Elevación', hover != null ? h('b', null, rows[hover].elev + ' m') : null),
+        h(LineChart, Object.assign({}, common, { height: 96, series: [{ key: 'elev', label: 'Elevación', color: 'elevation', unit: 'm', area: true, areaOpacity: .28 }], yTicks: 2 })))),
+    h(React.Fragment, null,
+      h(Panel, { className: 'grow', flush: true, title: 'Intervalos', subtitle: (a.type === 'intervals' ? 'Detectados del plan' : 'Vueltas automáticas y tramos') + ' · clic o ↑ ↓ en la tabla, ← → desde cualquier punto, Esc limpia',
+        actions: h('span', { className: 'small cl-faint', style: { display: 'flex', gap: 4, alignItems: 'center' } }, h('span', { className: 'kbd' }, '←'), h('span', { className: 'kbd' }, '→'), h('span', { className: 'kbd' }, 'Esc')) },
+        h('div', { ref: lapsRef }, h(DataTable, { compact: true, rows: lapsShown, selected: lapId, selectOnFocus: true, onEscape: function () { selectLap(null); }, onSelect: function (id, l) { pickLap(l); },
+          columns: [
+            { key: 'label', label: 'Tramo', render: function (l) { return h('span', { style: { fontWeight: l.kind === 'work' || l.kind === 'climb' ? 600 : 400 } }, l.label); } },
+            { key: 'km', label: 'Km', align: 'right', render: function (l) { return n1(rows[l.i0].km) + '–' + n1(rows[l.i1].km); } },
+            { key: 'dur', label: 'Duración', align: 'right', render: function (l) { return fDur(l.dur); } },
+            { key: 'avgP', label: 'Pot. media', align: 'right', render: function (l) { return l.avgP + ' W'; } },
+            { key: 'wkg', label: 'W/kg', align: 'right', render: function (l) { return wkg(l.avgP); } },
+            { key: 'hr', label: 'FC', align: 'right', render: function (l) { return l.hr + ' ppm'; } },
+            { key: 'cad', label: 'Cad.', align: 'right', render: function (l) { return l.cad + ' rpm'; } },
+            { key: 'z', label: 'Zona', render: function (l) { var f = l.avgP / ATH.ftp, zi = PZ.findIndex(function (z) { return f < z.hi; }); return h(Badge, { tone: 'z' + (zi + 1) }, PZ[zi].l); } }
+          ] }))),
+      h(Panel, { flush: true, title: 'Mejores esfuerzos', subtitle: 'vs. mejor marca de la temporada · clic para resaltar' },
+        h(DataTable, { compact: true, rows: st.best, rowKey: 'l', onSelect: function (id, b) { if (b.p) { setLap(null); setRange([b.i0, b.i1]); } },
+          columns: [
+            { key: 'l', label: 'Duración' },
+            { key: 'p', label: 'Potencia', align: 'right', render: function (b) { return b.p ? b.p + ' W' : '–'; } },
+            { key: 'w', label: 'W/kg', align: 'right', render: function (b) { return b.p ? wkg(b.p) : '–'; } },
+            { key: 's', label: '% mejor', align: 'right', render: function (b) { if (!b.p) return '–'; var v = Math.round(b.p / b.season * 100); return v >= 100 ? h(Badge, { tone: 'success' }, 'Récord') : v + '%'; } }
+          ] }))));
+}
+function Compare(p) {
+  var A = p.a, B = p.b, sa = getStream(A), sb = getStream(B);
+  var merged = useMemo(function () {
+    var n = Math.max(sa.rows.length, sb.rows.length), out = [];
+    for (var i = 0; i < n; i += 3) { var ra = sa.rows[i], rb = sb.rows[i]; out.push({ x: i * 10, pa: ra ? ra.ps : null, pb: rb ? rb.ps : null, ha: ra ? ra.hr : null, hb: rb ? rb.hr : null }); }
+    return out;
+  }, [A.id, B.id]);
+  var rowsCmp = [
+    ['Duración', fDur(A.dur), fDur(B.dur), null], ['Distancia', n1(A.dist) + ' km', n1(B.dist) + ' km', null], ['Desnivel', int(A.elev) + ' m', int(B.elev) + ' m', null],
+    ['Pot. normalizada', A.np + ' W', B.np + ' W', pct(B.np, A.np)], ['Pot. media', A.avgP + ' W', B.avgP + ' W', pct(B.avgP, A.avgP)], ['FC media', A.hr + ' ppm', B.hr + ' ppm', pct(B.hr, A.hr)],
+    ['Eficiencia (NP/FC)', n2(A.np / A.hr), n2(B.np / B.hr), pct(B.np / B.hr, A.np / A.hr)], ['TSS', A.tss, B.tss, pct(B.tss, A.tss)],
+    ['Mejor 20 min', (sa.best[3].p || '–') + ' W', (sb.best[3].p || '–') + ' W', sa.best[3].p && sb.best[3].p ? pct(sb.best[3].p, sa.best[3].p) : null]
+  ].map(function (r, i) { return { id: i, k: r[0], a: r[1], b: r[2], d: r[3] }; });
+  var series = [{ key: 'pa', label: 'A · ' + fDate(A.date), color: 'brand', unit: 'W', width: 1.5 }, { key: 'pb', label: 'B · ' + fDate(B.date), color: 'muted', unit: 'W', dash: true }];
+  return h('div', { className: 'page' },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+      h('div', null, h('div', { className: 'label' }, 'Comparación'), h('div', { style: { font: '600 20px/26px var(--font-sans)' } }, A.name + '  vs  ' + B.name)),
+      h('div', { style: { flex: 1 } }), h(Button, { icon: 'close', onClick: p.onClose }, 'Cerrar comparación')),
+    h(Panel, { title: 'Potencia superpuesta', subtitle: 'Alineadas desde el inicio · media 30 s' },
+      h(LineChart, { data: merged, x: 'x', height: 220, legend: true, series: series, xFormat: fClock, tooltipTitle: function (v) { return fDur(v); } })),
+    h(Panel, { title: 'Frecuencia cardíaca superpuesta' },
+      h(LineChart, { data: merged, x: 'x', height: 150, legend: true, zeroBased: false, xFormat: fClock, tooltipTitle: function (v) { return fDur(v); }, series: [{ key: 'ha', label: 'A', color: 'heart', unit: 'ppm' }, { key: 'hb', label: 'B', color: 'muted', unit: 'ppm', dash: true }] })),
+    h(Panel, { flush: true, title: 'Diferencias', subtitle: 'B respecto a A' },
+      h(DataTable, { compact: true, rows: rowsCmp, columns: [
+        { key: 'k', label: 'Métrica' }, { key: 'a', label: 'A · ' + fDate(A.date), align: 'right' }, { key: 'b', label: 'B · ' + fDate(B.date), align: 'right' },
+        { key: 'd', label: 'Δ', align: 'right', render: function (r) { return r.d == null ? '–' : h('span', { className: r.d > 0 ? 'delta-good' : r.d < 0 ? 'delta-bad' : '' }, (r.d > 0 ? '+' : '') + n1(r.d) + ' %'); } }
+      ] })));
+}
+
+/* ================= Rendimiento ================= */
+var CURVE_TICKS = [1, 5, 15, 60, 300, 1200, 3600, 14400];
+function Performance(p) {
+  var se = useState(['s2026', 's2025']), seasons = se[0], setSeasons = se[1];
+  var un = useState('w'), unit = un[0], setUnit = un[1];
+  var du = useState('p1200'), dur = du[0], setDur = du[1];
+  var SEAS = [{ key: 's2026', label: 'Temporada 2026', color: 'brand', width: 2 }, { key: 's2025', label: '2025', color: 'muted', dash: true }, { key: 's2024', label: '2024', color: 'faint', dash: true }];
+  var data = useMemo(function () { return unit === 'w' ? CURVE : CURVE.map(function (r) { return { x: r.x, s2026: r.s2026 / ATH.weight, s2025: r.s2025 / ATH.weight, s2024: r.s2024 / ATH.weight }; }); }, [unit]);
+  var fmtV = unit === 'w' ? function (v) { return int(v); } : function (v) { return n2(v); };
+  var series = SEAS.filter(function (s) { return seasons.indexOf(s.key) >= 0; }).map(function (s) { return Object.assign({}, s, { unit: unit === 'w' ? 'W' : 'W/kg', format: fmtV }); });
+  var tableRows = KEY_DUR.map(function (d) { var a = mmp(d.t, 2026), b = mmp(d.t, 2025); return { id: d.l, l: d.l, t: d.t, a: a, b: b, d: pct(a, b) }; });
+  var DURS = [{ key: 'p300', label: '5 min', color: 'z5' }, { key: 'p1200', label: '20 min', color: 'power' }, { key: 'p3600', label: '60 min', color: 'z2' }];
+  var dsel = DURS.filter(function (d) { return d.key === dur; })[0];
+  return h('div', { className: 'page' },
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+      SEAS.map(function (s) { return h(Chip, { key: s.key, color: s.color, active: seasons.indexOf(s.key) >= 0, onClick: function () { setSeasons(seasons.indexOf(s.key) >= 0 ? seasons.filter(function (x) { return x !== s.key; }) : seasons.concat([s.key])); } }, s.label); }),
+      h('div', { style: { flex: 1 } }),
+      h(Segmented, { label: 'Unidades', value: unit, onChange: setUnit, options: [{ value: 'w', label: 'Vatios' }, { value: 'wkg', label: 'W/kg' }] }),
+      h(Button, { icon: 'coach', onClick: function () { p.askAI('Analiza mi curva de potencia frente a 2025'); } }, 'Analizar con IA')),
+    h('div', { className: 'strip', style: { gridTemplateColumns: 'repeat(5, minmax(0,1fr))' } },
+      h(Metric, { size: 'l', label: 'FTP estimado', accent: 'power', value: mmp(3600, 2026) + 4, unit: 'W', sub: wkg(mmp(3600, 2026) + 4) + ' W/kg · modelo' }),
+      h(Metric, { label: 'Potencia crítica', value: SEASONS[2026].cp, unit: 'W', delta: SEASONS[2026].cp - SEASONS[2025].cp, deltaUnit: ' W', sub: 'vs. 2025' }),
+      h(Metric, { label: "W′ (capacidad anaeróbica)", value: n1(SEASONS[2026].w / 1000), unit: 'kJ', delta: Math.round((SEASONS[2026].w - SEASONS[2025].w) / 100) / 10, deltaUnit: ' kJ', sub: 'vs. 2025' }),
+      h(Metric, { label: 'Pico 5 s', value: mmp(5, 2026), unit: 'W', delta: mmp(5, 2026) - mmp(5, 2025), deltaUnit: ' W', sub: 'vs. 2025' }),
+      h(Metric, { label: 'Fondo 4 h', value: mmp(14400, 2026), unit: 'W', delta: mmp(14400, 2026) - mmp(14400, 2025), deltaUnit: ' W', sub: Math.round(mmp(14400, 2026) / ATH.ftp * 100) + '% FTP' })),
+    h('div', { className: 'row' },
+      h(Panel, { className: 'grow', title: 'Curva de potencia', subtitle: 'Máxima potencia media por duración · escala logarítmica' },
+        series.length ? h(LineChart, { data: data, x: 'x', xType: 'log', height: 300, legend: true, xTicks: CURVE_TICKS, xFormat: fSec, yFormat: fmtV, series: series, zeroBased: true,
+          refLines: unit === 'w' ? [{ value: ATH.ftp, label: 'FTP 275 W', color: 'power' }] : [{ value: ATH.ftp / ATH.weight, label: 'FTP ' + wkg(ATH.ftp), color: 'power' }] })
+          : h(StateBlock, { kind: 'empty', title: 'Ninguna temporada seleccionada', detail: 'Activa al menos una temporada para dibujar la curva.' })),
+      h(Panel, { flush: true, title: 'Duraciones clave', subtitle: '2026 frente a 2025', style: { width: 400, flex: 'none' } },
+        h(DataTable, { rows: tableRows, columns: [
+          { key: 'l', label: 'Duración' },
+          { key: 'a', label: '2026', align: 'right', render: function (r) { return h('span', { style: { fontWeight: 600 } }, r.a + ' W'); } },
+          { key: 'w', label: 'W/kg', align: 'right', render: function (r) { return wkg(r.a); } },
+          { key: 'b', label: '2025', align: 'right', render: function (r) { return r.b + ' W'; } },
+          { key: 'd', label: 'Δ', align: 'right', render: function (r) { return h('span', { className: r.d >= 0 ? 'delta-good' : 'delta-bad' }, (r.d > 0 ? '+' : '') + n1(r.d) + ' %'); } }
+        ] }))),
+    h(Panel, { title: 'Evolución de mejores marcas', subtitle: 'Mejor potencia de cada mes · temporada actual frente a la anterior', actions: h(Segmented, { label: 'Duración', value: dur, onChange: setDur, options: DURS.map(function (d) { return { value: d.key, label: d.label }; }) }) },
+      h(LineChart, { data: BESTS, x: 'x', height: 220, legend: true, zeroBased: false, xTicks: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], xFormat: function (v) { return MONTHS[v]; },
+        series: [{ key: dur, label: dsel.label + ' · 2025–26', color: dsel.color, unit: 'W', width: 2 }, { key: dur + '_25', label: dsel.label + ' · 2024–25', color: 'muted', unit: 'W', dash: true }] })));
+}
+
+/* ================= Puertos ================= */
+function climbProfile(cl) { var r = rng(cl.gain), out = [], e = 0; for (var km = 0; km <= cl.km + 1e-6; km += .25) { var g = cl.grade + Math.sin(km * 1.1 + cl.gain) * 1.6 + (r() - .5) * .6; out.push({ x: Math.round(km * 100) / 100, elev: Math.round(e), g: Math.max(1, g) }); e += Math.max(1, g) / 100 * 250; } var k = cl.gain / e; out.forEach(function (o) { o.elev = Math.round(o.elev * k); }); return out; }
+function pacing(att, prof) { var r = rng(att.seed); return prof.map(function (pt) { return Math.round(att.avgP * (1 + (pt.g - climbOf(att.climb).grade) * .025 + (r() - .5) * .025)); }); }
+function Climbs(p) {
+  var cs = useState('palombera'), cid = cs[0], setCid = cs[1];
+  var ck = useState([]), checked = ck[0], setChecked = ck[1];
+  var cl = climbOf(cid), atts = ATTEMPTS.filter(function (x) { return x.climb === cid; });
+  var best = atts.reduce(function (m, x) { return !m || x.time < m.time ? x : m; }, null), last = atts[0];
+  var prof = useMemo(function () { return climbProfile(cl); }, [cid]);
+  var evo = atts.slice().reverse().map(function (x, i) { return { x: i, d: x.date, min: Math.round(x.time / 6) / 10, w: x.avgP, hr: x.hr }; });
+  var pair = checked.length === 2 ? checked.map(function (id) { return ATTEMPTS.filter(function (x) { return x.id === id; })[0]; }) : (atts.length > 1 ? [atts[0], atts[1]] : null);
+  var pace = useMemo(function () { if (!pair) return null; var pa = pacing(pair[0], prof), pb = pacing(pair[1], prof); return prof.map(function (pt, i) { return { x: pt.x, a: pa[i], b: pb[i], elev: pt.elev, g: pt.g }; }); }, [pair && pair[0].id, pair && pair[1].id, cid]);
+  function toggle(id) { setChecked(checked.indexOf(id) >= 0 ? checked.filter(function (x) { return x !== id; }) : checked.concat([id]).slice(-2)); }
+  return h(React.Fragment, null,
+    h('div', { className: 'list-pane', style: { width: 300 } },
+      h('div', { className: 'filters' }, h('div', { className: 'label' }, 'Puertos detectados'), h('div', { className: 'small cl-faint' }, 'Segmentos con 2 o más intentos. Perfiles aproximados (demo).')),
+      h('div', { style: { overflow: 'auto', flex: 1 }, role: 'listbox', 'aria-label': 'Puertos' }, CLIMBS.map(function (c) {
+        var at = ATTEMPTS.filter(function (x) { return x.climb === c.id; }), b = at.reduce(function (m, x) { return Math.min(m, x.time); }, 1e9);
+        return h('div', { key: c.id, className: 'climb-item', role: 'option', tabIndex: 0, 'aria-selected': c.id === cid, onClick: function () { setCid(c.id); setChecked([]); }, onKeyDown: function (e) { if (e.key === 'Enter') { setCid(c.id); setChecked([]); } } },
+          h('div', { className: 'act-name' }, c.name), h('div', { className: 'act-meta' }, c.from),
+          h('div', { style: { display: 'flex', gap: 10, marginTop: 6, alignItems: 'center' } }, h(Badge, null, n1(c.km) + ' km · ' + n1(c.grade) + ' %'), h('span', { className: 'act-meta' }, at.length + ' intentos · mejor ' + fDur(b))));
+      }))),
+    h('div', { className: 'detail' }, h('div', { className: 'page' },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+        h('div', null, h('div', { style: { font: '600 20px/26px var(--font-sans)' } }, cl.name), h('div', { className: 'small cl-faint' }, cl.from + ' · ' + n1(cl.km) + ' km · ' + int(cl.gain) + ' m+ · ' + n1(cl.grade) + ' % medio')),
+        h('div', { style: { flex: 1 } }), h(Button, { icon: 'coach', onClick: function () { p.askAI('Compara mis dos últimas subidas a ' + cl.name); } }, 'Analizar con IA')),
+      h('div', { className: 'strip', style: { gridTemplateColumns: 'repeat(5, minmax(0,1fr))' } },
+        h(Metric, { size: 'l', label: 'Mejor tiempo', value: fDur(best.time), sub: fDate(best.date) + ' · ' + new Date(best.date).getUTCFullYear() }),
+        h(Metric, { label: 'Último intento', value: fDur(last.time), delta: last.time - best.time, lowerIsBetter: true, deltaFormat: fDur, sub: 'vs. mejor' }),
+        h(Metric, { label: 'Potencia último', accent: 'power', value: last.avgP, unit: 'W', sub: wkg(last.avgP) + ' W/kg' }),
+        h(Metric, { label: 'VAM último', value: int(cl.gain / last.time * 3600), unit: 'm/h' }),
+        h(Metric, { label: 'FC último', accent: 'heart', value: last.hr, unit: 'ppm', sub: Math.round(last.hr / ATH.lthr * 100) + '% LTHR' })),
+      h('div', { className: 'row' },
+        h(Panel, { className: 'grow', title: 'Evolución del tiempo', subtitle: 'Cada punto es un intento · menos es mejor' },
+          h(LineChart, { data: evo, x: 'x', height: 200, legend: true, zeroBased: false, xFormat: function (v) { return evo[v] ? DFS.format(evo[v].d).replace('.', '') : ''; }, xTicks: evo.map(function (e) { return e.x; }).filter(function (x, i) { return i % 2 === 0; }), tooltipTitle: function (v) { return DFY.format(evo[v].d); },
+            series: [{ key: 'min', label: 'Tiempo', color: 'ink', unit: 'min', width: 2 }, { key: 'w', label: 'Potencia media', color: 'power', unit: 'W', axis: 'right' }] })),
+        h(Panel, { title: 'Perfil', subtitle: 'Elevación por km', style: { width: 380, flex: 'none' } },
+          h(LineChart, { data: prof, x: 'x', height: 200, series: [{ key: 'elev', label: 'Elevación', color: 'elevation', unit: 'm', area: true, areaOpacity: .3 }, { key: 'g', label: 'Pendiente', color: 'z4', unit: '%', axis: 'right', format: n1 }], xFormat: function (v) { return v + ' km'; }, tooltipTitle: function (v) { return 'km ' + n1(v); } }))),
+      h(Panel, { title: pair ? 'Comparar intentos · ' + DFY.format(pair[0].date) + ' vs ' + DFY.format(pair[1].date) : 'Comparar intentos', subtitle: checked.length === 2 ? 'Selección manual' : 'Por defecto, los dos últimos · marca dos filas para elegir' },
+        pace ? h(LineChart, { data: pace, x: 'x', height: 200, legend: true, xFormat: function (v) { return v + ' km'; }, tooltipTitle: function (v) { return 'km ' + n1(v); }, zeroBased: false,
+          series: [{ key: 'a', label: 'A · ' + DFY.format(pair[0].date), color: 'brand', unit: 'W', width: 2 }, { key: 'b', label: 'B · ' + DFY.format(pair[1].date), color: 'muted', unit: 'W', dash: true }],
+          tooltipExtra: function (r) { return h('div', { className: 'cl-tip-row cl-faint' }, 'Pendiente', h('b', null, n1(r.g) + ' %')); } }) : h(StateBlock, { kind: 'empty', title: 'Un solo intento', detail: 'Necesitas al menos dos ascensiones para comparar.' })),
+      h(Panel, { flush: true, title: 'Intentos', subtitle: atts.length + ' registrados' },
+        h(DataTable, { rows: atts, checked: checked, onCheck: toggle, onSelect: function (id, r) { if (r.activityId) p.openActivity(r.activityId); },
+          columns: [
+            { key: 'date', label: 'Fecha', render: function (r) { return DFY.format(r.date); } },
+            { key: 'time', label: 'Tiempo', align: 'right', render: function (r) { return h('span', { style: { fontWeight: 600 } }, fDur(r.time)); } },
+            { key: 'gap', label: 'vs mejor', align: 'right', render: function (r) { return r.id === best.id ? h(Badge, { tone: 'success' }, 'Mejor') : '+' + fDur(r.time - best.time); } },
+            { key: 'avgP', label: 'Pot. media', align: 'right', render: function (r) { return r.avgP + ' W'; } },
+            { key: 'wkg', label: 'W/kg', align: 'right', render: function (r) { return wkg(r.avgP); } },
+            { key: 'hr', label: 'FC media', align: 'right', render: function (r) { return r.hr + ' ppm'; } },
+            { key: 'vam', label: 'VAM', align: 'right', render: function (r) { return int(cl.gain / r.time * 3600) + ' m/h'; } },
+            { key: 'cad', label: 'Cad.', align: 'right', render: function (r) { return r.cad + ' rpm'; } },
+            { key: 'src', label: '', render: function (r) { return r.activityId ? h('span', { className: 'small cl-faint' }, 'Abrir actividad ›') : h('span', { className: 'small cl-faint' }, 'Histórico'); } }
+          ] })))));
+}
+
+/* ================= Entrenador IA (simulado) ================= */
+var SUGGESTIONS = ['¿Cómo va mi forma para La Cantabrona?', 'Compara mis dos últimas subidas a Palombera', 'Analiza los intervalos del último martes', 'Analiza mi curva de potencia frente a 2025', 'Simular un error de herramienta'];
+function useChat() {
+  var ms = useState([{ id: 0, role: 'assistant', text: 'Hola. Puedo consultar tus actividades sincronizadas, tu curva de potencia, la carga de entrenamiento y tus puertos, y devolverte el análisis con gráficas y tablas. ¿Qué quieres revisar?' }]);
+  var msgs = ms[0], setMsgs = ms[1], idRef = useRef(1);
+  function patch(id, obj) { setMsgs(function (list) { return list.map(function (m) { return m.id === id ? Object.assign({}, m, obj) : m; }); }); }
+  function send(text, ctx) {
+    if (!text.trim()) return;
+    var u = idRef.current++, a = idRef.current++, plan = route(text, ctx || {});
+    setMsgs(function (l) { return l.concat([{ id: u, role: 'user', text: text }, { id: a, role: 'assistant', tool: plan.tool, args: plan.args, status: 'running', retry: text, ctx: ctx }]); });
+    setTimeout(function () { patch(a, plan.error ? { status: 'error', text: plan.error } : { status: 'done', kind: plan.kind, data: plan.data, text: plan.text, meta: plan.meta }); }, 1100 + Math.random() * 500);
+  }
+  return { msgs: msgs, send: send, busy: msgs.some(function (m) { return m.status === 'running'; }) };
+}
+function route(text, ctx) {
+  var t = text.toLowerCase();
+  if (t.indexOf('error') >= 0) return { tool: 'curva_potencia', args: 'temporadas: [2026]', error: 'La herramienta no respondió a tiempo (timeout 10 s). No se ha consultado ningún dato.' };
+  var climb = CLIMBS.filter(function (c) { return t.indexOf(c.name.toLowerCase().split(' ').pop()) >= 0; })[0];
+  if (climb || t.indexOf('puerto') >= 0 || t.indexOf('subida') >= 0) {
+    climb = climb || CLIMBS[0]; var at = ATTEMPTS.filter(function (x) { return x.climb === climb.id; }).slice(0, 2), prof = climbProfile(climb), pa = pacing(at[0], prof), pb = pacing(at[1], prof);
+    var dt = at[1].time - at[0].time, dp = at[0].avgP - at[1].avgP, firstHalf = prof.length >> 1;
+    var avg = function (arr, a0, a1) { var s = 0; for (var i = a0; i < a1; i++) s += arr[i]; return Math.round(s / (a1 - a0)); };
+    return { tool: 'comparar_ascensiones', args: 'puerto: "' + climb.id + '", ultimos: 2', meta: '2 intentos · 0,4 s', kind: 'climb',
+      data: { climb: climb, at: at, rows: prof.map(function (p0, i) { return { x: p0.x, a: pa[i], b: pb[i] }; }) },
+      text: 'En ' + climb.name + ' fuiste ' + (dt > 0 ? fDur(dt) + ' más rápido' : fDur(-dt) + ' más lento') + ' el ' + DFS.format(at[0].date).replace('.', '') + ' con ' + Math.abs(dp) + ' W ' + (dp >= 0 ? 'más' : 'menos') + ' de media. La diferencia está en la primera mitad (' + avg(pa, 0, firstHalf) + ' W frente a ' + avg(pb, 0, firstHalf) + ' W); en la segunda mitad la diferencia es de ' + Math.abs(avg(pa, firstHalf, prof.length) - avg(pb, firstHalf, prof.length)) + ' W. La FC fue similar (' + at[0].hr + ' vs ' + at[1].hr + ' ppm), así que la mejora parece de capacidad y no de esfuerzo extra.' };
+  }
+  if (t.indexOf('intervalo') >= 0 || t.indexOf('series') >= 0 || t.indexOf('martes') >= 0) {
+    var act = (ctx.actId && actOf(ctx.actId).type === 'intervals' && t.indexOf('esta') >= 0) ? actOf(ctx.actId) : ACTS.filter(function (x) { return x.type === 'intervals'; })[0];
+    var laps = getStream(act).laps.filter(function (l) { return l.kind === 'work'; });
+    var drift = laps.length > 1 ? laps[laps.length - 1].hr - laps[0].hr : 0;
+    return { tool: 'analizar_intervalos', args: 'actividad: "' + act.id + '"', meta: laps.length + ' series · 0,3 s', kind: 'intervals', data: { act: act, laps: laps.map(function (l, i) { return Object.assign({ x: 'S' + (i + 1) }, l); }) },
+      text: act.name + ' (' + fDate(act.date) + '): ' + laps.length + ' series a ' + Math.round(laps.reduce(function (s, l) { return s + l.avgP; }, 0) / laps.length) + ' W de media, ' + Math.round(laps.reduce(function (s, l) { return s + l.avgP; }, 0) / laps.length / ATH.ftp * 100) + '% del FTP. La potencia se mantiene estable entre series y la FC sube ' + drift + ' ppm de la primera a la última: deriva normal. Puedes subir 5 W el objetivo de la próxima sesión.' };
+  }
+  if (t.indexOf('curva') >= 0 || t.indexOf('ftp') >= 0 || t.indexOf('potencia') >= 0) {
+    return { tool: 'curva_potencia', args: 'temporadas: [2026, 2025]', meta: '2 temporadas · 0,6 s', kind: 'curve', data: null,
+      text: 'Has mejorado en todas las duraciones, sobre todo de 5 a 60 minutos (+' + n1(pct(mmp(1200, 2026), mmp(1200, 2025))) + ' % en 20 min). El esprint apenas cambia (+' + n1(pct(mmp(5, 2026), mmp(5, 2025))) + ' %), lo esperable con un plan centrado en umbral y fondo. Para La Cantabrona interesa más el extremo largo: tu potencia de 4 h es el ' + Math.round(mmp(14400, 2026) / ATH.ftp * 100) + ' % del FTP.' };
+  }
+  if (t.indexOf('forma') >= 0 || t.indexOf('cantabrona') >= 0 || t.indexOf('objetivo') >= 0 || t.indexOf('carga') >= 0) {
+    var g = GOALS[1], days = Math.round((g.date - TODAY) / DAY), weeksLeft = Math.round(days / 7), need = Math.round((g.ctl - NOW.ctl) / weeksLeft * 10) / 10;
+    return { tool: 'carga_entrenamiento', args: 'dias: 90', meta: '90 días · 0,2 s', kind: 'load', data: { rows: LOAD.slice(-90) },
+      text: 'Tu fitness (CTL) está en ' + n1(NOW.ctl) + ' y la forma en ' + n1(NOW.tsb) + '. Para llegar a La Cantabrona con CTL ' + g.ctl + ' necesitas subir unos ' + n1(need) + ' puntos por semana durante las ' + weeksLeft + ' semanas que quedan; es asumible si mantienes los bloques de 3+1 semanas. Prioriza un fondo largo semanal a partir de febrero.' };
+  }
+  var found = ACTS.filter(function (a) { return t.split(/\s+/).some(function (w) { return w.length > 3 && a.name.toLowerCase().indexOf(w) >= 0; }); }).slice(0, 5);
+  if (!found.length) found = ACTS.slice(0, 5);
+  return { tool: 'buscar_actividades', args: 'texto: "' + text.slice(0, 32) + '", limite: 5', meta: found.length + ' resultados · 0,2 s', kind: 'table', data: { rows: found },
+    text: 'Estas son las actividades más relevantes. Pregúntame por cualquiera de ellas para analizarla en detalle o compararla.' };
+}
+function AssistantContent(p) {
+  var m = p.m;
+  if (m.text && !m.tool) return h('p', null, m.text);
+  var vis = null;
+  if (m.status === 'done') {
+    if (m.kind === 'climb') vis = h(React.Fragment, null,
+      h(LineChart, { data: m.data.rows, x: 'x', height: 160, legend: true, zeroBased: false, xFormat: function (v) { return v + ' km'; }, tooltipTitle: function (v) { return 'km ' + n1(v); }, series: [{ key: 'a', label: DFS.format(m.data.at[0].date), color: 'brand', unit: 'W', width: 2 }, { key: 'b', label: DFS.format(m.data.at[1].date), color: 'muted', unit: 'W', dash: true }] }),
+      h(DataTable, { compact: true, rows: m.data.at, columns: [{ key: 'd', label: 'Fecha', render: function (r) { return DFY.format(r.date); } }, { key: 't', label: 'Tiempo', align: 'right', render: function (r) { return fDur(r.time); } }, { key: 'p', label: 'W', align: 'right', render: function (r) { return r.avgP; } }, { key: 'h', label: 'FC', align: 'right', render: function (r) { return r.hr; } }] }));
+    else if (m.kind === 'intervals') vis = h(React.Fragment, null,
+      h(BarChart, { data: m.data.laps, x: 'x', height: 150, legend: true, series: [{ key: 'avgP', label: 'Potencia media', color: 'power', unit: 'W' }], line: { key: 'hr', label: 'FC media', color: 'heart', unit: 'ppm' } }),
+      h(DataTable, { compact: true, rows: m.data.laps, columns: [{ key: 'x', label: 'Serie' }, { key: 'd', label: 'Duración', align: 'right', render: function (l) { return fDur(l.dur); } }, { key: 'p', label: 'W', align: 'right', render: function (l) { return l.avgP; } }, { key: 'h', label: 'FC', align: 'right', render: function (l) { return l.hr; } }, { key: 'c', label: 'Cad.', align: 'right', render: function (l) { return l.cad; } }] }));
+    else if (m.kind === 'curve') vis = h(LineChart, { data: CURVE, x: 'x', xType: 'log', height: 170, legend: true, xTicks: [5, 60, 300, 1200, 3600, 14400], xFormat: fSec, series: [{ key: 's2026', label: '2026', color: 'brand', unit: 'W', width: 2 }, { key: 's2025', label: '2025', color: 'muted', unit: 'W', dash: true }] });
+    else if (m.kind === 'load') vis = h(LineChart, { data: m.data.rows, x: 'x', height: 160, legend: true, zeroBased: false, xFormat: function (v) { return DFS.format(v).replace('.', ''); }, tooltipTitle: fDate, series: [{ key: 'ctl', label: 'CTL', color: 'fitness', width: 2 }, { key: 'atl', label: 'ATL', color: 'fatigue', dash: true }, { key: 'tsb', label: 'TSB', color: 'form', area: true, areaOpacity: .12 }] });
+    else if (m.kind === 'table') vis = h(DataTable, { compact: true, rows: m.data.rows, columns: [{ key: 'd', label: 'Fecha', render: function (a) { return fDate(a.date); } }, { key: 'n', label: 'Actividad', render: function (a) { return a.name; } }, { key: 'np', label: 'NP', align: 'right', render: function (a) { return a.np + ' W'; } }, { key: 'tss', label: 'TSS', align: 'right' }] });
+  }
+  return h(React.Fragment, null,
+    h(ToolResult, { tool: m.tool, args: m.args, status: m.status, meta: m.status === 'done' ? m.meta : m.status === 'running' ? 'consultando…' : 'error' },
+      m.status === 'running' ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } }, h(Skeleton, { height: 120, radius: 6 }), h(Skeleton, { height: 10, width: '60%' })) :
+        m.status === 'error' ? h(StateBlock, { kind: 'error', title: 'La herramienta falló', detail: m.text, action: h(Button, { size: 'sm', icon: 'sync', onClick: function () { p.onRetry('Analiza mi curva de potencia frente a 2025'); } }, 'Reintentar') }) : vis),
+    m.status === 'done' ? h('p', null, m.text) : null);
+}
+function ChatPanel(p) {
+  var chat = p.chat, tx = useState(''), text = tx[0], setText = tx[1], logRef = useRef(null);
+  useEffect(function () { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [chat.msgs]);
+  function submit() { if (!text.trim() || chat.busy) return; chat.send(text, p.ctx); setText(''); }
+  return h('div', { className: 'chat' },
+    h('div', { className: 'chat-head' }, h('div', { className: 'cl-msg-avatar' }, 'CL'), h('div', { style: { minWidth: 0, flex: 1 } }, h('div', { style: { font: '600 14px/18px var(--font-sans)' } }, 'Entrenador IA'), h('div', { className: 'small cl-faint', style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, p.context ? 'Contexto: ' + p.context : 'OpenRouter · modelo configurable (simulado)')),
+      p.onClose ? h(Button, { variant: 'ghost', size: 'sm', icon: 'close', 'aria-label': 'Cerrar panel IA', onClick: p.onClose }) : null),
+    h('div', { className: 'chat-log', ref: logRef, 'aria-live': 'polite' }, chat.msgs.map(function (m) {
+      return h(ChatMessage, { key: m.id, role: m.role }, m.role === 'user' ? m.text : h(AssistantContent, { m: m, onRetry: function (t) { chat.send(t, p.ctx); } }));
+    })),
+    h('div', { className: 'chat-input' },
+      h('div', { className: 'suggest' }, SUGGESTIONS.slice(0, p.compact ? 3 : 5).map(function (s) { return h(Chip, { key: s, onClick: function () { if (!chat.busy) chat.send(s, p.ctx); } }, s); })),
+      h('div', { className: 'chat-box' },
+        h('textarea', { rows: 1, value: text, placeholder: 'Pregunta por tus entrenamientos…', 'aria-label': 'Mensaje para el entrenador', onChange: function (e) { setText(e.target.value); }, onKeyDown: function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } } }),
+        h(Button, { variant: 'primary', size: 'sm', icon: 'send', 'aria-label': 'Enviar', disabled: !text.trim() || chat.busy, onClick: submit })),
+      h('div', { className: 'small cl-faint' }, 'Respuestas simuladas: no hay conexión real con OpenRouter ni con Garmin.')));
+}
+function CoachPage(p) {
+  var tools = [['buscar_actividades', 'Filtra el histórico'], ['analizar_intervalos', 'Series de una sesión'], ['comparar_ascensiones', 'Intentos en un puerto'], ['curva_potencia', 'MMP por temporada'], ['carga_entrenamiento', 'CTL · ATL · TSB']];
+  return h('div', { className: 'coach-page', style: { flex: 1 } },
+    h('div', { className: 'coach-side' },
+      h('div', null, h('div', { className: 'label', style: { marginBottom: 8 } }, 'Herramientas de análisis'), h('div', { className: 'tool-list' }, tools.map(function (t) { return h('div', { key: t[0] }, h(Icon, { name: 'check', size: 12, style: { color: 'var(--success)' } }), h('span', { style: { display: 'flex', flexDirection: 'column' } }, h('span', { style: { color: 'var(--ink)' } }, t[0]), h('span', { className: 'cl-faint', style: { fontFamily: 'var(--font-sans)', fontSize: 12 } }, t[1]))); }))),
+      h('div', null, h('div', { className: 'label', style: { marginBottom: 8 } }, 'Contexto del atleta'), h('div', { className: 'small cl-muted', style: { display: 'flex', flexDirection: 'column', gap: 4 } }, h('span', null, 'FTP 275 W · 3,44 W/kg'), h('span', null, 'Umbral FC 182 ppm · 80 kg'), h('span', null, ACTS.length + ' actividades · ' + ATTEMPTS.length + ' ascensiones'), h('span', null, 'Objetivos: La Cantabrona 2027, Soplao BTT'))),
+      h('div', null, h('div', { className: 'label', style: { marginBottom: 8 } }, 'Modelo'), h(Badge, { variant: 'outline' }, 'OpenRouter · sin configurar'))),
+    h('div', { className: 'coach-main' }, h(ChatPanel, { chat: p.chat })));
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+})();
+</script>
+</body>
+</html>

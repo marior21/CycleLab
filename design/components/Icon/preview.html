@@ -1,0 +1,13 @@
+<!-- @dsCard group="Base" height=72 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Icon</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+ReactDOM.createRoot(document.getElementById("root")).render(h('div',{className:'row',style:{color:'var(--ink-muted)'}},['dashboard','activity','performance','mountain','coach','sync','search','calendar','compare','bolt','heart','cadence','clock','target','trend','route','alert','check','send','close','sun','moon'].map(function(n){return h('span',{key:n,title:n,style:{display:'inline-flex'}},h(C.Icon,{name:n,size:20}))})));
+</script>
+</body>
+</html>

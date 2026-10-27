@@ -1,0 +1,13 @@
+<!-- @dsCard group="Gráficos" height=230 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>ZoneBar</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+ReactDOM.createRoot(document.getElementById("root")).render(h('div',{style:{maxWidth:520}},h(C.ZoneBar,{format:function(v){return Math.round(v/60)+' min'},zones:[['Z1','Recuperación',1380],['Z2','Resistencia',2460],['Z3','Tempo',180],['Z4','Umbral',1980],['Z5','VO₂máx',60],['Z6','Anaeróbico',0],['Z7','Neuromuscular',0]].map(function(z,i){return {label:z[0],name:z[1],value:z[2],color:'z'+(i+1)}})})));
+</script>
+</body>
+</html>

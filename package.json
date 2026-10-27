@@ -1,0 +1,68 @@
+{
+  "name": "cyclelab",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Análisis local de ciclismo con Garmin y OpenRouter",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "npm run tokens && electron-vite build",
+    "preview": "electron-vite preview",
+    "tokens": "node scripts/tokens.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src scripts tests",
+    "test": "vitest run",
+    "test:e2e": "npm run build && playwright test",
+    "postinstall": "electron-builder install-app-deps",
+    "package": "npm run build && electron-builder --mac --dir",
+    "test:visual": "npm run build && node scripts/visual.mjs"
+  },
+  "dependencies": {
+    "@fontsource/barlow": "^5.2.0",
+    "@fontsource/barlow-condensed": "^5.2.0",
+    "@fontsource/jetbrains-mono": "^5.2.0",
+    "@garmin/fitsdk": "^21.218.0",
+    "better-sqlite3": "^13.0.3",
+    "echarts": "^6.0.0",
+    "fflate": "^0.8.2",
+    "maplibre-gl": "^6.16.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@playwright/test": "^1.58.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.0.0",
+    "electron-vite": "^3.1.0",
+    "eslint": "^9.0.0",
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0",
+    "prettier": "^3.9.10",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^6.1.0",
+    "vitest": "^5.0.5"
+  },
+  "build": {
+    "appId": "com.cyclelab.desktop",
+    "productName": "CycleLab",
+    "files": [
+      "out/**/*",
+      "licenses/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.healthcare-fitness",
+      "identity": null
+    }
+  }
+}

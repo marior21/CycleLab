@@ -1,0 +1,13 @@
+<!-- @dsCard group="Base" height=64 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Badge</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+ReactDOM.createRoot(document.getElementById("root")).render(h('div',{className:'row'},h(C.Badge,{tone:'z2'},'Resistencia'),h(C.Badge,{tone:'z5'},'Intervalos'),h(C.Badge,{tone:'z4'},'Z4'),h(C.Badge,{tone:'success'},'Récord'),h(C.Badge,{tone:'warning'},'Fatiga alta'),h(C.Badge,null,'17,6 km · 5,5 %'),h(C.Badge,{variant:'outline'},'Datos de demostración')));
+</script>
+</body>
+</html>

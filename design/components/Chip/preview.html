@@ -1,0 +1,14 @@
+<!-- @dsCard group="Filtros" height=64 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Chip</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+function D(){var s=React.useState(['endurance','intervals']);var T={endurance:['Resistencia','z2',23],intervals:['Intervalos','z5',11],climb:['Ascensión','z4',7],mtb:['BTT','speed',9]};return h('div',{className:'row'},Object.keys(T).map(function(k){var on=s[0].indexOf(k)>=0;return h(C.Chip,{key:k,active:on,color:T[k][1],count:T[k][2],onClick:function(){s[1](on?s[0].filter(function(x){return x!==k}):s[0].concat([k]))}},T[k][0])}));}
+ReactDOM.createRoot(document.getElementById("root")).render(h(D));
+</script>
+</body>
+</html>

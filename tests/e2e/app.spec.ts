@@ -1,0 +1,1236 @@
+import { test, expect, _electron as electron } from "@playwright/test";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+test("navigation, analysis, settings, chat and persistence", async () => {
+  const userData = mkdtempSync(join(tmpdir(), "cyclelab-e2e-"));
+  const launch = () =>
+    electron.launch({
+      args: ["out/main/index.js"],
+      env: { ...process.env, CYCLELAB_USER_DATA: userData },
+      timeout: 45000,
+    });
+  let app = await launch();
+  let page = await app.firstWindow();
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await expect(
+    page.getByRole("heading", { name: "Actividades", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".chart-label").first()).toBeVisible();
+  await page.evaluate(() => document.fonts.ready);
+  await page.screenshot({ path: "test-results/activities-dark.png" });
+  await page.getByRole("button", { name: "Cambiar tema" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.screenshot({ path: "test-results/activities-light.png" });
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator(".sel-bar")).toBeVisible();
+  const before = await page.locator(".sel-bar").innerText();
+  await page.getByRole("button", { name: "Distancia", exact: true }).click();
+  await expect(page.locator(".sel-bar")).toHaveText(before, {
+    useInnerText: true,
+  });
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".sel-bar")).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Buscar actividad" }).fill("zzzzzz");
+  await expect(
+    page.getByText("Sin actividades", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Restablecer filtros" }).click();
+  const checks = page.getByRole("checkbox");
+  await checks.nth(0).check();
+  await checks.nth(1).check();
+  await page.getByRole("button", { name: "Comparar", exact: true }).click();
+  await expect(
+    page.getByText("Potencia superpuesta", { exact: true }),
+  ).toBeVisible();
+  for (const name of [
+    "Dashboard",
+    "Rendimiento",
+    "Segmentos",
+    "Puertos",
+    "Entrenador IA",
+  ]) {
+    await page
+      .getByRole("navigation")
+      .getByRole("button", { name, exact: false })
+      .click();
+    await expect(
+      page.getByRole("heading", { name, exact: true }),
+    ).toBeVisible();
+    await page.screenshot({ path: `test-results/${name}-light.png` });
+  }
+  await page
+    .getByRole("textbox", { name: "Mensaje para el entrenador" })
+    .fill("¿Cómo va mi carga?");
+  await page.getByRole("button", { name: "Enviar", exact: true }).click();
+  await expect(page.getByText(/Tu fitness \(CTL\) está/)).toBeVisible();
+  await page.getByRole("button", { name: "Ajustes", exact: true }).click();
+  await expect(page.getByLabel("API key de Garmin")).toHaveAttribute(
+    "type",
+    "password",
+  );
+  await expect(page.getByLabel("API key de OpenRouter")).toHaveAttribute(
+    "type",
+    "password",
+  );
+  await page.screenshot({ path: "test-results/settings-light.png" });
+  await page.getByRole("button", { name: "Mis datos", exact: true }).click();
+  await expect(
+    page.getByText("Mis datos · Garmin", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Actividades" })
+    .click();
+  await expect(page.getByText("Tu histórico está vacío")).toBeVisible();
+  await page.getByRole("button", { name: "Ajustes", exact: true }).click();
+  await page.getByRole("button", { name: "Demostración", exact: true }).click();
+  expect(errors).toEqual([]);
+  await app.close();
+  app = await launch();
+  page = await app.firstWindow();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Entrenador IA" })
+    .click();
+  await expect(page.getByText(/Tu fitness \(CTL\) está/)).toBeVisible();
+  await app.close();
+});
+
+test("IPC validation, sandbox, offline profile and source isolation", async () => {
+  const userData = mkdtempSync(join(tmpdir(), "cyclelab-contract-"));
+  const app = await electron.launch({
+    args: ["out/main/index.js"],
+    env: { ...process.env, CYCLELAB_USER_DATA: userData },
+  });
+  try {
+    const page = await app.firstWindow();
+    await expect(
+      page.getByRole("heading", { name: "Actividades", exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(() => ({
+        node: typeof (window as unknown as { require: unknown }).require,
+        process: typeof (window as unknown as { process: unknown }).process,
+      })),
+    ).toEqual({ node: "undefined", process: "undefined" });
+    const preferences = await app.evaluate(({ BrowserWindow }) => {
+      const w = BrowserWindow.getAllWindows()[0];
+      return {
+        preferences: (
+          w.webContents as unknown as {
+            getLastWebPreferences: () => {
+              sandbox: boolean;
+              contextIsolation: boolean;
+              nodeIntegration: boolean;
+            };
+          }
+        ).getLastWebPreferences(),
+        size: w.getMinimumSize(),
+      };
+    });
+    expect(preferences.preferences).toMatchObject({
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    });
+    expect(preferences.size).toEqual([1200, 760]);
+    const invalid = await page.evaluate(async () => {
+      try {
+        await window.cyclelab.saveSettings({ theme: "invalid" } as never);
+        return "accepted";
+      } catch (e) {
+        return (e as Error).message;
+      }
+    });
+    expect(invalid).toContain("no son válidos");
+    await page.context().setOffline(true);
+    await page.evaluate(async () => {
+      await window.cyclelab.saveSettings({
+        theme: "light",
+        source: "garmin",
+        model: "chosen/model",
+        athlete: { ftp: 300, lthr: 175, weight: 75 },
+      });
+    });
+    await expect(page.getByText("Tu histórico está vacío")).toBeVisible();
+    const state = await page.evaluate(() => window.cyclelab.getState());
+    expect(state.settings.model).toBe("chosen/model");
+    expect(state.dataset.athlete).toEqual({ ftp: 300, lthr: 175, weight: 75 });
+    expect(state.messages).toEqual([]);
+    expect(state.dataset.goals).toEqual([]);
+    await page.evaluate(async () => {
+      const s = (await window.cyclelab.getState()).settings;
+      await window.cyclelab.saveSettings({
+        theme: s.theme,
+        model: s.model,
+        athlete: s.athlete,
+        source: "demo",
+      });
+    });
+    await expect(page.locator(".chart-label").first()).toBeVisible();
+    await page.locator(".act-item").nth(1).click();
+    await expect(page.locator(".page[aria-busy=true]")).toBeVisible();
+    await expect(page.locator(".chart-label").first()).toBeVisible();
+    await page.keyboard.press("Meta+6");
+    await page
+      .getByRole("textbox", { name: "Mensaje para el entrenador" })
+      .fill("Simular un error");
+    await page.getByRole("button", { name: "Enviar", exact: true }).click();
+    await expect(
+      page.getByText("La herramienta falló", { exact: true }),
+    ).toBeVisible();
+  } finally {
+    await app.close();
+  }
+});
+
+test("Garmin settings accepts the plain JWT token response", async () => {
+  const app = await electron.launch({
+    args: ["out/main/index.js"],
+    env: {
+      ...process.env,
+      CYCLELAB_USER_DATA: mkdtempSync(join(tmpdir(), "cyclelab-garmin-auth-")),
+    },
+  });
+  try {
+    const page = await app.firstWindow();
+    await page.getByRole("button", { name: "Ajustes", exact: true }).click();
+    await app.evaluate(() => {
+      globalThis.fetch = async () =>
+        new Response(
+          "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjE5MDAwMDAwMDB9.test_signature",
+          { headers: { "Content-Type": "text/plain" } },
+        );
+    });
+    await page.getByLabel("API key de Garmin").fill("test-key-not-real");
+    await page
+      .getByRole("button", { name: "Guardar y comprobar", exact: true })
+      .first()
+      .click();
+    await expect(
+      page.getByText("Clave configurada", { exact: true }),
+    ).toBeVisible();
+    expect(
+      (await page.evaluate(() => window.cyclelab.getState())).settings
+        .garminConfigured,
+    ).toBe(true);
+    await page
+      .getByRole("button", { name: "Cambiar clave", exact: true })
+      .click();
+    await expect(page.getByLabel("API key de Garmin")).toHaveValue("");
+    await page
+      .getByRole("button", { name: "Desconectar", exact: true })
+      .click();
+    expect(
+      (await page.evaluate(() => window.cyclelab.getState())).settings
+        .garminConfigured,
+    ).toBe(false);
+  } finally {
+    await app.close();
+  }
+});
+
+test("reclassifies saved Garmin activities on restart and exposes the new filters", async () => {
+  const userData = mkdtempSync(join(tmpdir(), "cyclelab-classification-"));
+  const launch = () =>
+    electron.launch({
+      args: ["out/main/index.js"],
+      env: { ...process.env, CYCLELAB_USER_DATA: userData },
+    });
+  let app = await launch();
+  try {
+    let page = await app.firstWindow();
+    await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
+    const template = (await page.evaluate(() => window.cyclelab.getState()))
+      .dataset.activities[0];
+    await app.evaluate(
+      async (_electron, { userData, modulePath, template }) => {
+        const Database = process
+          .getBuiltinModule("module")
+          .createRequire(modulePath)(modulePath);
+        const db = new Database(userData + "/cyclelab.db");
+        try {
+          const insert = db.prepare(
+            "INSERT INTO activities(source,id,date,summary) VALUES (?,?,?,?)",
+          );
+          for (const [i, patch] of [
+            { name: "Sesión indoor", garminType: "indoor_cycling" },
+            {
+              name: "4x8 intervalos",
+              garminType: "road_biking",
+              date: Date.UTC(2021, 2, 15),
+            },
+            {
+              name: "Morning ride",
+              date: Date.UTC(2018, 4, 20),
+              garminType: "road_biking",
+              dist: null,
+              elev: null,
+              IF: null,
+            },
+          ].entries()) {
+            const a = {
+              ...template,
+              ...patch,
+              id: "saved-" + i,
+              type: "endurance",
+              structuredIntervals: undefined,
+              classification: undefined,
+            };
+            insert.run("garmin", a.id, a.date, JSON.stringify(a));
+          }
+          db.prepare(
+            "DELETE FROM settings WHERE key='classificationVersion'",
+          ).run();
+        } finally {
+          db.close();
+        }
+      },
+      {
+        userData,
+        modulePath: join(
+          process.cwd(),
+          "node_modules/better-sqlite3/lib/index.js",
+        ),
+        template,
+      },
+    );
+    await page.evaluate(() =>
+      window.cyclelab.saveSettings({
+        theme: "dark",
+        source: "garmin",
+        model: null,
+        athlete: { ftp: null, lthr: null, weight: null },
+      }),
+    );
+    await app.close();
+    app = await launch();
+    page = await app.firstWindow();
+    await page
+      .getByRole("heading", { name: "Actividades", exact: true })
+      .waitFor();
+    const state = await page.evaluate(() => window.cyclelab.getState());
+    expect(state.dataset.activities.map((a) => a.type).sort()).toEqual([
+      "cycling",
+      "indoor",
+      "intervals",
+    ]);
+    await expect(page.locator(".act-item")).toHaveCount(3);
+    await expect(
+      page.getByRole("button", { name: "Todo", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "90 d", exact: true }).click();
+    await expect(page.locator(".act-item")).toHaveCount(1);
+    await page.getByRole("button", { name: "Todo", exact: true }).click();
+    await expect(page.locator(".act-item")).toHaveCount(3);
+    await page.getByLabel("Año de las actividades").selectOption("2021");
+    await expect(page.locator(".act-item")).toHaveCount(1);
+    await expect(page.locator(".act-item")).toContainText("4x8 intervalos");
+    await page.getByLabel("Buscar actividad").fill("Morning");
+    await expect(
+      page.getByText("Sin actividades", { exact: true }),
+    ).toBeVisible();
+    await page.getByLabel("Buscar actividad").fill("");
+    await page.getByLabel("Fecha desde").fill("2018-05-20");
+    await page.getByLabel("Fecha hasta").fill("2018-05-20");
+    await expect(page.getByLabel("Año de las actividades")).toHaveValue("");
+    await expect(page.locator(".act-item")).toHaveCount(1);
+    await expect(page.locator(".act-item")).toContainText("Morning ride");
+    await page.screenshot({ path: "test-results/date-filters-dark.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await page.screenshot({ path: "test-results/date-filters-light.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await page.getByLabel("Fecha desde").fill("2021-03-15");
+    await expect(page.getByRole("alert")).toContainText("posterior");
+    await page
+      .getByRole("button", { name: "Restablecer filtros", exact: true })
+      .click();
+    await expect(page.getByLabel("Fecha desde")).toHaveValue("");
+    await expect(page.getByLabel("Fecha hasta")).toHaveValue("");
+    await expect(page.locator(".act-item")).toHaveCount(3);
+    await page.getByRole("button", { name: "Indoor 1", exact: true }).click();
+    await expect(page.locator(".act-item")).toHaveCount(2);
+    await page.getByRole("button", { name: "Indoor 1", exact: true }).click();
+    await expect(page.locator(".act-item")).toHaveCount(3);
+    await page
+      .locator(".act-item")
+      .filter({ hasText: "4x8 intervalos" })
+      .click();
+    await expect(
+      page.getByText(/Clasificación estimada · El nombre/),
+    ).toBeVisible();
+    await page.screenshot({ path: "test-results/classification-dark.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await page.screenshot({ path: "test-results/classification-light.png" });
+    await app.evaluate(
+      (_electron, { userData, modulePath }) => {
+        const Database = process
+          .getBuiltinModule("module")
+          .createRequire(modulePath)(modulePath);
+        const db = new Database(userData + "/cyclelab.db");
+        try {
+          db.prepare(
+            "UPDATE activities SET summary=json_set(summary,'$.type','endurance') WHERE source='garmin' AND id='saved-1'",
+          ).run();
+        } finally {
+          db.close();
+        }
+      },
+      {
+        userData,
+        modulePath: join(
+          process.cwd(),
+          "node_modules/better-sqlite3/lib/index.js",
+        ),
+      },
+    );
+    await page.getByRole("button", { name: "Ajustes", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Volver a etiquetar todo", exact: true })
+      .click();
+    await expect(
+      page.getByText(
+        "Se han vuelto a etiquetar 3 actividades de todo el histórico.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    expect(
+      (
+        await page.evaluate(() => window.cyclelab.getState())
+      ).dataset.activities.find((a) => a.id === "saved-1")?.type,
+    ).toBe("intervals");
+    expect(
+      await page.evaluate(() => window.cyclelab.reclassifyActivities()),
+    ).toBe(3);
+    await page.screenshot({ path: "test-results/history-settings-light.png" });
+  } finally {
+    await app.close();
+  }
+});
+
+test("upgrades stored unlabelled power intervals and explains the detection", async () => {
+  const userData = mkdtempSync(join(tmpdir(), "cyclelab-power-pattern-"));
+  const launch = () =>
+    electron.launch({
+      args: ["out/main/index.js"],
+      env: { ...process.env, CYCLELAB_USER_DATA: userData },
+    });
+  let app = await launch();
+  try {
+    let page = await app.firstWindow();
+    await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
+    const template = (await page.evaluate(() => window.cyclelab.getState()))
+      .dataset.activities[0];
+    await app.evaluate(
+      (_electron, { userData, modulePath, template }) => {
+        const Database = process
+          .getBuiltinModule("module")
+          .createRequire(modulePath)(modulePath);
+        const db = new Database(userData + "/cyclelab.db");
+        try {
+          const summary = {
+            ...template,
+            id: "power-pattern",
+            name: "Ciclismo en ruta",
+            type: "cycling",
+            classification: undefined,
+            structuredIntervals: false,
+            intervalPattern: undefined,
+            garminType: "road_biking",
+          };
+          const laps = [
+            [1026, 151],
+            [243, 313],
+            [136, 41],
+            [241, 313],
+            [154, 35],
+            [243, 311],
+            [174, 49],
+            [242, 309],
+            [177, 28],
+            [1686, 175],
+          ].map(([dur, avgP], i) => ({
+            id: "lap-" + i,
+            label: "Vuelta " + (i + 1),
+            kind: "lap",
+            i0: 0,
+            i1: 0,
+            dur,
+            avgP,
+            np: null,
+            hr: null,
+            cad: null,
+            max: null,
+            gain: null,
+            dist: null,
+          }));
+          const detail = {
+            rows: [],
+            laps,
+            points: [],
+            features: [],
+            markers: [],
+            best: [],
+          };
+          db.prepare(
+            "INSERT INTO activities(source,id,date,summary,detail) VALUES (?,?,?,?,?)",
+          ).run(
+            "garmin",
+            summary.id,
+            summary.date,
+            JSON.stringify(summary),
+            JSON.stringify(detail),
+          );
+          db.prepare(
+            "UPDATE settings SET value='1' WHERE key='classificationVersion'",
+          ).run();
+        } finally {
+          db.close();
+        }
+      },
+      {
+        userData,
+        modulePath: join(
+          process.cwd(),
+          "node_modules/better-sqlite3/lib/index.js",
+        ),
+        template,
+      },
+    );
+    await page.evaluate(() =>
+      window.cyclelab.saveSettings({
+        theme: "dark",
+        source: "garmin",
+        model: null,
+        athlete: { ftp: null, lthr: null, weight: null },
+      }),
+    );
+    await app.close();
+    app = await launch();
+    page = await app.firstWindow();
+    await expect(page.locator(".act-item .cl-badge")).toHaveText("Intervalos");
+    await expect(page.getByText(/4 bloques de 4:02 a ≈312 W/)).toBeVisible();
+    await page.screenshot({ path: "test-results/power-pattern-dark.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await page.screenshot({ path: "test-results/power-pattern-light.png" });
+    expect(
+      await page.evaluate(() => window.cyclelab.reclassifyActivities()),
+    ).toBe(1);
+    expect(
+      (await page.evaluate(() => window.cyclelab.getState())).dataset
+        .activities[0].intervalPattern?.repetitions,
+    ).toBe(4);
+  } finally {
+    await app.close();
+  }
+});
+
+test("manual segments creation, isolation, restart and deletion", async () => {
+  const userData = mkdtempSync(join(tmpdir(), "cyclelab-segments-"));
+  const launch = () =>
+    electron.launch({
+      args: ["out/main/index.js"],
+      env: { ...process.env, CYCLELAB_USER_DATA: userData },
+    });
+  let app = await launch();
+  try {
+    let page = await app.firstWindow();
+    await expect(page.locator(".chart-label").first()).toBeVisible();
+    await page.keyboard.press("ArrowRight");
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page
+      .getByRole("button", { name: "Crear segmento", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Crear segmento", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: "Buscar actividad" }),
+    ).toHaveCount(0);
+    const initial = Number(
+      await page.getByRole("slider", { name: "Inicio" }).inputValue(),
+    );
+    await page
+      .getByRole("button", { name: "Adelantar inicio", exact: true })
+      .click();
+    await expect(page.getByRole("slider", { name: "Inicio" })).toHaveValue(
+      String(initial + 1),
+    );
+    await page.getByRole("slider", { name: "Inicio" }).focus();
+    await page.keyboard.press("End");
+    expect(
+      Number(await page.getByRole("slider", { name: "Inicio" }).inputValue()),
+    ).toBe(
+      Number(await page.getByRole("slider", { name: "Final" }).inputValue()) -
+        1,
+    );
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("slider", { name: "Inicio" })).toHaveValue("0");
+    await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await expect(
+      page.getByRole("textbox", { name: "Buscar actividad" }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Crear segmento", exact: true })
+      .click();
+    await page.screenshot({ path: "test-results/segment-creator-dark.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await page.screenshot({ path: "test-results/segment-creator-light.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await page.getByRole("button", { name: "Siguiente", exact: true }).click();
+    await expect(page.getByRole("slider", { name: "Inicio" })).toBeDisabled();
+    await page.getByLabel("Nombre del segmento").fill("Subida de prueba");
+    await page.getByRole("button", { name: "Atrás", exact: true }).click();
+    await page.getByRole("button", { name: "Siguiente", exact: true }).click();
+    await expect(page.getByLabel("Nombre del segmento")).toHaveValue(
+      "Subida de prueba",
+    );
+    await page
+      .getByRole("button", { name: "Guardar segmento", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Segmentos", exact: true }),
+    ).toBeVisible();
+    expect(errors).toEqual([]);
+    await page
+      .getByRole("navigation")
+      .getByRole("button", { name: "Segmentos" })
+      .click();
+    await expect(page.locator(".detail-heading")).toHaveText(
+      "Subida de prueba",
+    );
+    await page.screenshot({ path: "test-results/segments-dark.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await page.screenshot({ path: "test-results/segments-light.png" });
+    await page.keyboard.press("Meta+5");
+    await expect(
+      page.getByText("Sin puertos marcados", { exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Meta+4");
+    await page
+      .getByRole("button", { name: "Marcar como puerto", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Quitar marca de puerto" }),
+    ).toBeVisible();
+    await page.keyboard.press("Meta+5");
+    await expect(page.locator(".detail-heading")).toHaveText(
+      "Subida de prueba",
+    );
+    await page.screenshot({ path: "test-results/puertos-marked-light.png" });
+    const validation = await page
+      .evaluate(async () => {
+        const state = await window.cyclelab.getState();
+        const a = state.dataset.activities[0];
+        let rejected = false;
+        try {
+          await window.cyclelab.saveSegment(
+            "demo",
+            a.id,
+            "Invalid",
+            0,
+            99999999,
+          );
+        } catch {
+          rejected = true;
+        }
+        return { rejected };
+      })
+      .catch(() => ({ rejected: false }));
+    expect(validation.rejected).toBe(true);
+    await app.close();
+    app = await launch();
+    page = await app.firstWindow();
+    await expect(
+      page.getByRole("heading", { name: "Actividades", exact: true }),
+    ).toBeVisible();
+    const stored = await page.evaluate(
+      async () => (await window.cyclelab.getState()).segments,
+    );
+    expect(stored).toHaveLength(1);
+    expect(stored[0].isClimb).toBe(true);
+    await page.evaluate(async () => {
+      const s = await window.cyclelab.getState();
+      await window.cyclelab.saveSettings({
+        theme: s.settings.theme,
+        source: "garmin",
+        model: s.settings.model,
+        athlete: s.settings.athlete,
+      });
+    });
+    expect(
+      await page.evaluate(
+        async () => (await window.cyclelab.getState()).segments.length,
+      ),
+    ).toBe(0);
+    await page.evaluate(async () => {
+      const s = await window.cyclelab.getState();
+      await window.cyclelab.saveSettings({
+        theme: s.settings.theme,
+        source: "demo",
+        model: s.settings.model,
+        athlete: s.settings.athlete,
+      });
+    });
+    await page
+      .getByRole("navigation")
+      .getByRole("button", { name: "Segmentos" })
+      .click();
+    await page.keyboard.press("Meta+5");
+    await page.getByRole("button", { name: "Quitar marca de puerto" }).click();
+    await expect(
+      page.getByText("Sin puertos marcados", { exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Meta+4");
+    await expect(page.locator(".detail-heading")).toHaveText(
+      "Subida de prueba",
+    );
+    expect(
+      await page.evaluate(
+        async () => (await window.cyclelab.getState()).segments[0].isClimb,
+      ),
+    ).toBe(false);
+    await page
+      .getByRole("button", { name: "Eliminar segmento", exact: true })
+      .click();
+    await page.getByRole("button", { name: "Confirmar eliminación" }).click();
+    await expect(
+      page.getByText("Sin segmentos guardados", { exact: true }),
+    ).toBeVisible();
+  } finally {
+    await app.close();
+  }
+});
+
+test("segment results cover all years, repeated passes, persistence and refreshed samples", async () => {
+  const userData = mkdtempSync(join(tmpdir(), "cyclelab-matching-"));
+  const launch = () =>
+    electron.launch({
+      args: ["out/main/index.js"],
+      env: { ...process.env, CYCLELAB_USER_DATA: userData },
+    });
+  let app = await launch();
+  try {
+    let page = await app.firstWindow();
+    await expect(page.locator(".chart-label").first()).toBeVisible();
+    const template = await page.evaluate(
+      async () => (await window.cyclelab.getState()).dataset.activities[0],
+    );
+    await app.evaluate(
+      (_electron, { userData, modulePath, template }) => {
+        const Database = process
+          .getBuiltinModule("module")
+          .createRequire(modulePath)(modulePath);
+        const db = new Database(userData + "/cyclelab.db");
+        const path = Array.from({ length: 51 }, (_, i) => i * 10);
+        const make = (xs: number[]) =>
+          xs.map((x, i) => ({
+            x: i * 2,
+            km: i / 100,
+            lat: 0,
+            lon: x / 111195,
+            p: 200,
+            ps: 200,
+            hr: 145,
+            cad: 85,
+            elev: 10,
+            v: 5,
+          }));
+        try {
+          for (const [id, year, xs] of [
+            ["origin", 2026, path],
+            [
+              "historic",
+              2016,
+              [...path, ...path.toReversed().slice(1), ...path.slice(1)],
+            ],
+            ["reverse", 2019, path.toReversed()],
+            ["missing", 2018, []],
+          ] as [string, number, number[]][]) {
+            const a = {
+              ...template,
+              id,
+              name: id,
+              date: Date.UTC(year, 0, 1),
+              detailStatus: "ready",
+            };
+            db.prepare(
+              "INSERT INTO activities(source,id,date,summary,detail,best) VALUES (?,?,?,?,?,?)",
+            ).run(
+              "garmin",
+              id,
+              a.date,
+              JSON.stringify(a),
+              JSON.stringify({
+                rows: make(xs),
+                laps: [],
+                points: [],
+                markers: [],
+                features: [],
+                best: [],
+              }),
+              "[]",
+            );
+          }
+          db.prepare(
+            "INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+          ).run(
+            "settings",
+            JSON.stringify({
+              source: "garmin",
+              theme: "dark",
+              model: null,
+              athlete: { ftp: null, lthr: null, weight: null },
+            }),
+          );
+        } finally {
+          db.close();
+        }
+      },
+      {
+        userData,
+        modulePath: join(
+          process.cwd(),
+          "node_modules/better-sqlite3/lib/index.js",
+        ),
+        template,
+      },
+    );
+    await app.close();
+    app = await launch();
+    page = await app.firstWindow();
+    await expect(
+      page.getByRole("heading", { name: "Actividades", exact: true }),
+    ).toBeVisible();
+    const segment = await page.evaluate(async () =>
+      window.cyclelab.saveSegment("garmin", "origin", "Tramo histórico", 0, 50),
+    );
+    await expect
+      .poll(async () =>
+        app.evaluate(
+          (_electron, { userData, modulePath, id }) => {
+            const Database = process
+              .getBuiltinModule("module")
+              .createRequire(modulePath)(modulePath);
+            const db = new Database(userData + "/cyclelab.db", {
+              readonly: true,
+            });
+            try {
+              return JSON.parse(
+                db
+                  .prepare(
+                    "SELECT payload FROM segment_results WHERE source='garmin' AND id=?",
+                  )
+                  .get(id)?.payload ?? "{}",
+              ).status;
+            } finally {
+              db.close();
+            }
+          },
+          {
+            userData,
+            modulePath: join(
+              process.cwd(),
+              "node_modules/better-sqlite3/lib/index.js",
+            ),
+            id: segment.id,
+          },
+        ),
+      )
+      .toBe("done");
+    const report = await page.evaluate(
+      (id) => window.cyclelab.getSegmentResults("garmin", id),
+      segment.id,
+    );
+    expect(report.total).toBe(4);
+    expect(report.scanned).toBe(4);
+    expect(report.skipped).toBe(1);
+    expect(report.attempts.map((a) => a.activityId)).toEqual([
+      "origin",
+      "historic",
+      "historic",
+    ]);
+    expect(report.attempts.map((a) => a.dur)).toEqual([100, 100, 100]);
+    await page.keyboard.press("Meta+4");
+    await expect(
+      page.getByText("Resultados del segmento", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "historic", exact: true }),
+    ).toHaveCount(2);
+    await page
+      .getByText("Resultados del segmento", { exact: true })
+      .scrollIntoViewIfNeeded();
+    const resultsTable = page.locator("table").filter({
+      has: page.getByRole("button", { name: "Fecha", exact: true }),
+    });
+    const dateHeader = resultsTable.getByRole("columnheader", {
+      name: "Fecha",
+      exact: true,
+    });
+    await expect(dateHeader).toHaveAttribute("aria-sort", "descending");
+    await resultsTable
+      .getByRole("button", { name: "Fecha", exact: true })
+      .click();
+    await expect(dateHeader).toHaveAttribute("aria-sort", "ascending");
+    await expect(resultsTable.locator("tbody tr").first()).toContainText(
+      "2016",
+    );
+    await resultsTable
+      .getByRole("button", { name: "Fecha", exact: true })
+      .press("Enter");
+    await expect(dateHeader).toHaveAttribute("aria-sort", "descending");
+    await expect(resultsTable.locator("tbody tr").first()).toContainText(
+      "2026",
+    );
+    await resultsTable
+      .getByRole("button", { name: "Actividad", exact: true })
+      .click();
+    await expect(resultsTable.locator("tbody tr").first()).toContainText(
+      "historic",
+    );
+    await page.screenshot({ path: "test-results/segment-results-dark.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await page.screenshot({ path: "test-results/segment-results-light.png" });
+    await app.close();
+    app = await launch();
+    page = await app.firstWindow();
+    await expect(
+      page.getByRole("heading", { name: "Actividades", exact: true }),
+    ).toBeVisible();
+    expect(
+      (
+        await page.evaluate(
+          (id) => window.cyclelab.getSegmentResults("garmin", id),
+          segment.id,
+        )
+      ).attempts,
+    ).toEqual(report.attempts);
+    await app.evaluate(
+      (_electron, { userData, modulePath }) => {
+        const Database = process
+          .getBuiltinModule("module")
+          .createRequire(modulePath)(modulePath);
+        const db = new Database(userData + "/cyclelab.db");
+        try {
+          db.prepare(
+            "UPDATE activities SET detail=(SELECT detail FROM activities WHERE source='garmin' AND id='origin') WHERE source='garmin' AND id='missing'",
+          ).run();
+          db.prepare(
+            "INSERT INTO settings VALUES ('activityRevision:garmin','1') ON CONFLICT(key) DO UPDATE SET value=CAST(value AS INTEGER)+1",
+          ).run();
+        } finally {
+          db.close();
+        }
+      },
+      {
+        userData,
+        modulePath: join(
+          process.cwd(),
+          "node_modules/better-sqlite3/lib/index.js",
+        ),
+      },
+    );
+    await expect
+      .poll(
+        async () =>
+          (
+            await page.evaluate(
+              (id) => window.cyclelab.getSegmentResults("garmin", id),
+              segment.id,
+            )
+          ).attempts.length,
+      )
+      .toBe(4);
+    const isolated = await page.evaluate(async (id) => {
+      try {
+        await window.cyclelab.getSegmentResults("demo", id);
+        return false;
+      } catch {
+        return true;
+      }
+    }, segment.id);
+    expect(isolated).toBe(true);
+  } finally {
+    await app.close();
+  }
+});
+
+test("MapTiler credentials, isolated map resources, real GPS map and selection", async () => {
+  const userData = mkdtempSync(join(tmpdir(), "cyclelab-map-"));
+  const app = await electron.launch({
+    args: ["out/main/index.js"],
+    env: { ...process.env, CYCLELAB_USER_DATA: userData },
+  });
+  try {
+    const page = await app.firstWindow();
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await expect(page.locator(".chart-label").first()).toBeVisible();
+    const template = await page.evaluate(
+      async () => (await window.cyclelab.getState()).dataset.activities[0],
+    );
+    await app.evaluate(
+      (_electron, { userData, modulePath, template }) => {
+        const Database = process
+          .getBuiltinModule("module")
+          .createRequire(modulePath)(modulePath);
+        const db = new Database(userData + "/cyclelab.db");
+        try {
+          const rows = Array.from({ length: 1001 }, (_, i) => ({
+            x: i,
+            km: i / 1000,
+            p: 100 + i / 5,
+            ps: 100 + i / 5,
+            hr: 130,
+            cad: 80,
+            elev: 10 + i,
+            v: 25,
+            lat: 43.46,
+            lon: -3.81 + i * 0.00001,
+          }));
+          const a = {
+            ...template,
+            id: "map-route",
+            name: "Ruta GPS de prueba",
+            detailStatus: "ready",
+          };
+          const detail = {
+            rows,
+            laps: [],
+            points: rows.map((_, i) => [i * 8, 0]),
+            pointIndices: rows.map((_, i) => i),
+            features: [],
+            markers: [],
+            best: [],
+          };
+          db.prepare(
+            "INSERT INTO activities(source,id,date,summary,detail,best) VALUES (?,?,?,?,?,?)",
+          ).run(
+            "garmin",
+            a.id,
+            a.date,
+            JSON.stringify(a),
+            JSON.stringify(detail),
+            "[]",
+          );
+        } finally {
+          db.close();
+        }
+        const original = globalThis.fetch;
+        globalThis.fetch = async (input, init) => {
+          const url = new URL(
+            typeof input === "string"
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url,
+          );
+          if (url.hostname !== "api.maptiler.com") return original(input, init);
+          if (url.searchParams.get("key") !== "maptiler-test-key")
+            return new Response("denied", { status: 403 });
+          if (url.pathname.endsWith("style.json"))
+            return new Response(
+              JSON.stringify({
+                version: 8,
+                sources: {
+                  base: {
+                    type: "raster",
+                    url: "https://api.maptiler.com/tiles/test/tiles.json?key=maptiler-test-key",
+                  },
+                },
+                layers: [
+                  {
+                    id: "background",
+                    type: "background",
+                    paint: {
+                      "background-color": url.pathname.includes("dark")
+                        ? "#15202b"
+                        : "#cddaca",
+                    },
+                  },
+                  { id: "base", type: "raster", source: "base" },
+                ],
+              }),
+              {
+                headers: {
+                  "content-type": "application/json",
+                  "cache-control": "max-age=60",
+                },
+              },
+            );
+          if (url.pathname.endsWith("tiles.json"))
+            return new Response(
+              JSON.stringify({
+                tilejson: "3.0.0",
+                tiles: [
+                  "https://api.maptiler.com/tiles/test/{z}/{x}/{y}.png?key=maptiler-test-key",
+                ],
+                tileSize: 256,
+                minzoom: 0,
+                maxzoom: 16,
+              }),
+              { headers: { "content-type": "application/json" } },
+            );
+          return new Response(
+            Buffer.from(
+              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4AWM4fOnwfwAIDANYHYZPQQAAAABJRU5ErkJggg==",
+              "base64",
+            ),
+            {
+              headers: {
+                "content-type": "image/png",
+                "cache-control": "max-age=60",
+              },
+            },
+          );
+        };
+      },
+      {
+        userData,
+        modulePath: join(
+          process.cwd(),
+          "node_modules/better-sqlite3/lib/index.js",
+        ),
+        template,
+      },
+    );
+    await page.getByRole("button", { name: "Ajustes", exact: true }).click();
+    const panel = page
+      .locator(".cl-panel")
+      .filter({ has: page.getByText("MapTiler", { exact: true }) });
+    await panel.getByLabel("API key de MapTiler").fill("maptiler-test-key");
+    await panel.getByRole("button", { name: "Guardar y comprobar" }).click();
+    await expect(panel.getByText("Clave configurada")).toBeVisible();
+    expect(
+      await page.evaluate(async () =>
+        JSON.stringify(await window.cyclelab.getState()),
+      ),
+    ).not.toContain("maptiler-test-key");
+    const resource = await page.evaluate(() =>
+      window.cyclelab.mapResource("/maps/outdoor-v4/style.json"),
+    );
+    expect(JSON.stringify(resource)).not.toContain("maptiler-test-key");
+    expect(JSON.stringify(resource)).toContain("cyclemap://");
+    expect(
+      await page.evaluate(async () => {
+        try {
+          await window.cyclelab.mapResource("https://example.com");
+          return false;
+        } catch {
+          return true;
+        }
+      }),
+    ).toBe(true);
+    await page.evaluate(async () => {
+      const s = (await window.cyclelab.getState()).settings;
+      await window.cyclelab.saveSettings({
+        source: "garmin",
+        theme: s.theme,
+        model: s.model,
+        athlete: s.athlete,
+      });
+    });
+    await page.keyboard.press("Meta+2");
+    const map = page.locator(".geo-map");
+    await expect(map.locator(".maplibregl-canvas")).toBeVisible();
+    await expect(
+      map.getByText("No se pudo cargar la cartografía", { exact: false }),
+    ).toHaveCount(0);
+    await expect(map.getByRole("button", { name: "Acercar" })).toBeVisible();
+    await expect(map.locator(".geo-map-frame")).toHaveAttribute(
+      "data-ready",
+      "true",
+    );
+    await map
+      .locator(".maplibregl-canvas")
+      .screenshot({ path: "test-results/route-initial.png" });
+    await map.getByRole("button", { name: "Potencia", exact: true }).click();
+    await expect(map.getByText(/Potencia absoluta/)).toBeVisible();
+    await map.getByRole("button", { name: "Seleccionar tramo" }).click();
+    const canvas = map.locator(".maplibregl-canvas");
+    await canvas.scrollIntoViewIfNeeded();
+    const bounds = await canvas.boundingBox();
+    await canvas.click({
+      position: { x: bounds!.width * 0.3, y: bounds!.height / 2 },
+    });
+    await expect(map.getByRole("status")).toHaveText(/Haz clic en el final/);
+    await canvas.click({
+      position: { x: bounds!.width * 0.7, y: bounds!.height / 2 },
+    });
+    await expect(
+      page.getByRole("button", { name: "Crear segmento", exact: true }),
+    ).toBeEnabled();
+    await page.screenshot({ path: "test-results/maptiler-dark.png" });
+    // Zoom requests new tiles. A failed tile must not replace the interactive map.
+    await app.evaluate(() => {
+      const original = globalThis.fetch;
+      (
+        globalThis as typeof globalThis & { workingMapFetch: typeof fetch }
+      ).workingMapFetch = original;
+      globalThis.fetch = async (input, init) => {
+        const url = String(input);
+        if (url.includes("/tiles/test/") && url.includes(".png"))
+          return new Response("temporary tile failure", { status: 503 });
+        return original(input, init);
+      };
+    });
+    await map.getByRole("button", { name: "Alejar", exact: true }).click();
+    await expect(map.getByText(/No se pudo cargar parte/)).toBeVisible();
+    await expect(map.locator(".maplibregl-canvas")).toBeVisible();
+    await expect(
+      map.getByRole("img", { name: "Recorrido", exact: true }),
+    ).toHaveCount(0);
+    await map.getByRole("button", { name: "Acercar", exact: true }).click();
+    await expect(map.locator(".maplibregl-canvas")).toBeVisible();
+
+    await app.evaluate(() => {
+      const g = globalThis as typeof globalThis & {
+        mapTestFetch: typeof fetch;
+      };
+      g.mapTestFetch = (
+        globalThis as typeof globalThis & { workingMapFetch: typeof fetch }
+      ).workingMapFetch;
+      globalThis.fetch = async () => {
+        throw new Error("offline");
+      };
+    });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await expect(
+      map.getByRole("button", { name: "Reintentar mapa" }),
+    ).toBeVisible();
+    await expect(
+      map.getByRole("img", { name: "Recorrido", exact: true }),
+    ).toBeVisible();
+    await app.evaluate(() => {
+      globalThis.fetch = (
+        globalThis as typeof globalThis & { mapTestFetch: typeof fetch }
+      ).mapTestFetch;
+    });
+    await map.getByRole("button", { name: "Reintentar mapa" }).click();
+    await expect(map.getByRole("button", { name: "Acercar" })).toBeVisible();
+    await expect(map.locator(".geo-map-frame")).toHaveAttribute(
+      "data-ready",
+      "true",
+    );
+    await expect(map.locator(".maplibregl-canvas")).toBeVisible();
+    await page.screenshot({ path: "test-results/maptiler-light.png" });
+    await page.getByRole("button", { name: "Ajustes", exact: true }).click();
+    await panel.getByRole("button", { name: "Desconectar" }).click();
+    await expect(panel.getByLabel("API key de MapTiler")).toHaveValue("");
+    await page.keyboard.press("Meta+2");
+    await expect(
+      page.getByText("Configura MapTiler para ver la cartografía."),
+    ).toBeVisible();
+    expect(errors).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});

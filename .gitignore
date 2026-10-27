@@ -1,0 +1,14 @@
+node_modules/
+out/
+dist/
+release/
+.playwright-mcp/
+test-results/
+playwright-report/
+*.db
+*.db-shm
+*.db-wal
+.env*
+.DS_Store
+artifacts/visual/*.png
+artifacts/visual/comparison.json

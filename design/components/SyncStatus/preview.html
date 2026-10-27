@@ -1,0 +1,14 @@
+<!-- @dsCard group="Estructura" height=150 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>SyncStatus</title><style>body{background:var(--bg-200);padding:16px} .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap} </style></head>
+<body>
+<div id="root"></div>
+<script>
+var C = window.CycleLab, h = React.createElement;
+function demoSeries(n, f) { var out = []; for (var i = 0; i < n; i++) out.push(f(i)); return out; }
+function D(){var s=React.useState('synced');return h('div',{style:{width:232,display:'grid',gap:4}},h(C.SyncStatus,{state:s[0],detail:s[0]==='syncing'?'Descargando actividades…':'Última: hoy 09:12 · 84 actividades',onClick:function(){s[1]('syncing');setTimeout(function(){s[1]('synced')},1500)}}),h(C.SyncStatus,{state:'error',detail:'Garmin no responde (429)'}),h(C.SyncStatus,{state:'offline',detail:'Se sincronizará al reconectar'}));}
+ReactDOM.createRoot(document.getElementById("root")).render(h(D));
+</script>
+</body>
+</html>

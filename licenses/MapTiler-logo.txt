@@ -1,0 +1,3 @@
+MapTiler logo: https://api.maptiler.com/resources/logo.svg
+Bundled for required attribution, per https://docs.maptiler.com/guides/map-design/attribution/add-attribution/
+MapTiler trademarks and copyrights belong to MapTiler.

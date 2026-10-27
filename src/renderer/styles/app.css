@@ -1,0 +1,533 @@
+:root {
+  --control-height: 32px;
+  --search-min: 80px;
+  --goals-width: 380px;
+  --zones-width: 340px;
+  --durations-width: 400px;
+  --climbs-width: 300px;
+  --settings-width: 1000px;
+  --border-width: 1px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --native-height: 28px;
+  --axis-size: 10px;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+body {
+  background: var(--bg-000);
+}
+.app {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
+}
+.min-zero {
+  min-width: 0;
+}
+.block {
+  display: block;
+}
+.push {
+  margin-left: auto;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.right {
+  text-align: right;
+}
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.toolbar.compact {
+  gap: var(--space-2);
+}
+.align-end {
+  align-items: flex-end;
+}
+.split-view {
+  display: flex;
+  overflow: hidden;
+}
+.page-heading {
+  font: var(--title-l);
+  margin-top: var(--focus-offset);
+}
+.detail-heading {
+  font: 600 var(--ref-20px)/var(--ref-26px) var(--font-sans);
+}
+.metrics-five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.goals-panel,
+.profile-panel {
+  width: var(--goals-width);
+  flex: none;
+}
+.zones-panel {
+  width: var(--zones-width);
+  flex: none;
+}
+.durations-panel {
+  width: var(--durations-width);
+  flex: none;
+}
+.climb-list {
+  width: var(--climbs-width);
+}
+.activity-list {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+.activity-meta {
+  display: flex;
+  gap: var(--ref-10px);
+  align-items: center;
+  margin-top: var(--space-1);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ref-6px);
+}
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+  height: var(--control-height);
+  border: var(--border-width) solid var(--line-strong);
+  border-radius: var(--radius-md);
+  padding: 0 var(--ref-10px);
+}
+.search-field input {
+  min-width: var(--search-min);
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.search-field:focus-within {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
+}
+.native-titlebar {
+  height: var(--native-height);
+  -webkit-app-region: drag;
+}
+.cl-sidebar-head {
+  -webkit-app-region: drag;
+}
+.topbar {
+  -webkit-app-region: drag;
+}
+.topbar button,
+.topbar .cl-badge {
+  -webkit-app-region: no-drag;
+}
+.athlete-name {
+  font-weight: 600;
+}
+.on-brand {
+  color: inherit;
+  border-color: currentColor;
+  opacity: 0.7;
+}
+.zone-name {
+  display: flex;
+  gap: var(--space-2);
+  min-width: 0;
+  align-items: center;
+}
+.zone-name > span {
+  width: var(--ref-96px);
+  flex: none;
+}
+.chart-surface {
+  position: relative;
+  width: 100%;
+  touch-action: none;
+}
+.chart-underlay,
+.chart-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.chart-engine {
+  position: relative;
+  pointer-events: none;
+}
+.chart-overlay {
+  z-index: 1;
+}
+.chart-empty {
+  display: grid;
+  place-items: center;
+  color: var(--ink-faint);
+  font: var(--body-s);
+}
+.cl-axis text {
+  font-family: var(--font-mono);
+  font-size: var(--axis-size);
+  fill: var(--ink-faint);
+}
+input.cl-check {
+  appearance: none;
+  margin: 0;
+  flex: none;
+  position: relative;
+  background: transparent;
+}
+.cl-check:checked {
+  background: var(--brand);
+  border-color: var(--brand-edge);
+}
+.cl-check:checked:after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  color: var(--on-brand);
+  font: var(--label);
+  text-align: center;
+}
+.cl-table tr:focus-visible,
+.act-item:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: calc(-1 * var(--focus-offset));
+}
+.cl-msg-body {
+  min-width: 0;
+}
+.message-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.section-label {
+  margin-bottom: var(--space-2);
+}
+.settings-page {
+  max-width: var(--settings-width);
+}
+.settings-page p {
+  margin: var(--space-2) 0;
+}
+.settings-model,
+.credential-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+.settings-sync {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-4);
+}
+.profile-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.profile-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+input,
+select {
+  color: var(--ink);
+  background: var(--bg-100);
+  border: var(--border-width) solid var(--line-strong);
+  border-radius: var(--radius-md);
+  font: var(--body-s);
+  padding: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+.credential input,
+.settings-model input {
+  flex: 1;
+}
+.settings-model select {
+  width: 100%;
+}
+label {
+  font: var(--body-s);
+  color: var(--ink-muted);
+}
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-sans);
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
+}
+.error-text {
+  color: var(--danger);
+}
+.cl-tool-args {
+  max-width: 65%;
+}
+.sel-bar {
+  margin-bottom: var(--space-2);
+}
+@media (max-width: 1280px) {
+  .activity-panels {
+    flex-direction: column;
+  }
+  .activity-panels > .zones-panel {
+    width: auto;
+  }
+  .row > .profile-panel {
+    width: 40%;
+  }
+  .durations-panel {
+    width: 42%;
+  }
+  .metrics-five .cl-metric-label {
+    white-space: normal;
+  }
+  .metrics-five .cl-metric-unit {
+    display: block;
+  }
+  .goals-panel {
+    width: 38%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+input.cl-check {
+  padding: 0;
+  min-width: var(--ref-16px);
+}
+
+:root {
+  --ref-96px: 96px;
+}
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.goal > .small {
+  margin-top: calc(-1 * var(--ref-6px));
+}
+.countdown .small {
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
+
+.activity-year {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+}
+.activity-year select {
+  flex: 1;
+  min-width: 0;
+}
+.activity-date-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.activity-date-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.activity-date-fields input {
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-2);
+  font: var(--body-s);
+}
+[data-theme="dark"] .activity-date-fields input {
+  color-scheme: dark;
+}
+[data-theme="light"] .activity-date-fields input {
+  color-scheme: light;
+}
+.segment-form {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.segment-name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+}
+.cl-table-sort {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.cl-table-sort:hover {
+  color: var(--ink);
+}
+.map-toolbar,
+.map-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.map-notice {
+  color: var(--ink-muted);
+  font: var(--body-s);
+}
+.geo-map-frame {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.geo-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+.map-readout {
+  margin-top: var(--space-2);
+}
+.maptiler-logo {
+  position: absolute;
+  bottom: var(--space-6);
+  left: var(--space-2);
+  padding: var(--space-1);
+  background: var(--on-brand);
+  border-radius: var(--radius-sm);
+}
+.maptiler-logo img {
+  width: var(--map-logo-width);
+  display: block;
+}
+.geo-map .maplibregl-ctrl-group,
+.geo-map .maplibregl-ctrl-attrib {
+  background: var(--bg-200);
+  color: var(--ink);
+}
+.geo-map .maplibregl-ctrl-attrib a {
+  color: var(--ink-muted);
+}
+[data-theme="dark"] .geo-map .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+:root {
+  --map-fit-padding: 40px;
+  --map-route-width: 4;
+  --map-route-outline-width: 7;
+  --map-selection-width: 6;
+  --map-marker-radius: 6;
+  --map-marker-stroke: 2;
+  --map-hit-radius: 24px;
+  --map-logo-width: 67px;
+}
+
+.segment-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.segment-guide h2 {
+  font: var(--title-l);
+  margin: 0;
+}
+.segment-guide p {
+  font: var(--body);
+}
+.segment-guide,
+.segment-visuals,
+.segment-save {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.segment-guide .toolbar {
+  flex-wrap: wrap;
+}
+.segment-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-block: var(--space-4);
+  border-block: 1px solid var(--line);
+}
+.segment-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  border: 0;
+  padding: 0;
+  margin: 0 0 var(--space-4);
+}
+.segment-endpoint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.segment-endpoint label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.segment-endpoint input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--brand-ink);
+}
+.segment-name input {
+  min-width: 0;
+  width: 100%;
+}

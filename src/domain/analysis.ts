@@ -167,9 +167,9 @@ export function realDataset(
   athlete: Athlete,
 ): Dataset {
   const today = Date.now(),
-    dated = activities.slice().sort((a, b) => a.date - b.date);
+    dated = activities.filter((a) => a.tss !== null).sort((a, b) => a.date - b.date);
   const load: ChartRow[] = [];
-  if (dated.length && dated.every((a) => a.tss !== null)) {
+  if (dated.length) {
     let ctl = 0,
       atl = 0;
     const totals = new Map<number, number>();
@@ -216,7 +216,7 @@ export function realDataset(
     curve: curve.filter((r) => Object.keys(r).length > 1),
     bests: [...months.values()].sort((a, b) => Number(a.x) - Number(b.x)),
     coverage:
-      "Cálculos sobre el histórico importado. La carga parte de CTL/ATL 0; los datos ausentes no se estiman.",
+      "La carga parte de CTL/ATL 0 y solo incluye actividades con TSS. Las actividades sin TSS se excluyen del cálculo.",
   };
 }
 

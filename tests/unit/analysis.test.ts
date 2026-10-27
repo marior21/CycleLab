@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   bestEfforts,
+  DAY,
   compareStreams,
   projectRoute,
   routeSelection,
@@ -63,6 +64,24 @@ describe("analysis without invented readings", () => {
     expect(data.goals).toEqual([]);
     expect(data.curve).toEqual([]);
     expect(data.athlete.ftp).toBeNull();
+  });
+  it("calculates load using only activities with TSS, including zero", () => {
+    const today = Math.floor(Date.now() / DAY) * DAY;
+    const activities = [
+      { ...ACTS[0], date: today, tss: 42 },
+      { ...ACTS[0], date: today - 3 * DAY, tss: null },
+      { ...ACTS[0], date: today - 2 * DAY, tss: 0 },
+      { ...ACTS[0], date: today - DAY, tss: null },
+      { ...ACTS[0], date: today, tss: 42 },
+    ];
+    const data = realDataset(activities, [], ATH);
+    expect(data.activities).toEqual(activities);
+    expect(data.load).toEqual([
+      { x: today - 2 * DAY, tss: 0, ctl: 0, atl: 0, tsb: 0 },
+      { x: today - DAY, tss: 0, ctl: 0, atl: 0, tsb: 0 },
+      { x: today, tss: 84, ctl: 2, atl: 12, tsb: 0 },
+    ]);
+    expect(realDataset([activities[1]], [], ATH).load).toEqual([]);
   });
 });
 

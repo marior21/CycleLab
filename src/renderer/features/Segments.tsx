@@ -2,9 +2,9 @@ import { SegmentAttempts } from "./SegmentAttempts";
 import { useEffect, useState } from "react";
 import type { ActivityDetail } from "../../shared/models";
 import { Badge, Button, Metric, Panel, StateBlock } from "../components/ui";
-import { LineChart } from "../components/charts";
 import { RouteMap } from "../components/RouteMap";
 import { routeSelection } from "../../domain/analysis";
+import { averageGrade } from "../../domain/segmentProfile";
 import { duration, number, date } from "../format";
 import type { PageProps } from "./shared";
 
@@ -55,10 +55,6 @@ export function Segments(p: PageProps & { climbsOnly?: boolean }) {
         </Button>
       </div>
     );
-  const profile =
-    detail?.rows
-      .slice(segment.i0, segment.i1 + 1)
-      .map((r) => ({ x: r.x - segment.start, elev: r.elev })) ?? [];
   return (
     <>
       <div className="list-pane climb-list">
@@ -158,6 +154,18 @@ export function Segments(p: PageProps & { climbsOnly?: boolean }) {
               />
               <Metric label="Desnivel" value={number(segment.gain)} unit="m+" />
               <Metric
+                label="Pendiente media"
+                value={number(
+                  averageGrade(
+                    detail?.rows[segment.i0]?.elev,
+                    detail?.rows[segment.i1]?.elev,
+                    segment.dist,
+                  ),
+                  1,
+                )}
+                unit="%"
+              />
+              <Metric
                 label="Duración"
                 value={duration(segment.end - segment.start)}
               />
@@ -173,25 +181,13 @@ export function Segments(p: PageProps & { climbsOnly?: boolean }) {
             key={`${p.demo}:${segment.id}`}
             source={p.demo ? "demo" : "garmin"}
             id={segment.id}
+            segment={segment}
+            detail={detail}
             openActivity={p.openActivity}
           />
           {error && <p role="alert">{error}</p>}
           {detail && (
             <>
-              <Panel title="Perfil del segmento">
-                <LineChart
-                  data={profile}
-                  series={[
-                    {
-                      key: "elev",
-                      label: "Elevación",
-                      color: "elevation",
-                      area: true,
-                    },
-                  ]}
-                  xFormat={(v) => duration(v)}
-                />
-              </Panel>
               <Panel title="Ubicación del tramo">
                 {detail.points.length ? (
                   <RouteMap

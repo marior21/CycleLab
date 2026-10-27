@@ -871,6 +871,42 @@ test("segment results cover all years, repeated passes, persistence and refreshe
     const resultsTable = page.locator("table").filter({
       has: page.getByRole("button", { name: "Fecha", exact: true }),
     });
+    const gradeMetric = page
+      .locator(".cl-metric")
+      .filter({ hasText: "Pendiente media" });
+    await expect(gradeMetric).toContainText("0,0");
+    await expect(gradeMetric).toContainText("%");
+    const attemptRow = resultsTable
+      .locator("tbody tr")
+      .filter({ hasText: "historic" })
+      .last();
+    await attemptRow.getByRole("cell").first().click();
+    await expect(attemptRow).toHaveAttribute("aria-selected", "true");
+    const profilePanel = page
+      .locator(".cl-panel")
+      .filter({ has: page.getByText("Perfil del segmento", { exact: true }) });
+    await expect(
+      profilePanel.getByText("Frecuencia cardíaca", { exact: true }),
+    ).toBeVisible();
+    await expect(profilePanel.locator(".chart-overlay")).toHaveCount(1);
+    await expect(
+      profilePanel.getByText("Velocidad", { exact: true }),
+    ).toBeVisible();
+    await profilePanel
+      .locator(".chart-surface")
+      .first()
+      .hover({ position: { x: 150, y: 50 } });
+    await expect(profilePanel.locator(".cl-tip")).toContainText("5,0 km/h");
+    const chart = profilePanel.locator(".chart-surface").last();
+    await chart.scrollIntoViewIfNeeded();
+    await chart.hover({ position: { x: 150, y: 50 } });
+    await expect(profilePanel.locator(".cl-tip")).toContainText("Pendiente");
+    await expect(profilePanel.locator(".cl-tip")).toContainText("145 ppm");
+    await expect(profilePanel.locator(".cl-tip")).toContainText("200 W");
+    await page.screenshot({ path: "test-results/segment-profile-dark.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await chart.hover({ position: { x: 150, y: 50 } });
+    await page.screenshot({ path: "test-results/segment-profile-light.png" });
     const dateHeader = resultsTable.getByRole("columnheader", {
       name: "Fecha",
       exact: true,

@@ -2,7 +2,6 @@
   --control-height: 32px;
   --search-min: 80px;
   --goals-width: 380px;
-  --zones-width: 340px;
   --durations-width: 400px;
   --climbs-width: 300px;
   --settings-width: 1000px;
@@ -78,10 +77,6 @@ body {
 .goals-panel,
 .profile-panel {
   width: var(--goals-width);
-  flex: none;
-}
-.zones-panel {
-  width: var(--zones-width);
   flex: none;
 }
 .durations-panel {
@@ -299,12 +294,6 @@ textarea:focus-visible {
   margin-bottom: var(--space-2);
 }
 @media (max-width: 1280px) {
-  .activity-panels {
-    flex-direction: column;
-  }
-  .activity-panels > .zones-panel {
-    width: auto;
-  }
   .row > .profile-panel {
     width: 40%;
   }

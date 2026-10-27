@@ -572,7 +572,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
         />
         <Metric size="s" label="Trabajo" value={number(a.kj)} unit="kJ" />
       </div>
-      <div className="row activity-panels">
+      <div className="row">
         <Panel
           className="grow"
           title="Recorrido"
@@ -628,39 +628,6 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
             }
             caption={`${number(a.dist, 1)} km · ${number(a.elev)} m+${p.demo ? " · km cada 10" : ""}`}
           />
-        </Panel>
-        <Panel
-          className="zones-panel"
-          title="Tiempo en zonas"
-          subtitle={
-            zone === "power"
-              ? `Potencia · FTP ${number(ftp)} W`
-              : `Frecuencia cardíaca · LTHR ${number(data.athlete.lthr)} ppm`
-          }
-          actions={
-            <Segmented
-              label="Métrica de zonas"
-              value={zone}
-              onChange={setZone}
-              options={[
-                { value: "power", label: "Potencia" },
-                { value: "hr", label: "FC" },
-              ]}
-            />
-          }
-        >
-          {(zone === "power" ? ftp : data.athlete.lthr) ? (
-            <ZoneBar zones={zoneRows} format={shortDuration} />
-          ) : (
-            <StateBlock
-              title="Falta el umbral"
-              action={
-                <Button onClick={() => p.go("settings")}>
-                  Completar perfil
-                </Button>
-              }
-            />
-          )}
         </Panel>
       </div>
       <Panel
@@ -865,47 +832,85 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           empty={<StateBlock title="Sin intervalos registrados" />}
         />
       </Panel>
-      <Panel
-        flush
-        title="Mejores esfuerzos"
-        subtitle="vs. mejor marca de la temporada · clic para resaltar"
-      >
-        <DataTable
-          compact
-          rows={d.best.filter((b) => [60, 300, 600, 1200, 3600].includes(b.t))}
-          rowKey="l"
-          onSelect={(_id, b) => {
-            if (b.p !== null && b.i0 !== undefined && b.i1 !== undefined) {
-              setLap(null);
-              setRange([b.i0, b.i1]);
-            }
-          }}
-          columns={[
-            { key: "l", label: "Duración" },
-            {
-              key: "p",
-              label: "Potencia",
-              align: "right",
-              render: (b) => number(b.p) + " W",
-            },
-            {
-              key: "w",
-              label: "W/kg",
-              align: "right",
-              render: (b) => ratio(b.p, data.athlete.weight),
-            },
-            {
-              key: "season",
-              label: "% mejor",
-              align: "right",
-              render: (b) =>
-                b.p !== null && b.season
-                  ? number((b.p / b.season) * 100) + "%"
-                  : "–",
-            },
-          ]}
-        />
-      </Panel>
+      <div className="row">
+        <Panel
+          className="grow"
+          flush
+          title="Mejores esfuerzos"
+          subtitle="vs. mejor marca de la temporada · clic para resaltar"
+        >
+          <DataTable
+            compact
+            rows={d.best.filter((b) =>
+              [60, 300, 600, 1200, 3600].includes(b.t),
+            )}
+            rowKey="l"
+            onSelect={(_id, b) => {
+              if (b.p !== null && b.i0 !== undefined && b.i1 !== undefined) {
+                setLap(null);
+                setRange([b.i0, b.i1]);
+              }
+            }}
+            columns={[
+              { key: "l", label: "Duración" },
+              {
+                key: "p",
+                label: "Potencia",
+                align: "right",
+                render: (b) => number(b.p) + " W",
+              },
+              {
+                key: "w",
+                label: "W/kg",
+                align: "right",
+                render: (b) => ratio(b.p, data.athlete.weight),
+              },
+              {
+                key: "season",
+                label: "% mejor",
+                align: "right",
+                render: (b) =>
+                  b.p !== null && b.season
+                    ? number((b.p / b.season) * 100) + "%"
+                    : "–",
+              },
+            ]}
+          />
+        </Panel>
+        <Panel
+          className="grow"
+          title="Tiempo en zonas"
+          subtitle={
+            zone === "power"
+              ? `Potencia · FTP ${number(ftp)} W`
+              : `Frecuencia cardíaca · LTHR ${number(data.athlete.lthr)} ppm`
+          }
+          actions={
+            <Segmented
+              label="Métrica de zonas"
+              value={zone}
+              onChange={setZone}
+              options={[
+                { value: "power", label: "Potencia" },
+                { value: "hr", label: "FC" },
+              ]}
+            />
+          }
+        >
+          {(zone === "power" ? ftp : data.athlete.lthr) ? (
+            <ZoneBar zones={zoneRows} format={shortDuration} />
+          ) : (
+            <StateBlock
+              title="Falta el umbral"
+              action={
+                <Button onClick={() => p.go("settings")}>
+                  Completar perfil
+                </Button>
+              }
+            />
+          )}
+        </Panel>
+      </div>
     </div>
   );
 }

@@ -289,9 +289,16 @@ export function GeoRouteMap(
         b.elev !== null
           ? (b.elev - a.elev) / ((b.km - a.km) * 10)
           : null;
-      const value = mode === "power" ? b.p : mode === "speed" ? b.v : grade;
-      const palette =
+      const value =
         mode === "power"
+          ? b.p
+          : mode === "hr"
+            ? b.hr
+            : mode === "speed"
+              ? b.v
+              : grade;
+      const palette =
+        mode === "power" || mode === "hr"
           ? ["z1", "z2", "z3", "z4", "z5", "z6"]
           : mode === "speed"
             ? ["z1", "cadence", "speed"]
@@ -299,9 +306,11 @@ export function GeoRouteMap(
       const thresholds =
         mode === "power"
           ? [100, 200, 250, 300, 400]
-          : mode === "speed"
-            ? [15, 30]
-            : [-2, 2, 5, 9];
+          : mode === "hr"
+            ? [100, 120, 140, 160, 180]
+            : mode === "speed"
+              ? [15, 30]
+              : [-2, 2, 5, 9];
       const shade =
         mode === "route" || value === null
           ? "ink-muted"
@@ -374,6 +383,7 @@ export function GeoRouteMap(
             options={[
               { value: "route", label: "Ruta" },
               { value: "power", label: "Potencia" },
+              { value: "hr", label: "FC" },
               { value: "grade", label: "Pendiente" },
               { value: "speed", label: "Velocidad" },
             ]}
@@ -446,7 +456,7 @@ export function GeoRouteMap(
       {!unavailable && (!error || !!loaded) && (
         <div className="small cl-faint map-readout">
           {row
-            ? `${number(row.p)} W · ${number(row.v, 1)} km/h · ${number(row.elev)} m`
+            ? `${number(row.p)} W · ${number(row.hr)} ppm · ${number(row.v, 1)} km/h · ${number(row.elev)} m`
             : p.caption}
           {mode !== "route" && (
             <span>
@@ -454,9 +464,11 @@ export function GeoRouteMap(
               ·{" "}
               {mode === "power"
                 ? "Potencia absoluta (W)"
-                : mode === "speed"
-                  ? "Velocidad (km/h)"
-                  : "Pendiente entre muestras (%)"}{" "}
+                : mode === "hr"
+                  ? "Frecuencia cardíaca (ppm) · cortes: 100 / 120 / 140 / 160 / 180"
+                  : mode === "speed"
+                    ? "Velocidad (km/h)"
+                    : "Pendiente entre muestras (%)"}{" "}
               · gris: sin dato
             </span>
           )}

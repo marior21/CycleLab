@@ -1154,6 +1154,8 @@ test("MapTiler credentials, isolated map resources, real GPS map and selection",
       .screenshot({ path: "test-results/route-initial.png" });
     await map.getByRole("button", { name: "Potencia", exact: true }).click();
     await expect(map.getByText(/Potencia absoluta/)).toBeVisible();
+    await map.getByRole("button", { name: "FC", exact: true }).click();
+    await expect(map.getByText(/Frecuencia cardíaca \(ppm\)/)).toBeVisible();
     await map.getByRole("button", { name: "Seleccionar tramo" }).click();
     const canvas = map.locator(".maplibregl-canvas");
     await canvas.scrollIntoViewIfNeeded();
@@ -1162,6 +1164,7 @@ test("MapTiler credentials, isolated map resources, real GPS map and selection",
       position: { x: bounds!.width * 0.3, y: bounds!.height / 2 },
     });
     await expect(map.getByRole("status")).toHaveText(/Haz clic en el final/);
+    await expect(map.locator(".map-readout")).toContainText(/\d+ ppm/);
     await canvas.click({
       position: { x: bounds!.width * 0.7, y: bounds!.height / 2 },
     });

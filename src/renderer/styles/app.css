@@ -212,9 +212,68 @@ input.cl-check {
 .cl-msg-body {
   min-width: 0;
 }
-.message-text {
-  white-space: pre-wrap;
+.message-markdown {
   overflow-wrap: anywhere;
+  min-width: 0;
+}
+.message-markdown > * {
+  margin: 0 0 var(--space-3);
+}
+.message-markdown > :last-child {
+  margin-bottom: 0;
+}
+.message-markdown p {
+  margin: 0 0 var(--space-3);
+  white-space: pre-wrap;
+}
+.message-markdown :is(h1, h2, h3, h4, h5, h6) {
+  font: var(--title-m);
+}
+.message-markdown :is(ul, ol) {
+  padding-left: var(--space-6);
+}
+.message-markdown li + li {
+  margin-top: var(--space-1);
+}
+.message-markdown a {
+  color: var(--brand-ink);
+  text-decoration: underline;
+}
+.message-markdown blockquote {
+  border-left: var(--focus-width) solid var(--line-strong);
+  padding-left: var(--space-3);
+  color: var(--ink-muted);
+}
+.message-markdown code {
+  font-family: var(--font-mono);
+  background: var(--bg-300);
+}
+.message-markdown pre {
+  overflow-x: auto;
+  padding: var(--space-3);
+  background: var(--bg-300);
+  border-radius: var(--radius-sm);
+}
+.message-markdown hr {
+  border: 0;
+  border-top: var(--ref-1px) solid var(--line);
+}
+.markdown-table {
+  overflow-x: auto;
+}
+.markdown-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--body-s);
+  font-variant-numeric: tabular-nums;
+}
+.markdown-table :is(th, td) {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--ref-1px) solid var(--line);
+  text-align: left;
+}
+.markdown-table th {
+  background: var(--bg-300);
 }
 .section-label {
   margin-bottom: var(--space-2);

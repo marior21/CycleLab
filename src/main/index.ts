@@ -363,14 +363,8 @@ async function boot() {
       },
     });
     win.webContents.setWindowOpenHandler(({ url }) => {
-      if (
-        [
-          "https://www.maptiler.com/",
-          "https://www.maptiler.com/copyright/",
-          "https://www.openstreetmap.org/copyright",
-        ].includes(url)
-      )
-        void shell.openExternal(url);
+      if (/^https?:\/\//i.test(url))
+        void shell.openExternal(url).catch(() => {});
       return { action: "deny" };
     });
     win.webContents.on("will-navigate", (event) => event.preventDefault());

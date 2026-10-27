@@ -13,6 +13,7 @@ import {
 } from "../components/ui";
 import { BarChart, LineChart } from "../components/charts";
 import { date, effort, number } from "../format";
+import { MarkdownMessage } from "../components/MarkdownMessage";
 const suggestions = [
   "¿Cómo va mi forma para La Cantabrona?",
   "Compara mis dos últimas subidas a Palombera",
@@ -194,7 +195,7 @@ export function ChatPanel(p: Props) {
                 }
               />
             ) : (
-              <p className="message-text">{m.text}</p>
+              <MarkdownMessage text={m.text} />
             )}
           </ChatMessage>
         ))}

@@ -21,6 +21,57 @@ npm run package
 
 El último comando genera `dist/mac-arm64/CycleLab.app` en un Mac Apple Silicon (la arquitectura depende del equipo). La aplicación no está firmada ni notarizada.
 
+## GitHub y releases
+
+El workflow [Release](.github/workflows/release.yml) comprueba lint, tipos y tests unitarios en macOS Apple Silicon, macOS Intel y Windows x64. Después genera `.dmg` y `.zip` para cada arquitectura de Mac y un instalador `.exe` para Windows. SQLite se recompila en cada runner para su plataforma y arquitectura. Solo cuando las tres compilaciones terminan correctamente se crea una **release en borrador** con todos los instaladores.
+
+### Subir el repositorio por primera vez
+
+1. En GitHub, crea un repositorio vacío llamado `CycleLab`, sin añadir README, licencia ni `.gitignore`. Puedes empezar con visibilidad privada.
+2. Revisa `git status` y los archivos que vas a subir. `.gitignore` excluye `.env*`, bases SQLite, dependencias y compilaciones; comprueba también que el historial no contiene credenciales o datos personales antes de publicarlo.
+3. Guarda la configuración del pipeline y conecta el repositorio (sustituye `TU_USUARIO`):
+
+```sh
+git add .github/workflows/release.yml package.json README.md
+git commit -m "add macOS and Windows release pipeline" -m "Build installers on native GitHub runners and collect them in a draft release after validation. Document repository setup and version tags."
+git remote add origin https://github.com/TU_USUARIO/CycleLab.git
+git push -u origin main
+```
+
+Para autenticarte puedes usar GitHub Desktop, SSH o GitHub CLI (`gh auth login`). GitHub no acepta la contraseña de la cuenta como contraseña de Git por HTTPS. Si ya existe `origin`, comprueba `git remote -v` antes de cambiarlo.
+
+### Primera release y siguientes versiones
+
+Para publicar la versión actual `0.1.0`, con el árbol de trabajo limpio y los cambios ya subidos:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Para las siguientes versiones, actualiza `package.json` y `package-lock.json`, confirma esos cambios y crea el tag correspondiente:
+
+```sh
+npm version patch --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "release 0.1.1" -m "Bump the application version to 0.1.1 for the next desktop release."
+git tag v0.1.1
+git push origin main
+git push origin v0.1.1
+```
+
+Adapta `0.1.1` a la versión resultante. El workflow rechaza etiquetas que no coincidan exactamente con `v` + la versión de `package.json`. No reutilices etiquetas ya publicadas.
+
+En **Actions → Release** puedes seguir la ejecución. En **Releases**, revisa el borrador, prueba los instaladores y pulsa **Publish release**. También puedes ejecutar **Run workflow** desde una rama para generar artefactos descargables durante 14 días sin crear una release. Una ejecución manual sobre un tag sí prepara la release. Reejecutar sobre un borrador sustituye sus instaladores; sobre una release publicada se rechaza la subida.
+
+No necesitas crear un token personal para el pipeline: usa el `GITHUB_TOKEN` automático, con permiso de escritura únicamente en el job de release. Las claves de Garmin, OpenRouter y MapTiler se configuran en la aplicación instalada y no son secretos necesarios para compilar. En repositorios privados, los runners consumen la cuota de GitHub Actions de tu cuenta.
+
+### Firma y validación de los instaladores
+
+Los instaladores iniciales **no llevan firma de distribución**. macOS puede bloquear una descarga sin firma/notarización y Windows puede mostrar avisos de SmartScreen. Para distribución pública configura Developer ID y notarización de Apple, y firma de código para Windows mediante los secretos de Actions. En Mac habrá que retirar `build.mac.identity: null` y configurar las credenciales; no basta con añadir secretos mientras la firma siga desactivada. Consulta la [guía de firma de electron-builder](https://www.electron.build/docs/features/code-signing/).
+
+Para compilar instaladores localmente: `npm run dist` (plataforma y arquitectura del equipo). Este pipeline no añade actualizaciones automáticas ni ejecuta pruebas visuales o de instalación. La interfaz se diseñó para Mac: valida instalación, controles de ventana, teclado, credenciales y reapertura de datos en un Windows real antes de dar soporte a esa plataforma.
+
 ## Configurar las conexiones
 
 1. Abre **Ajustes**, al pie de la barra lateral.

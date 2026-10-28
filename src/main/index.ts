@@ -1,9 +1,11 @@
 import { MapTilerSource } from "./maptiler";
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { settingsSchema } from "../shared/settings";
+import { snapshot, writeBackup, restoreBackup } from "./backup";
 import { createSegment } from "../domain/segments";
 import { SegmentResults } from "./segmentResults";
 import { Store } from "./store";
@@ -25,22 +27,9 @@ let win: BrowserWindow | null = null,
   store: Store;
 let demoSyncCount = 0;
 const busy = new Set<Source>();
+let restoring = false;
 const sourceSchema = z.enum(["demo", "garmin"]),
   providerSchema = z.enum(["garmin", "openrouter", "maptiler"]);
-const settingsSchema = z
-  .object({
-    theme: z.enum(["dark", "light"]),
-    source: sourceSchema,
-    model: z.string().max(200).nullable(),
-    athlete: z
-      .object({
-        ftp: z.number().min(1).max(1000).nullable(),
-        weight: z.number().min(10).max(400).nullable(),
-        lthr: z.number().min(30).max(250).nullable(),
-      })
-      .strict(),
-  })
-  .strict();
 function changed() {
   if (win && !win.isDestroyed()) win.webContents.send("cyclelab:changed");
 }
@@ -80,6 +69,8 @@ function register(name: string, fn: (...args: unknown[]) => unknown) {
       )
         return { ok: false, error: "Origen IPC no autorizado." };
       try {
+        if (restoring && name !== "state" && name !== "map-resource")
+          throw new Error("Espera a que termine la restauración.");
         return { ok: true, value: await fn(...args) };
       } catch (e) {
         return {
@@ -100,7 +91,7 @@ async function boot() {
   mkdirSync(dir, { recursive: true });
   store = new Store(join(dir, "cyclelab.db"));
   await store.seed();
-  const segmentResults = new SegmentResults(store, changed);
+  let segmentResults = new SegmentResults(store, changed);
   app.on("before-quit", () => segmentResults.stop());
   const credentials = new Credentials(store),
     garmin = new GarminPersonalSource(() => credentials.get("garmin")),
@@ -127,6 +118,65 @@ async function boot() {
     ),
   );
   register("state", () => state());
+  register("backup-export", async () => {
+    const { canceled, filePath } = await dialog.showSaveDialog(win!, {
+      title: "Exportar copia de seguridad",
+      defaultPath: `CycleLab-${new Date().toISOString().slice(0, 10)}.cyclelab-backup.json`,
+      filters: [{ name: "Copia de CycleLab", extensions: ["json"] }],
+    });
+    if (canceled || !filePath) return null;
+    if (!filePath.endsWith(".cyclelab-backup.json"))
+      throw new Error("El nombre debe terminar en .cyclelab-backup.json.");
+    writeBackup(filePath, snapshot(store.db));
+    return filePath;
+  });
+  register("backup-restore", async () => {
+    const ensureIdle = () => {
+      if (
+        busy.size ||
+        store.get<SyncState | null>("sync", null)?.state === "syncing" ||
+        store.get<SyncState | null>("demoSync", null)?.state === "syncing"
+      )
+        throw new Error(
+          "Espera a que terminen la sincronización y las respuestas del entrenador antes de restaurar.",
+        );
+    };
+    ensureIdle();
+    restoring = true;
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog(win!, {
+        title: "Restaurar copia de seguridad",
+        properties: ["openFile"],
+        filters: [{ name: "Copia de CycleLab", extensions: ["json"] }],
+      });
+      if (canceled || !filePaths[0]) return null;
+      const { response } = await dialog.showMessageBox(win!, {
+        type: "warning",
+        title: "Restaurar copia de seguridad",
+        message: "Se sustituirán tus datos locales por los de la copia.",
+        detail:
+          "Incluye actividades, segmentos, conversaciones y ajustes de ambos orígenes. Guardaremos una copia previa en la carpeta backups del perfil. Las claves de este Mac se conservan; en otro Mac tendrás que configurarlas de nuevo.",
+        buttons: ["Cancelar", "Restaurar copia"],
+        defaultId: 0,
+        cancelId: 0,
+      });
+      if (response !== 1) return null;
+      ensureIdle();
+      const previous = restoreBackup(store.db, filePaths[0], () =>
+        store.recover(),
+      );
+      segmentResults.stop();
+      segmentResults = new SegmentResults(store, changed);
+      garmin.reset();
+      maptiler.clear();
+      segmentResults.scheduleAll("demo");
+      segmentResults.scheduleAll("garmin");
+      changed();
+      return previous;
+    } finally {
+      restoring = false;
+    }
+  });
   register(
     "activity",
     (s, id) =>

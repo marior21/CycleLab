@@ -1,5 +1,6 @@
 import { classifyActivity } from "../domain/classification";
 import Database from "better-sqlite3";
+import { automaticBackup, schemaVersion } from "./backup";
 import type {
   Activity,
   ActivityDetail,
@@ -16,13 +17,15 @@ export class Store {
   readonly db: Database.Database;
   constructor(path: string) {
     this.db = new Database(path);
-    this.db.pragma("journal_mode = WAL");
-    this.db.pragma("foreign_keys = ON");
     const version = this.db.pragma("user_version", { simple: true }) as number;
-    if (version > 4)
+    if (version > schemaVersion)
       throw new Error(
         "Esta base de datos requiere una versión más reciente de CycleLab.",
       );
+    if (version > 0 && version < schemaVersion)
+      automaticBackup(this.db, `antes-de-migrar-v${version}`);
+    this.db.pragma("journal_mode = WAL");
+    this.db.pragma("foreign_keys = ON");
     this.db.transaction(() => {
       this.db.exec(
         `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 4;`,
@@ -32,6 +35,9 @@ export class Store {
           "ALTER TABLE activities ADD COLUMN best TEXT; UPDATE activities SET best=json_extract(detail,'$.best');",
         );
     })();
+    this.recover();
+  }
+  recover() {
     this.db
       .prepare(
         "UPDATE messages SET payload=json_set(payload,'$.status','error','$.text','La respuesta se interrumpió al cerrar CycleLab. Puedes volver a enviar la pregunta.') WHERE json_extract(payload,'$.status')='running'",

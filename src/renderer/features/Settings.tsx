@@ -16,6 +16,7 @@ export function Settings(p: Props) {
   const [models, setModels] = useState<Model[]>([]),
     [search, setSearch] = useState(""),
     [loading, setLoading] = useState(false),
+    [backupBusy, setBackupBusy] = useState(false),
     [reclassifying, setReclassifying] = useState(false),
     [tagMessage, setTagMessage] = useState(""),
     [error, setError] = useState(""),
@@ -51,6 +52,30 @@ export function Settings(p: Props) {
       setError(e instanceof Error ? e.message : "No se pudo guardar.");
     }
   }
+  async function backup(restore: boolean) {
+    setBackupBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const path = await (restore
+        ? window.cyclelab.restoreBackup()
+        : window.cyclelab.exportBackup());
+      if (path) {
+        await p.refresh();
+        setNotice(
+          restore
+            ? `Copia restaurada. Copia previa guardada en ${path}`
+            : `Copia guardada en ${path}`,
+        );
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "No se pudo completar la copia.",
+      );
+    } finally {
+      setBackupBusy(false);
+    }
+  }
   return (
     <div className="page settings-page">
       <div>
@@ -73,6 +98,33 @@ export function Settings(p: Props) {
             { value: "garmin", label: "Mis datos" },
           ]}
         />
+      </Panel>
+      <Panel
+        title="Copias de seguridad"
+        subtitle="Conserva actividades, segmentos, conversaciones y ajustes de ambos orígenes. Las copias no incluyen las claves."
+      >
+        <div className="toolbar">
+          <Button disabled={backupBusy} onClick={() => void backup(false)}>
+            Exportar copia
+          </Button>
+          <Button
+            disabled={backupBusy || sync.state === "syncing"}
+            onClick={() => void backup(true)}
+          >
+            Restaurar copia
+          </Button>
+          {backupBusy && (
+            <span role="status" className="small cl-muted">
+              Preparando copia…
+            </span>
+          )}
+        </div>
+        <p className="small cl-faint">
+          Restaurar sustituye los datos locales y guarda antes una copia de
+          recuperación. También se guarda una copia antes de migrar la base de
+          datos. En otro Mac, configura de nuevo Garmin, OpenRouter y MapTiler.
+          La copia contiene datos personales: guárdala en un lugar seguro.
+        </p>
       </Panel>
       <Panel
         title="Garmin Connect Personal"

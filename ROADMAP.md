@@ -55,6 +55,8 @@ SQLite ya conserva actividades, segmentos y conversaciones, pero falta un flujo 
 
 **Terminado cuando:** se recuperan segmentos, conversaciones y ajustes en un perfil limpio; una copia dañada o incompatible no sustituye la base válida. No copiar sin más el archivo SQLite mientras está abierto en modo WAL.
 
+**Completada el 28/10/2026.** Exportación y restauración desde Ajustes mediante copias lógicas versionadas, consistentes en WAL y sin credenciales. Validación de integridad y contenido, reemplazo transaccional y copia automática previa a restauraciones y migraciones. Recuperación verificada en un perfil limpio, con rechazo de archivos dañados/incompatibles y rollback ante fallo de escritura. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-12--copias-de-seguridad-y-recuperación-28102026).
+
 ### 1.3. Cobertura y procedencia de cada métrica · P0 · M
 
 La carga actual excluye actividades sin TSS y arranca desde CTL/ATL cero. La advertencia ya existe, pero conviene convertirla en información útil para interpretar el gráfico.

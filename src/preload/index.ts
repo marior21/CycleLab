@@ -9,6 +9,8 @@ async function call<T>(name: string, ...args: unknown[]): Promise<T> {
   return result.value;
 }
 const api: CycleLabAPI = {
+  exportBackup: () => call("backup-export"),
+  restoreBackup: () => call("backup-restore"),
   getState: () => call("state"),
   mapResource: (path) => call("map-resource", path),
   getSegmentResults: (source, id, retry) =>

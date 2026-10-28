@@ -187,3 +187,22 @@ Puedes acercar, desplazar, ajustar la vista y colorear el recorrido por potencia
 Todas las descargas de estilos, fuentes, sprites y tiles pasan por IPC validado al proceso principal. La clave se guarda cifrada con `safeStorage` y se elimina de las URLs antes de devolver recursos al renderer. La caché es temporal, en memoria, y respeta las cabeceras del proveedor; no se descargan zonas offline. Sin clave o ante un error, se conserva la vista esquemática y el análisis local. MapTiler recibe las peticiones de los tiles de la zona visible; no se sube el fichero de la actividad ni sus métricas.
 
 La pendiente usa diferencias entre muestras y puede ser ruidosa; los datos ausentes se dibujan en gris. No se añaden planificación de rutas, satélite, relieve 3D ni detección automática de puertos. Documentación: [MapLibre](https://maplibre.org/maplibre-gl-js/docs/), [API de MapTiler](https://docs.maptiler.com/cloud/api/reference/).
+
+## Copias de seguridad y recuperación
+
+En **Ajustes → Copias de seguridad**, «Exportar copia» guarda un archivo
+`.cyclelab-backup.json` con actividades y muestras, segmentos y resultados,
+conversaciones y ajustes de demostración y Garmin. Es una lectura lógica en una
+transacción SQLite, compatible con WAL; no se copia directamente el archivo abierto.
+
+«Restaurar copia» pide elegir el archivo y confirmar el reemplazo de los datos locales.
+Primero comprueba formato, versiones, SHA-256 y estructura de los registros. Guarda una
+copia previa en `backups/` dentro del perfil y restaura mediante una única transacción;
+un archivo inválido o un fallo de escritura conservan la base anterior. Las migraciones
+desde un esquema anterior también guardan una copia antes de cambiar las tablas.
+Las copias automáticas se pueden elegir con el mismo botón de restauración.
+
+Las claves de Garmin, OpenRouter y MapTiler no se exportan. Restaurar conserva las claves
+que ya tenga el Mac de destino; un perfil limpio pide configurarlas de nuevo en Ajustes.
+Las copias contienen datos personales, GPS y conversaciones en texto sin cifrar: guárdalas
+en una ubicación segura. Las copias automáticas se conservan hasta que las borres manualmente.

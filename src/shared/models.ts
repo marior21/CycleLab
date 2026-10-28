@@ -258,6 +258,8 @@ export type MapResource =
   | { kind: "json"; data: Record<string, unknown> }
   | { kind: "binary"; data: Uint8Array };
 export interface CycleLabAPI {
+  exportBackup(): Promise<string | null>;
+  restoreBackup(): Promise<string | null>;
   mapResource(path: string): Promise<MapResource>;
   getState(): Promise<AppState>;
   getSegmentResults(

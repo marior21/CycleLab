@@ -1,5 +1,6 @@
 import { sortAttempts, type AttemptSort } from "./segmentSort";
 import { useEffect, useState } from "react";
+import { SegmentComparison } from "./SegmentComparison";
 import { SegmentProfile } from "./SegmentProfile";
 import type {
   ActivityDetail,
@@ -16,8 +17,10 @@ export function SegmentAttempts(p: {
   id: string;
   segment: Segment;
   detail: ActivityDetail | null;
-  openActivity: (id: string) => void;
+  openActivity: (id: string, selection?: [number, number]) => void;
 }) {
+  const [checked, setChecked] = useState<string[]>([]);
+  const [comparing, setComparing] = useState(false);
   const [selected, setSelected] = useState<SegmentAttempt | null>(null);
   const [report, setReport] = useState<SegmentResults | null>(null);
   const [error, setError] = useState("");
@@ -59,6 +62,9 @@ export function SegmentAttempts(p: {
       unsubscribe();
     };
   }, [p.source, p.id, retry]);
+  const pair = checked.flatMap(
+    (id) => report?.attempts.find((a) => a.id === id) ?? [],
+  );
   const best = report?.attempts.reduce<number | null>(
     (value, a) => (value === null || a.dur < value ? a.dur : value),
     null,
@@ -100,7 +106,27 @@ export function SegmentAttempts(p: {
               <Metric label="Resultados" value={report.attempts.length} />
               <Metric label="Mejor tiempo" value={duration(best)} />
             </div>
+            <div className="toolbar">
+              <span className="small cl-faint">
+                Marca dos intentos para comparar · {pair.length}/2
+              </span>
+              <Button
+                disabled={pair.length !== 2}
+                onClick={() => setComparing(true)}
+              >
+                Comparar intentos
+              </Button>
+            </div>
             <DataTable
+              checked={checked}
+              onCheck={(id) => {
+                setComparing(false);
+                setChecked((current) =>
+                  current.includes(String(id))
+                    ? current.filter((value) => value !== id)
+                    : [...current, String(id)].slice(-2),
+                );
+              }}
               rows={sortAttempts(report.attempts, sort)}
               sort={sort}
               onSort={(key) =>
@@ -171,6 +197,15 @@ export function SegmentAttempts(p: {
           </>
         )}
       </Panel>
+      {comparing && pair.length === 2 && (
+        <SegmentComparison
+          key={pair.map((a) => a.id).join("|")}
+          source={p.source}
+          attempts={[pair[0], pair[1]]}
+          openActivity={p.openActivity}
+          onClose={() => setComparing(false)}
+        />
+      )}
       <SegmentProfile
         source={p.source}
         segment={p.segment}

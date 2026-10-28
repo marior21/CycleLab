@@ -117,6 +117,8 @@ La tabla histórica es útil; el siguiente salto es saber dónde se ganó o perd
 
 **Terminado cuando:** la alineación respeta huecos y sentido del recorrido; se explican los tiempos aproximados y no se interpolan grandes tramos sin datos como si fueran medidos.
 
+**Completada el 28/10/2026.** Selección de dos intentos en Segmentos y Puertos, superposición de potencia, FC y velocidad por distancia y diferencia acumulada A − B. Cursor y selección compartidos, acceso a cada actividad con su tramo y cortes explícitos ante huecos. Se mantienen el recorrido y sentido verificados por la búsqueda, sin estirar distancias ni extrapolar. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-23--comparación-visual-de-intentos-28102026).
+
 ### 2.4. Gestionar y revisar los segmentos · P1 · M
 
 - Renombrar y buscar segmentos; marcar favoritos.

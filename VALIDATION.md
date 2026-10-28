@@ -322,3 +322,50 @@ podía obtener vueltas pero no el resumen de la misma sesión. Se conservan los
 filtros de fecha/tipo y no se devuelve el listado general si el ID no existe.
 Prueba de regresión con ID numérico, resumen completo, ID ausente/parcial y búsqueda
 por nombre. La descripción de la herramienta explica cómo consultar el resumen.
+
+## Fase 2.3 — Comparación visual de intentos (28/10/2026)
+
+- Segmentos y Puertos permiten marcar dos resultados y abrir «Comparar intentos».
+  La pareja conserva el orden de selección (A/B), independientemente de la
+  ordenación de la tabla. Marcar un tercero conserva los dos últimos.
+- Potencia, FC y velocidad se superponen en sus unidades sobre distancia desde
+  el inicio de cada intento; A usa trazo continuo y B discontinuo. Un cuarto
+  gráfico muestra tiempo transcurrido A − B en segundos: negativo significa que
+  A llega antes. Los cuatro comparten cursor y selección por arrastre; Esc y el
+  botón de limpieza eliminan la selección. Cada intento abre su actividad con
+  el tramo original seleccionado.
+- Cálculo local sobre las muestras de los resultados persistidos, cuya búsqueda
+  ya comprueba recorrido y sentido. No hay nuevos IPC, dependencias ni cambios
+  de almacenamiento. No se normalizan longitudes ni se extrapolan extremos.
+- La interpolación solo une muestras consecutivas separadas hasta 30 s y 200 m.
+  Se insertan cortes incluso cuando ambos intentos tienen el mismo hueco;
+  distancia ausente interrumpe la continuidad y sensores ausentes siguen siendo
+  nulos. Los ceros medidos se conservan. Distancias decrecientes/reiniciadas o
+  tiempos desordenados invalidan la comparación. Las pausas cuentan en el tiempo
+  transcurrido; en distancias repetidas se utiliza el momento de salida.
+- La interfaz identifica las actividades, fechas con año, duración e inicio del
+  intento, explica el signo del tiempo y los límites de interpolación, y ofrece
+  estados de carga, error con reintento y distancia insuficiente.
+
+Validación: typecheck, lint, build y las 126 pruebas unitarias correctos. Siete
+pruebas nuevas cubren alineación, signo, interpolación corta, extremos distintos,
+huecos temporales/espaciales/distancia ausente, sensores nulos, ceros, pausas y
+registros inválidos y ruido de coma flotante (diferencia redondeada al milisegundo). Se conserva la prueba de rechazo de recorridos invertidos.
+El recorrido Electron de resultados históricos comprueba dos pasos de una misma
+actividad, selección de dos/tres filas, cuatro gráficos, selección compartida y
+Esc, y retorno a ambas actividades con el tramo. Sin errores de renderer durante
+el recorrido de comparación. Capturas por tema y por gráfico en
+`test-results/segment-comparison-{dark,light}*.png`.
+
+Comparación visual del sistema contra `design/prototype.html` en ambos temas,
+con evidencias en `artifacts/visual/`. El script original falló al comparar tamaños
+porque macOS limitó la altura de la ventana a 803 px; se ejecutó una copia temporal
+con el viewport del prototipo igual al de Electron (1440 × 803). La copia se
+eliminó después. La referencia solo superpone potencia; FC, velocidad y diferencia
+acumulada reutilizan el mismo componente y tokens. No se afirma igualdad de píxeles.
+
+Límites: pruebas con datos sintéticos y perfil temporal; sin nueva sincronización
+Garmin real ni ejecución de toda la suite Electron o instaladores. La distancia
+registrada y los extremos GPS pueden diferir entre intentos: los tiempos son
+aproximados, no cronometraje exacto de un mismo punto geográfico. No se reconstruyen
+recorridos sin distancia ni se rellenan grandes huecos.

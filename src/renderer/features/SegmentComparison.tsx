@@ -1,0 +1,179 @@
+import { useEffect, useMemo, useState } from "react";
+import type {
+  ActivityDetail,
+  SegmentAttempt,
+  Source,
+} from "../../shared/models";
+import { compareSegmentAttempts } from "../../domain/segmentComparison";
+import { LineChart } from "../components/charts";
+import { Button, Panel, StateBlock } from "../components/ui";
+import { date, duration, number } from "../format";
+
+export function SegmentComparison(p: {
+  source: Source;
+  attempts: [SegmentAttempt, SegmentAttempt];
+  openActivity: (id: string, selection?: [number, number]) => void;
+  onClose: () => void;
+}) {
+  const [details, setDetails] = useState<ActivityDetail[] | null>(null);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+  const [hover, setHover] = useState<number | null>(null);
+  const [selection, setSelection] = useState<[number, number] | null>(null);
+  const [a, b] = p.attempts;
+  useEffect(() => {
+    let active = true;
+    setDetails(null);
+    setError("");
+    Promise.all(
+      [a, b].map((attempt) =>
+        window.cyclelab.getActivity(p.source, attempt.activityId),
+      ),
+    )
+      .then((value) => {
+        if (active) setDetails(value);
+      })
+      .catch((e) => {
+        if (active)
+          setError(
+            e instanceof Error
+              ? e.message
+              : "No se pudieron cargar los intentos.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [p.source, a.activityId, b.activityId, retry]);
+  const rows = useMemo(
+    () =>
+      details
+        ? compareSegmentAttempts(
+            details[0].rows.slice(a.i0, a.i1 + 1),
+            details[1].rows.slice(b.i0, b.i1 + 1),
+          )
+        : [],
+    [details, a.i0, a.i1, b.i0, b.i1],
+  );
+  const shared = {
+    data: rows,
+    xFormat: (v: number) => `${number(v, 2)} km`,
+    hoverIndex: hover,
+    onHover: setHover,
+    selection,
+    onSelect: setSelection,
+    legend: true,
+    zeroBased: false,
+    yFormat: (v: number) => number(v, 1),
+  };
+  return (
+    <section
+      aria-label="Comparación de intentos"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setSelection(null);
+      }}
+    >
+      <Panel
+        title="Comparar intentos"
+        actions={<Button onClick={p.onClose}>Cerrar comparación</Button>}
+      >
+        {[a, b].map((attempt, i) => (
+          <div className="toolbar" key={attempt.id}>
+            <Button
+              onClick={() =>
+                p.openActivity(attempt.activityId, [attempt.i0, attempt.i1])
+              }
+            >
+              {i === 0 ? "A" : "B"} · Ver actividad
+            </Button>
+            <span className="small">
+              {attempt.activityName} · {date(attempt.date, true)} ·{" "}
+              {duration(attempt.dur)}
+              {details &&
+                ` · Inicio ${duration(details[i].rows[attempt.i0]?.x)}`}
+            </span>
+          </div>
+        ))}
+        <p className="small cl-faint">
+          Mismo recorrido y sentido según la búsqueda GPS. Distancia desde el
+          inicio de cada intento, sin ajustar longitudes. Tiempos aproximados
+          entre muestras; incluyen las pausas (en una parada se usa la salida).
+          Interpolación solo entre muestras consecutivas separadas hasta 30 s y
+          200 m. Los huecos y sensores ausentes se dejan vacíos.
+        </p>
+        <p className="small cl-faint">
+          Diferencia A − B: valores negativos indican que A llega antes;
+          positivos, que A llega después. Arrastra para seleccionar la misma
+          distancia en todos los gráficos; Esc limpia la selección.
+        </p>
+        {selection && (
+          <Button size="sm" onClick={() => setSelection(null)}>
+            Limpiar selección · {number(selection[0], 2)}–
+            {number(selection[1], 2)} km
+          </Button>
+        )}
+        {error ? (
+          <StateBlock
+            kind="error"
+            title="No se pudo cargar la comparación"
+            detail={error}
+            action={
+              <Button onClick={() => setRetry((n) => n + 1)}>Reintentar</Button>
+            }
+          />
+        ) : !details ? (
+          <StateBlock kind="loading" title="Cargando intentos" />
+        ) : !rows.length ? (
+          <StateBlock
+            title="Sin distancia utilizable para comparar"
+            detail="Los dos intentos necesitan distancia creciente y tiempos ordenados. No se reconstruyen distancias ausentes ni recorridos invertidos."
+          />
+        ) : (
+          <>
+            {(
+              [
+                ["p", "Potencia", "W"],
+                ["hr", "Frecuencia cardíaca", "ppm"],
+                ["v", "Velocidad", "km/h"],
+              ] as const
+            ).map(([key, label, unit]) => (
+              <div key={key}>
+                <h3 className="label">{label}</h3>
+                <LineChart
+                  {...shared}
+                  ariaLabel={`${label} de los intentos sobre distancia`}
+                  series={[
+                    { key: `a${key}`, label: "A", color: "brand-ink", unit },
+                    {
+                      key: `b${key}`,
+                      label: "B",
+                      color: "ink-muted",
+                      dash: true,
+                      unit,
+                    },
+                  ]}
+                />
+              </div>
+            ))}
+            <h3 className="label">Diferencia de tiempo acumulada</h3>
+            <LineChart
+              {...shared}
+              ariaLabel="Diferencia de tiempo acumulada A menos B"
+              series={[
+                {
+                  key: "delta",
+                  label: "A − B",
+                  color: "ink",
+                  unit: "s",
+                  format: (v) => number(v, 1),
+                },
+              ]}
+              refLines={[{ value: 0, label: "Igual tiempo" }]}
+            />
+          </>
+        )}
+      </Panel>
+    </section>
+  );
+}

@@ -889,7 +889,7 @@ test("segment results cover all years, repeated passes, persistence and refreshe
       .locator("tbody tr")
       .filter({ hasText: "historic" })
       .last();
-    await attemptRow.getByRole("cell").first().click();
+    await attemptRow.getByRole("cell").nth(1).click();
     await expect(attemptRow).toHaveAttribute("aria-selected", "true");
     const profilePanel = page
       .locator(".cl-panel")
@@ -944,6 +944,66 @@ test("segment results cover all years, repeated passes, persistence and refreshe
     await page.screenshot({ path: "test-results/segment-results-dark.png" });
     await page.getByRole("button", { name: "Cambiar tema" }).click();
     await page.screenshot({ path: "test-results/segment-results-light.png" });
+    const rendererErrors: string[] = [];
+    page.on("pageerror", (error) => rendererErrors.push(error.message));
+    await expect(
+      page.getByRole("button", { name: "Comparar intentos", exact: true }),
+    ).toBeDisabled();
+    await resultsTable.getByRole("checkbox").nth(0).check();
+    await resultsTable.getByRole("checkbox").nth(1).check();
+    await page
+      .getByRole("button", { name: "Comparar intentos", exact: true })
+      .click();
+    const comparison = page.getByRole("region", {
+      name: "Comparación de intentos",
+    });
+    await expect(comparison.locator(".chart-engine")).toHaveCount(4);
+    await expect(comparison).toContainText("Tiempos aproximados");
+    for (const theme of ["dark", "light"] as const) {
+      if ((await page.locator("html").getAttribute("data-theme")) !== theme)
+        await page.getByRole("button", { name: "Cambiar tema" }).click();
+      await comparison
+        .getByText("Comparar intentos", { exact: true })
+        .scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: `test-results/segment-comparison-${theme}.png`,
+      });
+      for (let i = 0; i < 4; i++) {
+        const plot = comparison.locator(".cl-chart").nth(i);
+        await plot.scrollIntoViewIfNeeded();
+        await plot.screenshot({
+          path: `test-results/segment-comparison-${theme}-${i}.png`,
+        });
+      }
+    }
+    const surface = comparison.locator(".chart-surface").first();
+    await surface.scrollIntoViewIfNeeded();
+    const bounds = (await surface.boundingBox())!;
+    await page.mouse.move(bounds.x + 80, bounds.y + 40);
+    await page.mouse.down();
+    await page.mouse.move(bounds.x + 200, bounds.y + 40);
+    await page.mouse.up();
+    await expect(comparison.locator(".cl-sel")).toHaveCount(4);
+    await comparison.focus();
+    await page.keyboard.press("Escape");
+    await expect(comparison.locator(".cl-sel")).toHaveCount(0);
+    await comparison.getByRole("button", { name: /^B ·/ }).click();
+    await expect(
+      page.getByRole("heading", { name: "Actividades", exact: true }),
+    ).toBeVisible();
+    await expect(page.locator(".sel-bar")).toContainText("Selección");
+    await page.keyboard.press("Meta+4");
+    await resultsTable.getByRole("checkbox").nth(0).check();
+    await resultsTable.getByRole("checkbox").nth(1).check();
+    await resultsTable.getByRole("checkbox").nth(2).check();
+    await expect(resultsTable.locator("input:checked")).toHaveCount(2);
+    await page
+      .getByRole("button", { name: "Comparar intentos", exact: true })
+      .click();
+    await expect(comparison.locator(".chart-engine")).toHaveCount(4);
+    await comparison.getByRole("button", { name: /^A ·/ }).click();
+    await expect(page.locator(".sel-bar")).toContainText("Selección");
+    expect(rendererErrors).toEqual([]);
     await app.close();
     app = await launch();
     page = await app.firstWindow();

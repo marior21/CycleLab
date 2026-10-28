@@ -1,3 +1,4 @@
+import { profileAt } from "./athlete";
 import { LOAD_PROVENANCE, sampleCoverage } from "./coverage";
 import type {
   Activity,
@@ -214,7 +215,14 @@ export function realDataset(
     for (const e of detail.best) {
       if (e.p === null) continue;
       const row = curve.find((r) => r.x === e.t);
-      if (row) row["s" + year] = Math.max(Number(row["s" + year] ?? 0), e.p);
+      if (
+        row &&
+        (row["s" + year] === undefined || e.p > Number(row["s" + year]))
+      ) {
+        row["s" + year] = e.p;
+        row["w" + year] = profileAt(athlete, a.date).weight;
+        row["d" + year] = a.date;
+      }
       monthly["p" + e.t] = Math.max(Number(monthly["p" + e.t] ?? 0), e.p);
     }
     months.set(mo, monthly);

@@ -1,3 +1,4 @@
+import { withProfileEntries } from "../domain/athlete";
 import { sampleCoverage } from "../domain/coverage";
 import type { SampleCoverage } from "../shared/models";
 import { classifyActivity } from "../domain/classification";
@@ -31,7 +32,7 @@ export class Store {
     this.db.pragma("foreign_keys = ON");
     this.db.transaction(() => {
       this.db.exec(
-        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 4;`,
+        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 5;`,
       );
       if (version === 1)
         this.db.exec(
@@ -89,13 +90,18 @@ export class Store {
       .run(key, JSON.stringify(value));
   }
   settings(): Settings {
+    const saved = this.get<Settings>("settings", {
+      theme: "dark" as const,
+      source: "demo" as Source,
+      model: null,
+      athlete: { ftp: null, lthr: null, weight: null },
+      garminConfigured: false,
+      openrouterConfigured: false,
+      maptilerConfigured: false,
+    });
     return {
-      ...this.get("settings", {
-        theme: "dark" as const,
-        source: "demo" as Source,
-        model: null,
-        athlete: { ftp: null, lthr: null, weight: null },
-      }),
+      ...saved,
+      athlete: withProfileEntries(saved.athlete, []),
       garminConfigured: this.hasSecret("garmin"),
       openrouterConfigured: this.hasSecret("openrouter"),
       maptilerConfigured: this.hasSecret("maptiler"),

@@ -75,6 +75,8 @@ Actualmente el perfil contiene un único valor de cada magnitud. Eso limita la i
 
 **Terminado cuando:** cambiar el FTP de hoy no modifica silenciosamente el significado de una sesión de hace dos años, y las comparaciones indican qué peso/umbral utilizan.
 
+**Completada el 28/10/2026.** Historial por magnitud, fecha UTC y procedencia, editable desde Ajustes y recuperable en copias. Zonas y W/kg utilizan referencias de la actividad; las comparaciones muestran el perfil aplicado y las curvas el peso de cada marca. Se conservan IF/TSS importados y los huecos históricos. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-14--historial-de-ftp-peso-y-lthr-28102026).
+
 ### 1.5. Mantenimiento y privacidad comprensibles · P1 · M
 
 - Ver espacio ocupado y estado de las importaciones; pausar/cancelar sin perder lo ya descargado.

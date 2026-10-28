@@ -32,10 +32,10 @@ export function Performance(p: PageProps) {
     Object.fromEntries(
       Object.entries(r).map(([k, v]) => [
         k,
-        k === "x" || unit === "w"
+        !/^s\d{4}$/.test(k) || unit === "w"
           ? v
-          : weight && typeof v === "number"
-            ? v / weight
+          : typeof r["w" + k.slice(1)] === "number" && typeof v === "number"
+            ? v / Number(r["w" + k.slice(1)])
             : null,
       ]),
     ),
@@ -62,6 +62,8 @@ export function Performance(p: PageProps) {
     l: effort(t),
     a: at(t),
     b: keys[1] ? at(t, keys[1]) : null,
+    weight: p.data.curve.find((r) => r.x === t)?.["w" + keys[0]?.slice(1)] as
+      number | null | undefined,
   }));
   const tone = dur === "p300" ? "z5" : dur === "p1200" ? "power" : "z2";
   return (
@@ -166,7 +168,8 @@ export function Performance(p: PageProps) {
           deltaUnit=" W"
           sub={
             p.data.athlete.ftp && at(14400) !== null
-              ? number((at(14400)! / p.data.athlete.ftp) * 100) + "% FTP"
+              ? number((at(14400)! / p.data.athlete.ftp) * 100) +
+                "% del FTP actual (referencia)"
               : "Sin referencia FTP"
           }
         />
@@ -175,11 +178,14 @@ export function Performance(p: PageProps) {
         <Panel
           className="grow"
           title="Curva de potencia"
-          subtitle="Máxima potencia media por duración · escala logarítmica"
+          subtitle="Máxima potencia media por duración · W/kg con el peso vigente en la actividad de cada marca; sin fecha, sin W/kg"
         >
-          {unit === "wkg" && !weight ? (
+          {unit === "wkg" &&
+          !curve.some((r) =>
+            series.some((s) => typeof r[s.key] === "number"),
+          ) ? (
             <StateBlock
-              title="Falta el peso"
+              title="Falta el peso histórico"
               action={
                 <Button onClick={() => p.go("settings")}>
                   Completar perfil
@@ -196,10 +202,26 @@ export function Performance(p: PageProps) {
               legend
               xTicks={ticks}
               xFormat={effort}
+              tooltipTitle={(t, row) =>
+                effort(t) +
+                " · " +
+                series
+                  .map(
+                    (s) =>
+                      s.key.slice(1) +
+                      ": " +
+                      number(row["w" + s.key.slice(1)] as number | null, 1) +
+                      " kg" +
+                      (row["d" + s.key.slice(1)]
+                        ? " (" + date(Number(row["d" + s.key.slice(1)])) + ")"
+                        : ""),
+                  )
+                  .join(" · ")
+              }
               yFormat={(v) => number(v, unit === "w" ? 0 : 2)}
               series={series}
               refLines={
-                p.data.athlete.ftp
+                p.data.athlete.ftp && (unit === "w" || weight)
                   ? [
                       {
                         value:
@@ -207,7 +229,7 @@ export function Performance(p: PageProps) {
                             ? p.data.athlete.ftp
                             : p.data.athlete.ftp / weight!,
                         label:
-                          "FTP " +
+                          "FTP actual · " +
                           (unit === "w"
                             ? number(p.data.athlete.ftp) + " W"
                             : ratio(p.data.athlete.ftp, weight) + " W/kg"),
@@ -255,7 +277,14 @@ export function Performance(p: PageProps) {
                 key: "w",
                 label: "W/kg",
                 align: "right",
-                render: (r) => ratio(r.a, weight),
+                render: (r) => (
+                  <>
+                    {ratio(r.a, r.weight ?? null)}
+                    <div className="small cl-muted">
+                      {number(r.weight ?? null, 1)} kg
+                    </div>
+                  </>
+                ),
               },
               {
                 key: "b",

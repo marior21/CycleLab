@@ -1,3 +1,5 @@
+import { settingsSchema } from "../shared/settings";
+import { withProfileEntries, utcDay } from "../domain/athlete";
 import { classifyActivity } from "../domain/classification";
 import { z } from "zod";
 import { unzipSync } from "fflate";
@@ -361,13 +363,31 @@ export class GarminSync {
       ) {
         try {
           const thresholds = await this.source.thresholds(latest.id);
+          const current = this.store.settings();
           this.store.set("settings", {
-            ...settings,
-            athlete: {
-              ...settings.athlete,
-              ftp: settings.athlete.ftp ?? thresholds.ftp,
-              lthr: settings.athlete.lthr ?? thresholds.lthr,
-            },
+            theme: current.theme,
+            source: current.source,
+            model: current.model,
+            athlete: settingsSchema.shape.athlete.parse(
+              withProfileEntries(
+                current.athlete,
+                (["ftp", "lthr"] as const)
+                  .filter(
+                    (metric) =>
+                      !current.athlete[metric] &&
+                      !current.athlete.history?.some(
+                        (entry) => entry.metric === metric,
+                      ) &&
+                      thresholds[metric] !== null,
+                  )
+                  .map((metric) => ({
+                    metric,
+                    value: thresholds[metric],
+                    date: utcDay(latest.date),
+                    origin: "Garmin",
+                  })),
+              ),
+            ),
           });
         } catch {
           /* Optional thresholds do not discard a completed import. */

@@ -1,3 +1,4 @@
+import { profileAt, profileNote } from "../../domain/athlete";
 import { Coverage } from "./Coverage";
 import { filterActivitiesByDate } from "../../domain/activityFilters";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -450,16 +451,20 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
     tooltipTitle: (_v: number, r: (typeof rows)[number]) =>
       duration(r.x) + " · " + number(r.km, 1) + " km",
   };
+  const historical = useMemo(
+    () => profileAt(data.athlete, a.date),
+    [data.athlete, a.date],
+  );
   const zoneRows = useMemo(
     () =>
       zones(
         rows,
         zone === "power" ? "p" : "hr",
-        zone === "power" ? data.athlete.ftp : data.athlete.lthr,
+        zone === "power" ? historical.ftp : historical.lthr,
       ),
-    [rows, zone, data.athlete],
+    [rows, zone, historical],
   );
-  const ftp = data.athlete.ftp;
+  const ftp = historical.ftp;
   const charts = [
     {
       name: "Potencia (30 s)",
@@ -527,6 +532,12 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           Preguntar a la IA
         </Button>
       </div>
+      <p className="small cl-muted">
+        {profileNote(data.athlete, a.date)}. Zonas y W/kg: cálculo local.{" "}
+        {p.demo
+          ? "IF/TSS de demostración."
+          : "IF/TSS importados de Garmin; umbral de origen no verificado."}
+      </p>
       {a.classification && (
         <div className="small cl-faint">
           {a.classification.estimated
@@ -550,7 +561,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           accent="power"
           value={number(a.np)}
           unit="W"
-          sub={ratio(a.np, data.athlete.weight) + " W/kg"}
+          sub={ratio(a.np, historical.weight) + " W/kg"}
         />
         <Metric
           size="s"
@@ -564,8 +575,8 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           value={number(a.hr)}
           unit="ppm"
           sub={
-            a.hr && data.athlete.lthr
-              ? number((a.hr / data.athlete.lthr) * 100) + "% LTHR"
+            a.hr && historical.lthr
+              ? number((a.hr / historical.lthr) * 100) + "% LTHR"
               : undefined
           }
         />
@@ -735,11 +746,11 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
                       : []
                   }
                   refLines={
-                    c.key === "hr" && data.athlete.lthr
+                    c.key === "hr" && historical.lthr
                       ? [
                           {
-                            value: data.athlete.lthr,
-                            label: "LTHR " + data.athlete.lthr,
+                            value: historical.lthr,
+                            label: "LTHR " + historical.lthr,
                           },
                         ]
                       : []
@@ -808,7 +819,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
               key: "wkg",
               label: "W/kg",
               align: "right",
-              render: (l) => ratio(l.avgP, data.athlete.weight),
+              render: (l) => ratio(l.avgP, historical.weight),
             },
             {
               key: "hr",
@@ -869,7 +880,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
                 key: "w",
                 label: "W/kg",
                 align: "right",
-                render: (b) => ratio(b.p, data.athlete.weight),
+                render: (b) => ratio(b.p, historical.weight),
               },
               {
                 key: "season",
@@ -889,7 +900,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           subtitle={
             zone === "power"
               ? `Potencia · FTP ${number(ftp)} W`
-              : `Frecuencia cardíaca · LTHR ${number(data.athlete.lthr)} ppm`
+              : `Frecuencia cardíaca · LTHR ${number(historical.lthr)} ppm`
           }
           actions={
             <Segmented
@@ -908,11 +919,12 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
               title="Sin muestras para calcular zonas"
               detail="El tiempo en zonas es desconocido para este canal."
             />
-          ) : (zone === "power" ? ftp : data.athlete.lthr) ? (
+          ) : (zone === "power" ? ftp : historical.lthr) ? (
             <ZoneBar zones={zoneRows} format={shortDuration} />
           ) : (
             <StateBlock
-              title="Falta el umbral"
+              title="Falta el umbral histórico"
+              detail="Añade un valor con fecha de vigencia anterior o igual a la actividad."
               action={
                 <Button onClick={() => p.go("settings")}>
                   Completar perfil
@@ -999,6 +1011,12 @@ function Comparison(
           Cerrar comparación
         </Button>
       </div>
+      <p className="small cl-muted">
+        A · {profileNote(p.data.athlete, p.a.date)}
+        <br />B · {profileNote(p.data.athlete, p.b.date)}
+        <br />
+        IF/TSS conservados del origen; no recalculados con el perfil actual.
+      </p>
       <Panel
         title="Potencia superpuesta"
         subtitle="Alineadas desde el inicio · media 30 s"

@@ -19,7 +19,7 @@ npm run preview
 npm run package
 ```
 
-El último comando genera `dist/mac-arm64/CycleLab.app` en un Mac Apple Silicon (la arquitectura depende del equipo). La aplicación no está firmada ni notarizada.
+El último comando genera y comprueba el arranque de `dist/mac-arm64/CycleLab.app` en un Mac Apple Silicon (la arquitectura depende del equipo). La aplicación no está firmada ni notarizada.
 
 ## GitHub y releases
 
@@ -206,3 +206,11 @@ Las claves de Garmin, OpenRouter y MapTiler no se exportan. Restaurar conserva l
 que ya tenga el Mac de destino; un perfil limpio pide configurarlas de nuevo en Ajustes.
 Las copias contienen datos personales, GPS y conversaciones en texto sin cifrar: guárdalas
 en una ubicación segura. Las copias automáticas se conservan hasta que las borres manualmente.
+
+## Historial del perfil
+
+En Ajustes, «Perfil del atleta» permite guardar FTP, peso y LTHR con una fecha de vigencia UTC. El historial se aplica a «Mis datos» y se incluye en las copias de seguridad. Puedes corregir una fecha existente; un campo vacío registra un valor desconocido desde ese día.
+
+Zonas y W/kg utilizan los valores vigentes en la fecha de la actividad. Los valores anteriores sin fecha no se aplican al pasado. IF/TSS importados se conservan sin recálculo. En Rendimiento, W/kg corresponde a cada marca en vatios dividida por su peso histórico; el tooltip indica peso y fecha. Las referencias al FTP actual se etiquetan como tales.
+
+`npm run test:package` comprueba SQLite, cifrado y persistencia de la app empaquetada en un perfil temporal. Admite una ruta de ejecutable: `npm run test:package -- /ruta/a/CycleLab.app/Contents/MacOS/CycleLab`. Las copias se escriben por registros para evitar cargar todo el histórico en memoria durante una migración.

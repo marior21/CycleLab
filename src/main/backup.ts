@@ -14,7 +14,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import { settingsSchema } from "../shared/settings";
 
-export const schemaVersion = 4;
+export const schemaVersion = 5;
 const source = z.enum(["demo", "garmin"]),
   num = z.number(),
   nullable = num.nullable();
@@ -207,7 +207,12 @@ const sync = z.object({
   error: z.string().optional(),
 });
 const settingSchemas: Record<string, z.ZodType> = {
-  settings: settingsSchema,
+  // Older Garmin syncs persisted connection flags; they contain no credentials.
+  settings: settingsSchema.extend({
+    garminConfigured: z.boolean().optional(),
+    openrouterConfigured: z.boolean().optional(),
+    maptilerConfigured: z.boolean().optional(),
+  }),
   sync,
   demoSync: sync,
   garminOffset: num.int().nonnegative(),
@@ -277,40 +282,30 @@ const tables = [
 const checksum = (data: string) =>
   createHash("sha256").update(data).digest("hex");
 
-// shortcut: snapshots are held in memory; use streaming if large histories make backups slow.
-export function snapshot(db: Database.Database): string {
-  return db.transaction(() => {
-    const data = JSON.stringify(
-      Object.fromEntries(
-        tables.map((table) => {
-          const exists = db
-            .prepare(
-              "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-            )
-            .get(table);
-          const rows = exists
-            ? db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()
-            : [];
-          return [
-            table,
-            table === "settings"
-              ? (rows as { key: string }[]).filter((r) =>
-                  Object.hasOwn(settingSchemas, r.key),
-                )
-              : rows,
-          ];
-        }),
-      ),
-    );
-    return JSON.stringify({
-      format: "CycleLab backup",
-      version: 1,
-      schemaVersion: db.pragma("user_version", { simple: true }),
-      createdAt: new Date().toISOString(),
-      sha256: checksum(data),
-      data,
-    });
-  })();
+function* snapshot(db: Database.Database): Generator<string> {
+  yield "{";
+  for (const [index, table] of tables.entries()) {
+    yield (index ? "," : "") + JSON.stringify(table) + ":[";
+    const exists = db
+      .prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?")
+      .get(table);
+    let first = true;
+    if (exists) {
+      for (const row of db
+        .prepare(`SELECT * FROM ${table} ORDER BY rowid`)
+        .iterate()) {
+        if (
+          table === "settings" &&
+          !Object.hasOwn(settingSchemas, (row as { key: string }).key)
+        )
+          continue;
+        yield (first ? "" : ",") + JSON.stringify(row);
+        first = false;
+      }
+    }
+    yield "]";
+  }
+  yield "}";
 }
 export function validateBackup(text: string) {
   try {
@@ -343,13 +338,28 @@ export function validateBackup(text: string) {
     );
   }
 }
-export function writeBackup(path: string, text: string) {
+export function writeBackup(path: string, db: Database.Database) {
   const temporary = path + "." + randomUUID() + ".tmp";
   try {
     const fd = openSync(temporary, "wx", 0o600);
     try {
-      writeFileSync(fd, text);
-      fsyncSync(fd);
+      db.transaction(() => {
+        const metadata = JSON.stringify({
+          format: "CycleLab backup",
+          version: 1,
+          schemaVersion: db.pragma("user_version", { simple: true }),
+          createdAt: new Date().toISOString(),
+        });
+        const hash = createHash("sha256");
+        writeFileSync(fd, metadata.slice(0, -1) + ',"data":"');
+        // Escape each record independently; never materialize the entire archive in V8.
+        for (const chunk of snapshot(db)) {
+          hash.update(chunk);
+          writeFileSync(fd, JSON.stringify(chunk).slice(1, -1));
+        }
+        writeFileSync(fd, '","sha256":"' + hash.digest("hex") + '"}');
+        fsyncSync(fd);
+      })();
     } finally {
       closeSync(fd);
     }
@@ -365,7 +375,7 @@ export function automaticBackup(db: Database.Database, reason: string): string {
     dir,
     `${reason}-${Date.now()}-${randomUUID()}.cyclelab-backup.json`,
   );
-  writeBackup(path, snapshot(db));
+  writeBackup(path, db);
   return path;
 }
 export function restoreBackup(

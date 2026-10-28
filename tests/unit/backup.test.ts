@@ -32,10 +32,30 @@ describe("backup validation", () => {
       ),
     ).toEqual(data);
   });
+  it("accepts legacy connection flags so pre-migration snapshots remain recoverable", () => {
+    const tables = {
+      ...data,
+      settings: [
+        {
+          key: "settings",
+          value: JSON.stringify({
+            theme: "dark",
+            source: "garmin",
+            model: null,
+            athlete: { ftp: 280, weight: null, lthr: null },
+            garminConfigured: true,
+            openrouterConfigured: false,
+            maptilerConfigured: false,
+          }),
+        },
+      ],
+    };
+    expect(validateBackup(archive(tables))).toEqual(tables);
+  });
   it.each([
     "truncated",
     archive(data, { version: 2 }),
-    archive(data, { schemaVersion: 5 }),
+    archive(data, { schemaVersion: 6 }),
     archive(data, { sha256: "damaged" }),
     archive({ ...data, secrets: [] }),
     archive({

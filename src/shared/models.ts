@@ -9,7 +9,14 @@ export type Screen =
   | "settings";
 export type ActivityType =
   "endurance" | "intervals" | "climb" | "mtb" | "indoor" | "gravel" | "cycling";
+export interface ProfileEntry {
+  date: string;
+  metric: "ftp" | "weight" | "lthr";
+  value: number | null;
+  origin: "manual" | "Garmin" | "demostración";
+}
 export interface Athlete {
+  history?: ProfileEntry[];
   ftp: number | null;
   lthr: number | null;
   weight: number | null;

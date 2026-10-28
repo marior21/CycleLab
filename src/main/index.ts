@@ -1,3 +1,4 @@
+import { withProfileEntries } from "../domain/athlete";
 import { MapTilerSource } from "./maptiler";
 import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
 import { join } from "node:path";
@@ -5,7 +6,7 @@ import { mkdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { settingsSchema } from "../shared/settings";
-import { snapshot, writeBackup, restoreBackup } from "./backup";
+import { writeBackup, restoreBackup } from "./backup";
 import { createSegment } from "../domain/segments";
 import { SegmentResults } from "./segmentResults";
 import { Store } from "./store";
@@ -127,7 +128,7 @@ async function boot() {
     if (canceled || !filePath) return null;
     if (!filePath.endsWith(".cyclelab-backup.json"))
       throw new Error("El nombre debe terminar en .cyclelab-backup.json.");
-    writeBackup(filePath, snapshot(store.db));
+    writeBackup(filePath, store.db);
     return filePath;
   });
   register("backup-restore", async () => {
@@ -232,7 +233,10 @@ async function boot() {
       throw new Error(
         "Espera a que termine la respuesta antes de cambiar de origen.",
       );
-    store.set("settings", value);
+    store.set("settings", {
+      ...value,
+      athlete: withProfileEntries(value.athlete, []),
+    });
     changed();
     if (
       value.source === "garmin" &&

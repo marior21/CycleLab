@@ -37,6 +37,39 @@ function fixture() {
   return { store, config, activities, details, a };
 }
 describe("resumable Garmin import", () => {
+  it("dates imported thresholds to their activity without inventing a past profile", async () => {
+    const f = fixture();
+    f.store.settings = () => ({
+      theme: "dark",
+      source: "garmin",
+      model: null,
+      athlete: { ftp: null, lthr: null, weight: null },
+      garminConfigured: true,
+      openrouterConfigured: false,
+      maptilerConfigured: false,
+    });
+    const source = {
+      listActivities: vi
+        .fn()
+        .mockResolvedValueOnce([f.a(1)])
+        .mockResolvedValueOnce([]),
+      getActivity: vi.fn().mockResolvedValue(emptyDetail()),
+      thresholds: vi.fn().mockResolvedValue({ ftp: 260, lthr: 175 }),
+    } as unknown as GarminPersonalSource;
+    await new GarminSync(f.store, source, () => {}).run();
+    expect(f.config.get("settings")).toMatchObject({
+      athlete: {
+        ftp: 260,
+        lthr: 175,
+        weight: null,
+        history: [
+          { metric: "ftp", value: 260, date: "2026-01-01", origin: "Garmin" },
+          { metric: "lthr", value: 175, date: "2026-01-01", origin: "Garmin" },
+        ],
+      },
+    });
+    expect(f.config.get("settings")).not.toHaveProperty("garminConfigured");
+  });
   it("preserves inferred interval evidence when summaries are refreshed", async () => {
     const f = fixture();
     const pattern = {

@@ -31,6 +31,19 @@ describe("coach tools", () => {
       expect(json).not.toContain('"points":');
     }
     expect(
+      tools.coverage({ screen: "activities", activityId: activity.id }),
+    ).toContain("FTP: 275 W");
+    expect(
+      tools.run(
+        "analizar_intervalos",
+        { actividad: activity.id },
+        { screen: "coach" },
+      ).note,
+    ).toContain("Peso: 80 kg");
+    expect(
+      tools.run("buscar_actividades", {}, { screen: "coach" }).rows[0].perfil,
+    ).toContain("desde 2000-01-01");
+    expect(
       tools.run("buscar_actividades", {}, { screen: "coach" }).rows.length,
     ).toBeLessThanOrEqual(20);
   });

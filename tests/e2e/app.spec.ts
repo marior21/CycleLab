@@ -160,7 +160,12 @@ test("IPC validation, sandbox, offline profile and source isolation", async () =
     await expect(page.getByText("Tu histórico está vacío")).toBeVisible();
     const state = await page.evaluate(() => window.cyclelab.getState());
     expect(state.settings.model).toBe("chosen/model");
-    expect(state.dataset.athlete).toEqual({ ftp: 300, lthr: 175, weight: 75 });
+    expect(state.dataset.athlete).toEqual({
+      ftp: 300,
+      lthr: 175,
+      weight: 75,
+      history: [],
+    });
     expect(state.messages).toEqual([]);
     expect(state.dataset.goals).toEqual([]);
     await page.evaluate(async () => {

@@ -1,5 +1,11 @@
 import { test, expect, _electron as electron } from "@playwright/test";
-import { mkdtempSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -54,7 +60,14 @@ test("backup export, clean-profile recovery, invalid files, cancellation and rol
         theme: "light",
         source: "demo",
         model: "modelo-de-prueba",
-        athlete: { ftp: 280, weight: 73, lthr: 175 },
+        athlete: {
+          ftp: 280,
+          weight: 73,
+          lthr: 175,
+          history: [
+            { metric: "ftp", value: 280, date: "2024-01-01", origin: "manual" },
+          ],
+        },
       }),
     );
     await app.evaluate(({ dialog }, path) => {
@@ -128,7 +141,14 @@ test("backup export, clean-profile recovery, invalid files, cancellation and rol
     expect(restored.settings).toMatchObject({
       theme: "light",
       model: "modelo-de-prueba",
-      athlete: { ftp: 280, weight: 73, lthr: 175 },
+      athlete: {
+        ftp: 280,
+        weight: 73,
+        lthr: 175,
+        history: [
+          { metric: "ftp", value: 280, date: "2024-01-01", origin: "manual" },
+        ],
+      },
       garminConfigured: false,
       openrouterConfigured: false,
       maptilerConfigured: false,
@@ -258,6 +278,74 @@ test("migration preserves a credential-free snapshot before changing v1", async 
       (await page.evaluate(() => window.cyclelab.getState())).dataset.activities
         .length,
     ).toBeGreaterThan(0);
+  } finally {
+    await app.close();
+  }
+});
+
+test("large pre-migration backups do not materialize the whole archive", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "cyclelab-large-backup-"));
+  let app = await launch(dir);
+  try {
+    await (
+      await app.firstWindow()
+    )
+      .getByRole("button", { name: "Ajustes", exact: true })
+      .waitFor();
+    await app.evaluate(
+      (_electron, { dir, modulePath }) => {
+        const DB = process.getBuiltinModule("module").createRequire(modulePath)(
+          modulePath,
+        );
+        const db = new DB(dir + "/cyclelab.db");
+        const text = "x".repeat(1024 * 1024);
+        db.transaction(() => {
+          const insert = db.prepare(
+            "INSERT INTO messages VALUES ('garmin',?,?)",
+          );
+          for (let i = 0; i < 192; i++)
+            insert.run(
+              String(i),
+              JSON.stringify({
+                id: String(i),
+                role: "user",
+                text,
+                status: "done",
+                tools: [],
+                createdAt: 0,
+              }),
+            );
+          db.pragma("user_version = 4");
+        })();
+        db.close();
+      },
+      { dir, modulePath },
+    );
+    await app.close();
+    app = await launch(dir);
+    const page = await app.firstWindow();
+    await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
+    const [file] = readdirSync(join(dir, "backups"));
+    expect(file).toContain("antes-de-migrar-v4");
+    expect(statSync(join(dir, "backups", file)).size).toBeGreaterThan(
+      192 * 1024 * 1024,
+    );
+    const result = await app.evaluate(
+      (_electron, { dir, modulePath }) => {
+        const DB = process.getBuiltinModule("module").createRequire(modulePath)(
+          modulePath,
+        );
+        const db = new DB(dir + "/cyclelab.db", { readonly: true });
+        const version = db.pragma("user_version", { simple: true });
+        const count = db
+          .prepare("SELECT count(*) AS n FROM messages WHERE source='garmin'")
+          .get().n;
+        db.close();
+        return { version, count };
+      },
+      { dir, modulePath },
+    );
+    expect(result).toEqual({ version: 5, count: 192 });
   } finally {
     await app.close();
   }

@@ -1,10 +1,23 @@
+import {
+  profileAt,
+  profileMetrics,
+  utcDay,
+  withProfileEntries,
+} from "../../domain/athlete";
 import { useEffect, useState } from "react";
 import type {
   AppState,
   Model,
   Settings as SettingsValue,
 } from "../../shared/models";
-import { Badge, Button, Panel, Segmented, StateBlock } from "../components/ui";
+import {
+  Badge,
+  Button,
+  DataTable,
+  Panel,
+  Segmented,
+  StateBlock,
+} from "../components/ui";
 import { number } from "../format";
 interface Props {
   state: AppState;
@@ -21,7 +34,8 @@ export function Settings(p: Props) {
     [tagMessage, setTagMessage] = useState(""),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [profile, setProfile] = useState(s.athlete);
+    [profile, setProfile] = useState(s.athlete),
+    [effectiveDate, setEffectiveDate] = useState(utcDay());
   useEffect(
     () => setProfile(s.athlete),
     [s.athlete.ftp, s.athlete.lthr, s.athlete.weight],
@@ -280,14 +294,48 @@ export function Settings(p: Props) {
       </Panel>
       <Panel
         title="Perfil del atleta"
-        subtitle="Completa los valores que Garmin no haya proporcionado. Se aplican a «Mis datos»."
+        subtitle="Valores con fecha de vigencia para «Mis datos». Calendario UTC, igual que las actividades."
       >
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            void save({ athlete: profile });
+            void save({
+              athlete: withProfileEntries(
+                s.athlete,
+                profileMetrics.map((metric) => ({
+                  metric,
+                  value: profile[metric],
+                  date: effectiveDate,
+                  origin: "manual",
+                })),
+              ),
+            });
           }}
         >
+          <p className="small cl-muted">
+            Los valores anteriores sin fecha se conservan como referencia
+            actual; no se aplican al pasado. Un campo vacío registra un valor
+            desconocido desde esa fecha. Guardar sustituye los valores de la
+            misma fecha. IF y TSS importados no se recalculan.
+          </p>
+          <div className="profile-fields">
+            <label>
+              Vigente desde (UTC)
+              <input
+                type="date"
+                required
+                value={effectiveDate}
+                max={utcDay()}
+                onChange={(e) => {
+                  setEffectiveDate(e.target.value);
+                  if (e.target.value)
+                    setProfile(
+                      profileAt(s.athlete, Date.parse(e.target.value)),
+                    );
+                }}
+              />
+            </label>
+          </div>
           <div className="profile-fields">
             {[
               { key: "ftp" as const, label: "FTP (W)", min: 1, max: 1000 },
@@ -319,7 +367,59 @@ export function Settings(p: Props) {
             ))}
           </div>
           <Button type="submit">Guardar perfil</Button>
+          <p className="small cl-faint">
+            Las zonas y W/kg se calculan localmente con el valor vigente en la
+            fecha de la actividad. Añadir o corregir una fecha pasada actualiza
+            esas referencias de forma explícita.
+          </p>
         </form>
+      </Panel>
+      <Panel title="Historial del perfil" flush>
+        <DataTable
+          rows={[...(s.athlete.history ?? [])]
+            .reverse()
+            .map((e) => ({ ...e, id: e.date + e.metric }))}
+          columns={[
+            { key: "date", label: "Vigente desde (UTC)" },
+            {
+              key: "metric",
+              label: "Magnitud",
+              render: (e) =>
+                e.metric === "weight" ? "Peso" : e.metric.toUpperCase(),
+            },
+            {
+              key: "value",
+              label: "Valor",
+              align: "right",
+              render: (e) =>
+                e.value === null
+                  ? "Desconocido"
+                  : number(e.value, e.metric === "weight" ? 1 : 0) +
+                    (e.metric === "weight"
+                      ? " kg"
+                      : e.metric === "ftp"
+                        ? " W"
+                        : " ppm"),
+            },
+            { key: "origin", label: "Procedencia" },
+            {
+              key: "edit",
+              label: "",
+              render: (e) => (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEffectiveDate(e.date);
+                    setProfile(profileAt(s.athlete, Date.parse(e.date)));
+                  }}
+                >
+                  Editar {e.date}
+                </Button>
+              ),
+            },
+          ]}
+          empty="Sin valores con fecha de vigencia"
+        />
       </Panel>
       {error && (
         <StateBlock

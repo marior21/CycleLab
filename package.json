@@ -14,9 +14,10 @@
     "test": "vitest run",
     "test:e2e": "npm run build && playwright test",
     "postinstall": "electron-builder install-app-deps",
-    "package": "npm run build && electron-builder --dir --publish never",
+    "package": "npm run build && electron-builder --dir --publish never && npm run test:package",
     "dist": "npm run build && electron-builder --publish never",
-    "test:visual": "npm run build && node scripts/visual.mjs"
+    "test:visual": "npm run build && node scripts/visual.mjs",
+    "test:package": "node scripts/smoke-package.mjs"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.2.0",

@@ -1,3 +1,4 @@
+import { profileMetrics } from "../../domain/athlete";
 import { sampleCoverage } from "../../domain/coverage";
 import type { GarminSource } from "../../domain/providers";
 import type { Dataset } from "../../shared/models";
@@ -30,7 +31,15 @@ export const demoDataset: Dataset = {
     ACTS.map((a) => [a.id, sampleCoverage(getStream(a))]),
   ),
   today: TODAY,
-  athlete: ATH,
+  athlete: {
+    ...ATH,
+    history: profileMetrics.map((metric) => ({
+      metric,
+      value: ATH[metric],
+      date: "2000-01-01",
+      origin: "demostración",
+    })),
+  },
   activities: ACTS,
   attempts: ATTEMPTS,
   climbs: CLIMBS,
@@ -42,7 +51,14 @@ export const demoDataset: Dataset = {
       s2025: mmp(d.t, 2025),
       s2024: mmp(d.t, 2024),
     })),
-  ].sort((a, b) => a.x - b.x),
+  ]
+    .sort((a, b) => a.x - b.x)
+    .map((r) => ({
+      ...r,
+      w2026: ATH.weight,
+      w2025: ATH.weight,
+      w2024: ATH.weight,
+    })),
   bests: BESTS,
   goals: GOALS,
   load: LOAD,

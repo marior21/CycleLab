@@ -8,7 +8,10 @@ const userData = mkdtempSync(join(tmpdir(), "cyclelab-package-"));
 const launch = () =>
   electron.launch({
     executablePath: resolve(
-      "dist/mac-arm64/CycleLab.app/Contents/MacOS/CycleLab",
+      process.argv[2] ??
+        (process.platform === "win32"
+          ? "dist/win-unpacked/CycleLab.exe"
+          : `dist/${process.arch === "arm64" ? "mac-arm64" : "mac"}/CycleLab.app/Contents/MacOS/CycleLab`),
     ),
     env: { ...process.env, CYCLELAB_USER_DATA: userData },
   });

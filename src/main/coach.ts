@@ -1,3 +1,4 @@
+import { profileNote } from "../domain/athlete";
 import { coverageNote } from "../domain/coverage";
 import { DAY } from "../domain/analysis";
 import { z } from "zod";
@@ -58,12 +59,22 @@ export class AnalysisTools {
   ) {}
   coverage(context: CoachContext) {
     const data = this.store.dataset(this.source);
-    return coverageNote(
-      data,
-      context.screen === "activities" && context.activityId
-        ? data.activities.filter((a) => a.id === context.activityId)
-        : data.activities,
-      this.source,
+    return (
+      "Perfil por actividad; no aplicar el perfil actual al pasado. IF/TSS importados, sin recálculo. " +
+      (context.activityId
+        ? profileNote(
+            data.athlete,
+            data.activities.find((a) => a.id === context.activityId)?.date ??
+              data.today,
+          ) + ". "
+        : "") +
+      coverageNote(
+        data,
+        context.screen === "activities" && context.activityId
+          ? data.activities.filter((a) => a.id === context.activityId)
+          : data.activities,
+        this.source,
+      )
     );
   }
   run(name: ToolName, raw: unknown, context: CoachContext): ToolView {
@@ -94,6 +105,7 @@ export class AnalysisTools {
         km: a.dist,
         NP: a.np,
         TSS: a.tss,
+        perfil: profileNote(data.athlete, a.date),
       }));
       return {
         ...base,
@@ -136,6 +148,11 @@ export class AnalysisTools {
           { key: "hr", label: "FC media", color: "heart", axis: "right" },
         ],
         note:
+          profileNote(
+            data.athlete,
+            data.activities.find((a) => a.id === id)?.date ?? data.today,
+          ) +
+          ". " +
           (d.laps.length
             ? ""
             : "La actividad no contiene intervalos registrados. ") +
@@ -175,7 +192,7 @@ export class AnalysisTools {
           (data.curve.length
             ? ""
             : "No hay muestras de potencia suficientes. ") +
-          "Temporadas: " +
+          "Potencias en W. wAAAA indica el peso histórico usado para la marca sAAAA; dAAAA, la fecha de la actividad. Peso nulo: no calcular W/kg. Temporadas: " +
           seasons.map((s) => s.slice(1)).join(", ") +
           ". " +
           coverageNote(

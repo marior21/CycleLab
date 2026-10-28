@@ -137,6 +137,17 @@ export class MapTilerSource {
           : "No se pudo cargar MapTiler. Comprueba la conexión y la configuración.",
       );
     }
+    // MapTiler uses 204 for tiles with no features or imagery in this area.
+    if (
+      response.status === 204 &&
+      url.pathname.startsWith("/tiles/") &&
+      !url.pathname.endsWith(".json")
+    )
+      return {
+        value: { kind: "binary" as const, data: new Uint8Array() },
+        size: 0,
+        maxAge: 0,
+      };
     const reader = response.body?.getReader();
     if (!reader) throw new Error("MapTiler devolvió una respuesta vacía.");
     const parts: Uint8Array[] = [];

@@ -1208,59 +1208,97 @@ test("MapTiler credentials, isolated map resources, real GPS map and selection",
       page.getByRole("button", { name: "Crear segmento", exact: true }),
     ).toBeEnabled();
     await page.screenshot({ path: "test-results/maptiler-dark.png" });
-    // Zoom requests new tiles. A failed tile must not replace the interactive map.
-    await app.evaluate(() => {
-      const original = globalThis.fetch;
-      (
-        globalThis as typeof globalThis & { workingMapFetch: typeof fetch }
-      ).workingMapFetch = original;
-      globalThis.fetch = async (input, init) => {
-        const url = String(input);
-        if (url.includes("/tiles/test/") && url.includes(".png"))
-          return new Response("temporary tile failure", { status: 503 });
-        return original(input, init);
-      };
-    });
-    await map.getByRole("button", { name: "Alejar", exact: true }).click();
-    await expect(map.getByText(/No se pudo cargar parte/)).toBeVisible();
-    await expect(map.locator(".maplibregl-canvas")).toBeVisible();
-    await expect(
-      map.getByRole("img", { name: "Recorrido", exact: true }),
-    ).toHaveCount(0);
-    await map.getByRole("button", { name: "Acercar", exact: true }).click();
-    await expect(map.locator(".maplibregl-canvas")).toBeVisible();
-
     await app.evaluate(() => {
       const g = globalThis as typeof globalThis & {
-        mapTestFetch: typeof fetch;
+        workingMapFetch: typeof fetch;
+        mapFailure: "tiles" | "offline" | null;
       };
-      g.mapTestFetch = (
-        globalThis as typeof globalThis & { workingMapFetch: typeof fetch }
-      ).workingMapFetch;
-      globalThis.fetch = async () => {
-        throw new Error("offline");
+      g.workingMapFetch = globalThis.fetch;
+      g.mapFailure = null;
+      globalThis.fetch = async (input, init) => {
+        const url = String(input);
+        if (g.mapFailure === "offline") throw new Error("offline");
+        if (g.mapFailure === "tiles" && url.includes(".png"))
+          return new Response("temporary tile failure", { status: 503 });
+        return g.workingMapFetch(input, init);
       };
     });
-    await page.getByRole("button", { name: "Cambiar tema" }).click();
-    await expect(
-      map.getByRole("button", { name: "Reintentar mapa" }),
-    ).toBeVisible();
-    await expect(
-      map.getByRole("img", { name: "Recorrido", exact: true }),
-    ).toBeVisible();
-    await app.evaluate(() => {
-      globalThis.fetch = (
-        globalThis as typeof globalThis & { mapTestFetch: typeof fetch }
-      ).mapTestFetch;
-    });
-    await map.getByRole("button", { name: "Reintentar mapa" }).click();
-    await expect(map.getByRole("button", { name: "Acercar" })).toBeVisible();
-    await expect(map.locator(".geo-map-frame")).toHaveAttribute(
-      "data-ready",
-      "true",
-    );
-    await expect(map.locator(".maplibregl-canvas")).toBeVisible();
-    await page.screenshot({ path: "test-results/maptiler-light.png" });
+    const fail = (mode: "tiles" | "offline" | null) =>
+      app.evaluate((_electron, mode) => {
+        (
+          globalThis as typeof globalThis & { mapFailure: typeof mode }
+        ).mapFailure = mode;
+      }, mode);
+    const frame = map.locator(".geo-map-frame");
+    const schematic = map.getByRole("img", { name: "Recorrido", exact: true });
+    const retry = map.getByRole("button", { name: "Reintentar mapa" });
+    const recover = async () => {
+      await fail(null);
+      await retry.click();
+      await expect(map.getByRole("alert")).toHaveCount(0);
+      await expect(frame).toHaveAttribute("data-ready", "true");
+      await expect(canvas).toBeVisible();
+      await expect(schematic).toHaveCount(0);
+    };
+    for (const theme of ["dark", "light"]) {
+      // New tiles fail after zoom: preserve the canvas and selection.
+      await fail("tiles");
+      await map.getByRole("button", { name: "Alejar", exact: true }).click();
+      await expect(map.getByRole("alert")).toContainText(
+        "No se pudo cargar parte",
+      );
+      await expect(canvas).toBeVisible();
+      await expect(schematic).toHaveCount(0);
+      await map.getByRole("button", { name: "Acercar", exact: true }).click();
+      await expect(canvas).toBeVisible();
+      await page.screenshot({ path: `test-results/map-partial-${theme}.png` });
+      await recover();
+
+      // A cached style can start offline even if its TileJSON cannot load.
+      await page.evaluate(() =>
+        Promise.all([
+          window.cyclelab.mapResource("/maps/outdoor-v4/style.json"),
+          window.cyclelab.mapResource("/maps/outdoor-v4-dark/style.json"),
+        ]),
+      );
+      await fail("offline");
+      await page.getByRole("button", { name: "Cambiar tema" }).click();
+      await expect(map.getByRole("alert")).toContainText(
+        "No se pudo cargar parte",
+      );
+      await expect(frame).toHaveAttribute("data-ready", "true");
+      await expect(canvas).toBeVisible();
+      await expect(schematic).toHaveCount(0);
+      await page.screenshot({
+        path: `test-results/map-cached-${theme === "dark" ? "light" : "dark"}.png`,
+      });
+      await recover();
+      await page.getByRole("button", { name: "Cambiar tema" }).click();
+      await expect(frame).toHaveAttribute("data-ready", "true");
+
+      // Saving the test key clears the main-process resource cache.
+      await page.evaluate(() =>
+        window.cyclelab.saveCredential("maptiler", "maptiler-test-key"),
+      );
+      await fail("offline");
+      // Remount with an uncached style: this is a genuine startup failure.
+      await page.getByRole("button", { name: "Cambiar tema" }).click();
+      await expect(map.getByRole("alert")).toContainText(
+        "No se pudo cargar la cartografía",
+      );
+      await expect(schematic).toBeVisible();
+      await expect(canvas).toBeHidden();
+      await expect(
+        page.getByRole("button", { name: "Crear segmento", exact: true }),
+      ).toBeEnabled();
+      await page.screenshot({
+        path: `test-results/map-startup-${theme === "dark" ? "light" : "dark"}.png`,
+      });
+      await recover();
+      await page.screenshot({
+        path: `test-results/maptiler-${theme === "dark" ? "light" : "dark"}.png`,
+      });
+    }
     await page.getByRole("button", { name: "Ajustes", exact: true }).click();
     await panel.getByRole("button", { name: "Desconectar" }).click();
     await expect(panel.getByLabel("API key de MapTiler")).toHaveValue("");

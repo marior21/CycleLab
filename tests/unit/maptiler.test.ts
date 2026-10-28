@@ -85,6 +85,21 @@ it("does not leak provider bodies, fetch errors or invalid JSON", async () => {
     await expect(source.validate()).rejects.not.toThrow(secret);
   }
 });
+it("accepts 204 empty tiles but rejects missing style and TileJSON bodies", async () => {
+  const source = new MapTilerSource(
+    () => secret,
+    async () => new Response(null, { status: 204 }),
+  );
+  for (const extension of ["pbf", "png"])
+    expect(await source.resource(`/tiles/v4/0/0/0.${extension}`)).toEqual({
+      kind: "binary",
+      data: new Uint8Array(),
+    });
+  await expect(source.validate()).rejects.toThrow("respuesta vacía");
+  await expect(source.resource("/tiles/v4/tiles.json")).rejects.toThrow(
+    "respuesta vacía",
+  );
+});
 it("backs off after 429 without hammering the provider", async () => {
   const fetcher = vi.fn(
     async () =>

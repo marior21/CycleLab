@@ -156,7 +156,8 @@ export function GeoRouteMap(
       m.on("idle", () => {
         if (m?.getSource("route")) setReady(true);
       });
-      m.on("load", () => {
+      // The route only needs the style; failed or slow tiles must not block it.
+      m.on("style.load", () => {
         if (!m) return;
         const css = getComputedStyle(document.documentElement),
           color = (name: string) => css.getPropertyValue(`--${name}`).trim(),
@@ -410,6 +411,11 @@ export function GeoRouteMap(
           {start === null
             ? "Haz clic en el inicio del tramo sobre la ruta."
             : "Haz clic en el final del tramo. Esc cancela."}
+        </p>
+      )}
+      {!unavailable && !loaded && !error && (
+        <p className="small cl-muted" role="status">
+          Cargando cartografía…
         </p>
       )}
       {unavailable && p.geographic.configured && (

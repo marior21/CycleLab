@@ -45,6 +45,8 @@ S = cambio localizado; M = varias capas o pantallas; L = datos, cálculos o fluj
 
 **Terminado cuando:** la prueba reproduce y distingue esos casos, pasa de forma repetible y se revisan ambos temas. Completar además una comprobación con cartografía real, sin confundir el tile simulado de los tests con esa validación.
 
+**Completada el 28/10/2026.** La ruta se carga al disponer del estilo; los errores parciales conservan el mapa y los fallos de estilo muestran el esquema alternativo. La prueba distingue estilos en caché y arranques sin caché, cambios de tema y recuperación. Validación con MapTiler real en ambos temas, incluida la corrección de tiles vacíos HTTP 204. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-11--regresión-de-mapas-cerrada-28102026).
+
 ### 1.2. Copias de seguridad y recuperación · P0 · M
 
 SQLite ya conserva actividades, segmentos y conversaciones, pero falta un flujo de copia/restauración en la app. Perder los segmentos personales o las notas futuras sería más grave que tener que volver a descargar actividades.
@@ -221,4 +223,4 @@ Fuentes principales: [estado y límites](README.md), [validaciones anteriores](V
 
 Cada entrega debería registrar: problema resuelto, comportamiento visible, criterio de aceptación, pruebas ejecutadas y límites pendientes. Para cambios funcionales: lint y typecheck, pruebas de lógica afectada, recorrido Electron y revisión visual cuando corresponda. Para integraciones: distinguir pruebas simuladas de comprobaciones reales.
 
-Este roadmap solo añade documentación. No se han ejecutado la app ni los tests, ni se han utilizado claves o datos privados para elaborarlo; el fallo de mapas citado procede de la validación registrada, no de una reproducción nueva.
+La elaboración inicial de este roadmap solo añadió documentación, sin ejecutar la app ni los tests ni utilizar claves o datos privados. Las entregas posteriores registran su estado y validaciones en cada fase y en `VALIDATION.md`.

@@ -172,3 +172,144 @@ describe("persisted segment comparisons", () => {
     expect(missing.note).toContain("No hay segmentos");
   });
 });
+
+describe("selection context and historical search", () => {
+  it("calculates only four separate ranges, preserves missing sensors and excludes GPS", async () => {
+    const activity = demoDataset.activities[0];
+    const detail = await new DemoGarminSource().getActivity(activity.id);
+    const ranges: [number, number][] = [
+      [0, 5],
+      [20, 25],
+      [40, 45],
+      [60, 65],
+    ];
+    detail.rows.forEach((r) => {
+      r.hr = null;
+    });
+    const store = {
+      dataset: () => demoDataset,
+      detail: () => detail,
+    } as unknown as Store;
+    const tools = new AnalysisTools(store, "demo");
+    const result = tools.selection({
+      screen: "activities",
+      activityId: activity.id,
+      ranges,
+    })!;
+    expect(result.rows).toHaveLength(4);
+    expect(result.rows.map((r) => [r.i0, r.i1])).toEqual(ranges);
+    expect(result.rows.every((r) => r.hr === null)).toBe(true);
+    expect(result.rows[0].dur).toBeLessThan(activity.dur);
+    expect(JSON.stringify(result)).not.toMatch(/"(lat|lon|points)":/);
+    expect(() =>
+      tools.selection({
+        screen: "activities",
+        activityId: activity.id,
+        ranges: [[0, detail.rows.length]],
+      }),
+    ).toThrow("selección");
+    expect(() =>
+      tools.selection({
+        screen: "activities",
+        activityId: "other-source",
+        ranges,
+      }),
+    ).toThrow("origen");
+    const pair = tools.selection({
+      screen: "activities",
+      comparison: [demoDataset.activities[1].id, activity.id],
+    })!;
+    expect(pair.rows.map((r) => r.activityId)).toEqual([
+      demoDataset.activities[1].id,
+      activity.id,
+    ]);
+    expect(pair.rows[1].np).toBe(activity.np);
+  });
+
+  it("filters old years and types before pagination and links every activity", () => {
+    const activities = Array.from({ length: 45 }, (_, i) => ({
+      ...demoDataset.activities[0],
+      id: String(i),
+      name: "Ruta histórica",
+      type: "mtb" as const,
+      date: Date.parse("2020-12-31T23:59:00Z") - i * 1000,
+    }));
+    const store = {
+      dataset: () => ({
+        ...demoDataset,
+        activities: [...demoDataset.activities, ...activities],
+      }),
+    } as unknown as Store;
+    const tools = new AnalysisTools(store, "demo");
+    const args = {
+      desde: "2020-01-01",
+      hasta: "2020-12-31",
+      tipos: ["mtb"],
+      texto: "histórica",
+    };
+    const first = tools.run("buscar_actividades", args, { screen: "coach" });
+    expect(first.rows).toHaveLength(20);
+    expect(first.rows[0].activityId).toBe("0");
+    expect(first.note).toContain("45 actividades coincidentes");
+    expect(first.note).toContain("siguiente offset: 20");
+    const last = tools.run(
+      "buscar_actividades",
+      { ...args, offset: 40 },
+      { screen: "coach" },
+    );
+    expect(last.rows).toHaveLength(5);
+    expect(last.note).toContain("No hay más resultados");
+    expect(
+      tools.run(
+        "buscar_actividades",
+        { ...args, tipos: ["indoor"] },
+        { screen: "coach" },
+      ).rows,
+    ).toEqual([]);
+    expect(() =>
+      tools.run(
+        "buscar_actividades",
+        { tipos: ["invalid"] },
+        { screen: "coach" },
+      ),
+    ).toThrow();
+  });
+});
+
+it("finds an activity summary by exact ID in either activity or text without falling back to the list", () => {
+  const activity = {
+    ...demoDataset.activities[0],
+    id: "22821983282",
+    name: "Salida de prueba",
+  };
+  const store = {
+    dataset: () => ({
+      ...demoDataset,
+      activities: [...demoDataset.activities, activity],
+    }),
+  } as unknown as Store;
+  const tools = new AnalysisTools(store, "garmin");
+  const run = (args: object) =>
+    tools.run("buscar_actividades", args, {
+      screen: "activities",
+      activityId: activity.id,
+    });
+  for (const args of [{ texto: activity.id }, { actividad: activity.id }]) {
+    expect(run(args).rows).toEqual([
+      expect.objectContaining({
+        activityId: activity.id,
+        actividad: activity.name,
+        fecha: new Date(activity.date).toISOString().slice(0, 10),
+        duracion: activity.dur,
+        km: activity.dist,
+        NP: activity.np,
+        TSS: activity.tss,
+      }),
+    ]);
+  }
+  expect(run({ actividad: "missing" }).rows).toEqual([]);
+  expect(run({ texto: "2282198328" }).rows).toEqual([]);
+  expect(run({ actividad: activity.id, hasta: "2000-01-01" }).rows).toEqual([]);
+  expect(run({ texto: "salida de prueba" }).rows).toHaveLength(1);
+  expect(run({}).rows.length).toBeGreaterThan(1);
+});

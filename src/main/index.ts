@@ -1,3 +1,4 @@
+import { coachContextSchema } from "../shared/coachContext";
 import { withProfileEntries } from "../domain/athlete";
 import { MapTilerSource } from "./maptiler";
 import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
@@ -421,21 +422,7 @@ async function boot() {
   });
   register("message", async (text, ctx) => {
     const value = z.string().trim().min(1).max(8000).parse(text),
-      context = z
-        .object({
-          screen: z.enum([
-            "dashboard",
-            "activities",
-            "performance",
-            "segments",
-            "climbs",
-            "coach",
-            "settings",
-          ]),
-          activityId: z.string().max(100).optional(),
-        })
-        .strict()
-        .parse(ctx) as CoachContext,
+      context = coachContextSchema.parse(ctx) as CoachContext,
       source = store.settings().source;
     if (busy.has(source)) throw new Error("Ya hay una respuesta en curso.");
     busy.add(source);
@@ -447,7 +434,7 @@ async function boot() {
           message:
             "Tu pregunta y datos de entrenamiento se enviarán a OpenRouter y al proveedor del modelo elegido.",
           detail:
-            "Se envían los últimos 20 mensajes (hasta 12 000 caracteres por mensaje), la pantalla y el identificador de actividad, cobertura y procedencia, y resultados limitados de herramientas: nombres, fechas, métricas, intervalos, curvas y carga. No se adjuntan coordenadas GPS, archivos FIT ni claves guardadas como contexto; la clave de OpenRouter se usa solo para autenticar la conexión. Lo que escribas sí se envía: no incluyas secretos ni ubicaciones privadas. El proveedor aplica sus políticas de tratamiento de datos y la consulta puede tener coste. La demo no realiza este envío.",
+            "Se envían los últimos 20 mensajes (hasta 12 000 caracteres por mensaje), la pantalla, los identificadores de actividades y segmentos, los tramos seleccionados y sus métricas calculadas localmente, cobertura y procedencia, y resultados limitados de herramientas: nombres, fechas, métricas, intervalos, curvas y carga. No se adjuntan coordenadas GPS, archivos FIT ni claves guardadas como contexto; la clave de OpenRouter se usa solo para autenticar la conexión. Lo que escribas sí se envía: no incluyas secretos ni ubicaciones privadas. El proveedor aplica sus políticas de tratamiento de datos y la consulta puede tener coste. La demo no realiza este envío.",
           buttons: ["Cancelar", "Aceptar y enviar"],
           defaultId: 0,
           cancelId: 0,
@@ -464,6 +451,7 @@ async function boot() {
         id: randomUUID(),
         role: "user",
         text: value,
+        context,
         status: "done",
         tools: [],
         createdAt: Date.now(),

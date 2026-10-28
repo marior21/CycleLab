@@ -37,6 +37,12 @@ export function Segments(p: PageProps & { climbsOnly?: boolean }) {
       cancelled = true;
     };
   }, [segment?.id, segment?.activityId, p.demo]);
+  useEffect(() => {
+    p.onContext({
+      screen: p.climbsOnly ? "climbs" : "segments",
+      segmentId: segment?.id,
+    });
+  }, [p.onContext, p.climbsOnly, segment?.id]);
   if (!segment)
     return (
       <div className="page">
@@ -109,7 +115,19 @@ export function Segments(p: PageProps & { climbsOnly?: boolean }) {
                 {duration(segment.start)}–{duration(segment.end)}
               </div>
             </div>
-            <Button onClick={() => p.openActivity(segment.activityId)}>
+            <Button
+              icon="coach"
+              onClick={() =>
+                p.ask("Analiza este tramo del segmento seleccionado")
+              }
+            >
+              Analizar este tramo
+            </Button>
+            <Button
+              onClick={() =>
+                p.openActivity(segment.activityId, [segment.i0, segment.i1])
+              }
+            >
               Ver actividad
             </Button>
           </div>

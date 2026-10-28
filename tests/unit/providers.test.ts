@@ -1,10 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { GarminPersonalSource, normalizeActivity } from "../../src/main/garmin";
-import {
-  OpenRouterCoachProvider,
-  type AnalysisTools,
-} from "../../src/main/coach";
+import { OpenRouterCoachProvider, AnalysisTools } from "../../src/main/coach";
 import { HttpError, request } from "../../src/main/http";
+import { demoDataset, DemoGarminSource } from "../../src/data/demo/provider";
+import type { Store } from "../../src/main/store";
 import type { ChatMessage } from "../../src/shared/models";
 const response = (
   data: unknown,
@@ -210,6 +209,7 @@ describe("OpenRouter", () => {
       "chosen",
       {
         run,
+        selection: () => null,
         coverage: () => "Cobertura de prueba: 2 actividades sin TSS.",
       } as unknown as AnalysisTools,
       fetcher,
@@ -255,6 +255,7 @@ describe("OpenRouter", () => {
     );
     const tools = {
       run: () => ({ rows: [], series: [] }),
+      selection: () => null,
       coverage: () => "Sin datos",
     } as unknown as AnalysisTools;
     await expect(
@@ -267,4 +268,48 @@ describe("OpenRouter", () => {
     ).rejects.toThrow("límite");
     expect(fetcher).toHaveBeenCalledTimes(6);
   });
+});
+
+it("sends the exact locally computed selection to OpenRouter even without model tool calls", async () => {
+  const activity = demoDataset.activities[0];
+  const detail = await new DemoGarminSource().getActivity(activity.id);
+  const store = {
+    dataset: () => demoDataset,
+    detail: () => detail,
+  } as unknown as Store;
+  const tools = new AnalysisTools(store, "demo");
+  const context = {
+    screen: "activities" as const,
+    activityId: activity.id,
+    ranges: [
+      [0, 5],
+      [20, 25],
+      [40, 45],
+      [60, 65],
+    ] as [number, number][],
+  };
+  const onTool = vi.fn();
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(
+      response({ choices: [{ message: { content: "Cuatro tramos." } }] }),
+    );
+  const provider = new OpenRouterCoachProvider(
+    () => "test-key",
+    "chosen",
+    tools,
+    fetcher,
+  );
+  await provider.respond([], context, onTool);
+  const selection = tools.selection(context);
+  expect(onTool).toHaveBeenCalledWith(selection);
+  const body = JSON.parse(String(fetcher.mock.calls[0][1]?.body));
+  expect(body.messages[0].content).toContain(JSON.stringify(selection));
+  expect(body.messages[0].content).not.toMatch(/"(lat|lon|points)":/);
+  expect(
+    body.tools.find(
+      (t: { function: { name: string } }) =>
+        t.function.name === "buscar_actividades",
+    ).function.parameters.properties,
+  ).toHaveProperty("desde");
 });

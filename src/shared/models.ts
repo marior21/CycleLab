@@ -249,6 +249,7 @@ export interface ToolView {
   note?: string;
 }
 export interface ChatMessage {
+  context?: CoachContext;
   id: string;
   role: "user" | "assistant";
   text: string;
@@ -260,6 +261,9 @@ export interface ChatMessage {
 export interface CoachContext {
   screen: Screen;
   activityId?: string;
+  ranges?: [number, number][];
+  comparison?: [string, string];
+  segmentId?: string;
 }
 export interface AppState {
   settings: Settings;

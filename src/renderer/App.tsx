@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
+  CoachContext,
   AppState,
   Activity,
   ActivityDetail,
@@ -46,7 +47,17 @@ export default function App() {
     [actId, setActId] = useState<string | null>(null),
     [drawer, setDrawer] = useState(false),
     [error, setError] = useState("");
+  const [selectionContext, setSelectionContext] = useState<CoachContext | null>(
+    null,
+  );
+  const [origin, setOrigin] = useState<{
+    id: string;
+    range?: [number, number];
+    key: number;
+  }>();
   const setScreen = (next: Screen) => {
+    if (!["activities", "segments", "climbs", "coach"].includes(next))
+      setSelectionContext(null);
     setDraft(null);
     updateScreen(next);
   };
@@ -63,6 +74,8 @@ export default function App() {
       setActId(s.dataset.activities[0]?.id ?? null);
       setDrawer(false);
       setDraft(null);
+      setSelectionContext(null);
+      setOrigin(undefined);
     }
   }, []);
   useEffect(() => {
@@ -98,15 +111,21 @@ export default function App() {
     });
     await refresh();
   }
-  const context = { screen, activityId: actId ?? undefined };
-  const send = async (text: string) => {
-    await window.cyclelab.sendMessage(text, context);
+  const context = (selectionContext?.screen === screen || screen === "coach"
+    ? selectionContext
+    : null) ?? {
+    screen,
+    activityId: screen === "activities" ? (actId ?? undefined) : undefined,
+  };
+  const send = async (text: string, savedContext = context) => {
+    await window.cyclelab.sendMessage(text, savedContext);
   };
   const ask = (text: string) => {
     if (screen !== "coach") setDrawer(true);
     void send(text).catch((e) => setError(e.message));
   };
-  const openActivity = (id: string) => {
+  const openActivity = (id: string, range?: [number, number]) => {
+    setOrigin({ id, range, key: Date.now() });
     setActId(id);
     setScreen("activities");
   };
@@ -143,6 +162,8 @@ export default function App() {
         setDraft({ activity, detail, range });
         setDrawer(false);
       },
+      origin,
+      onContext: setSelectionContext,
       segments: state.segments,
       maptilerConfigured: state.settings.maptilerConfigured,
       theme: state.settings.theme,
@@ -228,7 +249,7 @@ export default function App() {
     case "activities":
       body = (
         <Activities
-          key={state.settings.source}
+          key={state.settings.source + (origin?.key ?? "")}
           {...pageProps}
           actId={actId}
           setActId={setActId}

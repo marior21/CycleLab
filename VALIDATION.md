@@ -271,3 +271,54 @@ la demo. No se ha ejecutado toda la suite Electron ni los instaladores. El segme
 seleccionado en pantalla todavía no viaja en el contexto (fase 2.2): con varios
 candidatos hay que indicar su nombre. Los resultados GPS siguen siendo aproximados;
 la herramienta consulta el estado persistido y no inicia nuevas descargas.
+
+
+## Fase 2.2 — Preguntar por la selección actual (28/10/2026)
+
+- «Analizar este tramo» utiliza el rango del gráfico, los intervalos marcados o el
+  segmento actual. Los intervalos se envían como rangos independientes, sin incluir
+  recuperaciones intermedias. «Explicar esta comparación» conserva la pareja A/B.
+- El proceso principal resuelve los identificadores en el origen activo y calcula
+  estadísticas de cada rango y diferencias B respecto a A con las funciones del
+  análisis. Conserva valores nulos y referencias históricas; incluye recuentos de
+  muestras con potencia/FC. No adjunta coordenadas, archivos FIT ni credenciales.
+- El contexto es visible junto al campo del chat. Los resultados permiten volver
+  a cada actividad o tramo; reintentar conserva el contexto de la pregunta original,
+  también después de persistir el historial. Las copias aceptan y validan ese contexto.
+- `buscar_actividades` filtra todo el histórico por texto, fechas UTC inclusivas y
+  tipos antes de ordenar y paginar. Devuelve 20 filas por página, el total y el
+  siguiente offset cuando quedan resultados; cada actividad tiene enlace.
+- OpenRouter recibe la selección calculada antes de responder, aunque el modelo
+  no invoque herramientas. Los segmentos también sirven como referencia por defecto
+  para `comparar_ascensiones`, evitando elegir otro puerto por suposición.
+
+Validación: lint, typecheck, build y 118 pruebas unitarias correctos. Casos nuevos
+para cuatro rangos independientes, referencias de otro origen, índices inválidos,
+contexto IPC incompatible, sensores ausentes, pareja A/B, búsqueda de 45 actividades
+de 2020 y paginación por tipo/fecha. Petición OpenRouter verificada con transporte
+simulado: el mismo resultado local llega a la interfaz y al modelo, sin GPS.
+
+Recorrido Electron con perfil temporal: cuatro repeticiones de una sesión 4×8,
+retorno al tramo, comparación de dos actividades y elección del segmento correcto
+entre varios. Capturas en `test-results/coach-selection-{dark,light}.png`, sin errores
+de renderer. También pasan el recorrido de puertos, las dos pruebas de migración
+y la prueba de exportación/restauración de copias ejecutada aisladamente (un primer
+intento conjunto agotó el tiempo de espera). Comparación visual ejecutada contra `design/prototype.html` en Chromium
+para ambos temas, con capturas en `artifacts/visual/`; se mantienen componentes,
+colores y tipografía. El prototipo no incluye selección múltiple ni contexto del chat.
+
+Límites: sin llamadas de pago a OpenRouter ni nueva sincronización Garmin real.
+La respuesta libre del modelo no se valida con un proveedor real; se comprueban el
+contrato enviado y el flujo demo. No se ha ejecutado toda la suite Electron ni los
+instaladores. La búsqueda entrega páginas de 20 y conserva el límite existente de
+cinco rondas de herramientas por respuesta. Los tramos se basan en índices de las
+muestras locales; si faltan o dejan de ser válidos, el análisis devuelve un error.
+
+### Corrección de búsqueda por ID (28/10/2026)
+
+`buscar_actividades` acepta el ID exacto tanto en `actividad` como en `texto`.
+Antes, `actividad` se ignoraba y `texto` solo buscaba en el nombre: el entrenador
+podía obtener vueltas pero no el resumen de la misma sesión. Se conservan los
+filtros de fecha/tipo y no se devuelve el listado general si el ID no existe.
+Prueba de regresión con ID numérico, resumen completo, ID ausente/parcial y búsqueda
+por nombre. La descripción de la herramienta explica cómo consultar el resumen.

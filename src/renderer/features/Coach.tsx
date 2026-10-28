@@ -26,16 +26,16 @@ interface Props {
   context: CoachContext;
   onClose?: () => void;
   onSettings: () => void;
-  openActivity: (id: string) => void;
+  openActivity: (id: string, range?: [number, number]) => void;
   compact?: boolean;
-  send: (text: string) => Promise<void>;
+  send: (text: string, context?: CoachContext) => Promise<void>;
 }
 function ToolVisualization({
   tool: t,
   openActivity,
 }: {
   tool: ToolView;
-  openActivity: (id: string) => void;
+  openActivity: (id: string, range?: [number, number]) => void;
 }) {
   return (
     <>
@@ -50,7 +50,14 @@ function ToolVisualization({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => openActivity(String(r.activityId))}
+                  onClick={() =>
+                    openActivity(
+                      String(r.activityId),
+                      typeof r.i0 === "number" && typeof r.i1 === "number"
+                        ? [r.i0, r.i1]
+                        : undefined,
+                    )
+                  }
                 >
                   {String(r[c.key])}
                 </Button>
@@ -111,12 +118,12 @@ export function ChatPanel(p: Props) {
   useEffect(() => {
     log.current?.scrollTo({ top: log.current.scrollHeight });
   }, [p.state.messages]);
-  async function send(value: string) {
+  async function send(value: string, context?: CoachContext) {
     if (!value.trim() || busy) return;
     setError("");
     setText("");
     try {
-      await p.send(value);
+      await p.send(value, context);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "No se pudo enviar el mensaje.",
@@ -198,12 +205,13 @@ export function ChatPanel(p: Props) {
                       const question = p.state.messages
                         .slice(0, i)
                         .reverse()
-                        .find((m) => m.role === "user")?.text;
+                        .find((m) => m.role === "user");
                       if (question)
                         void send(
-                          demo && question.toLowerCase().includes("error")
+                          demo && question.text.toLowerCase().includes("error")
                             ? "Analiza mi curva de potencia"
-                            : question,
+                            : question.text,
+                          question.context,
                         );
                     }}
                   >
@@ -218,6 +226,25 @@ export function ChatPanel(p: Props) {
         ))}
       </div>
       <div className="chat-input">
+        <div className="small cl-muted" aria-label="Contexto del entrenador">
+          Contexto:{" "}
+          {p.context.comparison
+            ? p.context.comparison
+                .map(
+                  (id) =>
+                    p.state.dataset.activities.find((a) => a.id === id)?.name ??
+                    id,
+                )
+                .join(" / ")
+            : p.context.segmentId
+              ? (p.state.segments.find((s) => s.id === p.context.segmentId)
+                  ?.name ?? "Segmento no disponible")
+              : (p.state.dataset.activities.find(
+                  (a) => a.id === p.context.activityId,
+                )?.name ?? "Histórico")}
+          {p.context.ranges &&
+            ` · ${p.context.ranges.length} ${p.context.ranges.length === 1 ? "tramo seleccionado" : "tramos seleccionados"}`}
+        </div>
         {!ready ? (
           <StateBlock
             title="Configura el entrenador"

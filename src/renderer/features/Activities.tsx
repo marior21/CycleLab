@@ -363,6 +363,9 @@ export function DetailSkeleton() {
   );
 }
 function ActivityDetail(p: PageProps & { a: Activity }) {
+  useEffect(() => {
+    p.onContext({ screen: "activities", activityId: p.a.id });
+  }, [p.onContext, p.a.id]);
   const { detail, error, retry } = useDetail(p.a.id, p.demo, p.a.detailStatus);
   return error ? (
     <StateBlock
@@ -380,7 +383,15 @@ function ActivityDetail(p: PageProps & { a: Activity }) {
 function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
   const { a, detail: d, data } = p;
   const [hover, setHover] = useState<number | null>(null),
-    [range, setRange] = useState<[number, number] | null>(null),
+    [range, setRange] = useState<[number, number] | null>(
+      p.origin?.id === a.id &&
+        p.origin.range &&
+        d.rows[p.origin.range[0]] &&
+        d.rows[p.origin.range[1]]
+        ? p.origin.range
+        : null,
+    ),
+    [checkedLaps, setCheckedLaps] = useState<string[]>([]),
     [lapId, setLap] = useState<string | null>(null),
     [zone, setZone] = useState("power"),
     [axis, setAxis] = useState("time"),
@@ -388,7 +399,23 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
   const rows = d.rows,
     x = axis === "km" ? "km" : "x";
   const laps = d.laps.filter((l) => l.kind !== "rec");
+  const selectedLaps = useMemo(
+    () => d.laps.filter((l) => checkedLaps.includes(l.id)),
+    [d.laps, checkedLaps],
+  );
+  useEffect(() => {
+    p.onContext({
+      screen: "activities",
+      activityId: a.id,
+      ranges: selectedLaps.length
+        ? selectedLaps.map((l) => [l.i0, l.i1])
+        : range
+          ? [range]
+          : undefined,
+    });
+  }, [p.onContext, a.id, range, selectedLaps]);
   const selectLap = (l: Lap | null) => {
+    setCheckedLaps([]);
     setLap(l?.id ?? null);
     setRange(l ? [l.i0, l.i1] : null);
   };
@@ -402,7 +429,9 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
         e.metaKey ||
         e.ctrlKey ||
         e.altKey ||
-        target.matches("input,textarea,select,[contenteditable=true]")
+        target.matches(
+          "input:not([type=checkbox]),textarea,select,[contenteditable=true]",
+        )
       )
         return;
       const s = latest.current;
@@ -444,6 +473,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
         ])
       : null,
     onSelect: (r: [number, number] | null) => {
+      setCheckedLaps([]);
       setLap(null);
       setRange(r ? [nearest(rows, x, r[0]), nearest(rows, x, r[1])] : null);
     },
@@ -523,13 +553,17 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           icon="coach"
           onClick={() =>
             p.ask(
-              a.type === "intervals"
-                ? "Analiza los intervalos de esta sesión"
-                : "Resume esta actividad",
+              range || selectedLaps.length
+                ? "Analiza exclusivamente los tramos de la selección actual"
+                : a.type === "intervals"
+                  ? "Analiza los intervalos de esta sesión"
+                  : "Resume esta actividad",
             )
           }
         >
-          Preguntar a la IA
+          {range || selectedLaps.length
+            ? "Analizar este tramo"
+            : "Preguntar a la IA"}
         </Button>
       </div>
       <p className="small cl-muted">
@@ -623,6 +657,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
                     onHover: (i) =>
                       setHover(i === null ? null : (d.pointIndices?.[i] ?? i)),
                     onSelect: (r) => {
+                      setCheckedLaps([]);
                       setLap(null);
                       setRange([
                         d.pointIndices?.[r[0]] ?? r[0],
@@ -785,11 +820,48 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
         flush
         title="Intervalos"
         subtitle="Vueltas y tramos · clic o ↑ ↓ en la tabla, ← → desde cualquier punto, Esc limpia"
-        actions={<span className="small cl-faint">← → Esc</span>}
+        actions={
+          <div className="toolbar compact">
+            {selectedLaps.length > 0 && (
+              <>
+                <span className="small">
+                  {selectedLaps.length} intervalos seleccionados
+                </span>
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    p.ask("Analiza exclusivamente los intervalos seleccionados")
+                  }
+                >
+                  Analizar este tramo
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => selectLap(null)}
+                >
+                  Limpiar selección
+                </Button>
+              </>
+            )}
+            <span className="small cl-faint">← → Esc</span>
+          </div>
+        }
       >
         <DataTable
           compact
           rows={laps}
+          checked={checkedLaps}
+          checkLabel="Seleccionar intervalo para analizar"
+          onCheck={(id) => {
+            setLap(null);
+            setRange(null);
+            setCheckedLaps((current) =>
+              current.includes(String(id))
+                ? current.filter((v) => v !== id)
+                : [...current, String(id)],
+            );
+          }}
           selected={lapId}
           selectOnFocus
           onEscape={() => selectLap(null)}
@@ -864,6 +936,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
             rowKey="l"
             onSelect={(_id, b) => {
               if (b.p !== null && b.i0 !== undefined && b.i1 !== undefined) {
+                setCheckedLaps([]);
                 setLap(null);
                 setRange([b.i0, b.i1]);
               }
@@ -940,6 +1013,9 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
 function Comparison(
   p: PageProps & { a: Activity; b: Activity; onClose: () => void },
 ) {
+  useEffect(() => {
+    p.onContext({ screen: "activities", comparison: [p.a.id, p.b.id] });
+  }, [p.onContext, p.a.id, p.b.id]);
   const a = useDetail(p.a.id, p.demo, p.a.detailStatus),
     b = useDetail(p.b.id, p.demo, p.b.detailStatus);
   if (a.error || b.error)
@@ -1007,6 +1083,16 @@ function Comparison(
             {p.a.name} vs {p.b.name}
           </div>
         </div>
+        <Button
+          icon="coach"
+          onClick={() =>
+            p.ask(
+              "Explica esta comparación entre las dos actividades seleccionadas",
+            )
+          }
+        >
+          Explicar esta comparación
+        </Button>
         <Button className="push" icon="close" onClick={p.onClose}>
           Cerrar comparación
         </Button>

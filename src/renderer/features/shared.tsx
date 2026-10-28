@@ -1,4 +1,5 @@
 import type {
+  CoachContext,
   Activity,
   ActivityDetail,
   Dataset,
@@ -20,7 +21,9 @@ export interface PageProps {
   syncing: boolean;
   maptilerConfigured: boolean;
   theme: "dark" | "light";
-  openActivity: (id: string) => void;
+  openActivity: (id: string, range?: [number, number]) => void;
+  onContext: (context: CoachContext) => void;
+  origin?: { id: string; range?: [number, number]; key: number };
   go: (screen: Screen) => void;
   ask: (text: string) => void;
 }

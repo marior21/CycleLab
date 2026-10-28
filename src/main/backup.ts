@@ -1,3 +1,4 @@
+import { coachContextSchema } from "../shared/coachContext";
 import type Database from "better-sqlite3";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -150,6 +151,7 @@ const result = z.object({
   error: z.string().optional(),
 });
 const message = z.object({
+  context: coachContextSchema.optional(),
   id: z.string(),
   role: z.enum(["user", "assistant"]),
   text: z.string(),

@@ -107,6 +107,8 @@ El contexto enviado al entrenador incluye pantalla y actividad, pero no el inter
 
 **Terminado cuando:** al seleccionar cuatro repeticiones, la respuesta trata esas cuatro; al consultar un año antiguo, no responde únicamente con las actividades recientes. Los resultados permiten volver a la actividad o selección de origen.
 
+**Completada el 28/10/2026.** Selección de tramos e intervalos múltiples, pareja de actividades y segmento actual compartidos con el entrenador; métricas y diferencias calculadas localmente, contexto visible y enlaces de vuelta al tramo. La búsqueda filtra todo el histórico por fechas y tipos, pagina y declara sus límites. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-22--preguntar-por-la-selección-actual-28102026).
+
 ### 2.3. Comparar intentos de un segmento visualmente · P1 · L
 
 La tabla histórica es útil; el siguiente salto es saber dónde se ganó o perdió tiempo.

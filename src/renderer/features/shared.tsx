@@ -17,6 +17,7 @@ export interface PageProps {
   data: Dataset;
   segments: Segment[];
   demo: boolean;
+  syncing: boolean;
   maptilerConfigured: boolean;
   theme: "dark" | "light";
   openActivity: (id: string) => void;

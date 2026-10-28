@@ -65,6 +65,8 @@ La carga actual excluye actividades sin TSS y arranca desde CTL/ATL cero. La adv
 
 **Terminado cuando:** un periodo incompleto no parece equivalente a uno completo, y una métrica desconocida nunca aparece como cero. El entrenador recibe la misma información de cobertura.
 
+**Completada el 28/10/2026.** Cobertura por filtros y temporadas de potencia, FC, GPS, TSS y muestras; distingue ausencia de datos y sensores sin comprobar. Procedencia visible y compartida con el entrenador, carga identificada como estimación y reintento de las descargas fallidas del periodo. El TSS diario desconocido, las zonas sin muestras y el W/kg sin FTP conservan su estado ausente. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-13--cobertura-y-procedencia-28102026).
+
 ### 1.4. Historial de FTP, peso y LTHR · P1 · L
 
 Actualmente el perfil contiene un único valor de cada magnitud. Eso limita la interpretación de W/kg y zonas al comparar temporadas.

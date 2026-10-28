@@ -175,7 +175,14 @@ export interface Goal {
   tone: string;
 }
 export type ChartRow = Record<string, number | string | null>;
+export interface SampleCoverage {
+  samples: boolean;
+  power: boolean;
+  heart: boolean;
+  gps: boolean;
+}
 export interface Dataset {
+  sampleCoverage: Record<string, SampleCoverage>;
   today: number;
   athlete: Athlete;
   activities: Activity[];
@@ -287,6 +294,7 @@ export interface CycleLabAPI {
   disconnect(provider: "garmin" | "openrouter" | "maptiler"): Promise<AppState>;
   listModels(): Promise<Model[]>;
   sync(): Promise<void>;
+  retryDownloads(ids: string[]): Promise<void>;
   reclassifyActivities(): Promise<number>;
   sendMessage(text: string, context: CoachContext): Promise<void>;
   onChange(callback: () => void): () => void;

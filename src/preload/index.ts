@@ -26,6 +26,7 @@ const api: CycleLabAPI = {
   disconnect: (p) => call("disconnect", p),
   listModels: () => call("models"),
   sync: () => call("sync"),
+  retryDownloads: (ids) => call("retry-downloads", ids),
   reclassifyActivities: () => call("reclassify"),
   sendMessage: (text, ctx) => call("message", text, ctx),
   onChange: (callback) => {

@@ -579,3 +579,35 @@ input.cl-check {
   min-width: 0;
   width: 100%;
 }
+
+.coverage {
+  border-block: 1px solid var(--line);
+  padding: var(--space-3) var(--space-4);
+  font: var(--body-s);
+}
+.coverage summary {
+  cursor: pointer;
+}
+.coverage summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.coverage-body {
+  margin-top: var(--space-3);
+}
+.list-pane > .coverage {
+  overflow: auto;
+  flex-shrink: 0;
+  max-height: 50%;
+}
+.coverage .cl-table th,
+.coverage .cl-table td {
+  white-space: normal;
+  padding-inline: var(--space-2);
+}
+.list-pane > .coverage summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-100);
+}

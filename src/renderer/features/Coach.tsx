@@ -292,8 +292,8 @@ export function CoachPage(p: Props) {
           <div className="small cl-muted column">
             <span>
               FTP {number(d.athlete.ftp)} W ·{" "}
-              {d.athlete.weight
-                ? number((d.athlete.ftp ?? 0) / d.athlete.weight, 2)
+              {d.athlete.weight && d.athlete.ftp !== null
+                ? number(d.athlete.ftp / d.athlete.weight, 2)
                 : "–"}{" "}
               W/kg
             </span>

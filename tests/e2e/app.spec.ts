@@ -34,7 +34,9 @@ test("navigation, analysis, settings, chat and persistence", async () => {
   await expect(page.locator(".sel-bar")).toHaveCount(0);
   await page.getByRole("textbox", { name: "Buscar actividad" }).fill("zzzzzz");
   await expect(
-    page.getByText("Sin actividades", { exact: true }),
+    page
+      .getByRole("listbox", { name: "Actividades" })
+      .getByText("Sin actividades", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Restablecer filtros" }).click();
   const checks = page.getByRole("checkbox");
@@ -331,7 +333,9 @@ test("reclassifies saved Garmin activities on restart and exposes the new filter
     await expect(page.locator(".act-item")).toContainText("4x8 intervalos");
     await page.getByLabel("Buscar actividad").fill("Morning");
     await expect(
-      page.getByText("Sin actividades", { exact: true }),
+      page
+        .getByRole("listbox", { name: "Actividades" })
+        .getByText("Sin actividades", { exact: true }),
     ).toBeVisible();
     await page.getByLabel("Buscar actividad").fill("");
     await page.getByLabel("Fecha desde").fill("2018-05-20");

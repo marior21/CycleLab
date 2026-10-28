@@ -162,3 +162,39 @@ describe("resumable Garmin import", () => {
     expect(get).toHaveBeenCalledTimes(2);
   });
 });
+
+it("retries only selected failed downloads without changing import progress", async () => {
+  const f = fixture();
+  f.config.set("garminOffset", 99);
+  f.config.set("sync", { lastSync: 123 });
+  f.activities.set("1", { ...f.a(1), detailStatus: "error" });
+  f.activities.set("2", { ...f.a(2), detailStatus: "error" });
+  f.activities.set("3", { ...f.a(3), detailStatus: "ready" });
+  f.activities.set("4", { ...f.a(4), detailStatus: "pending" });
+  const source = {
+    listActivities: vi.fn(),
+    getActivity: vi.fn().mockResolvedValue(emptyDetail()),
+  } as unknown as GarminPersonalSource;
+  await new GarminSync(f.store, source, () => {}).run(["1", "3", "4"]);
+  expect(source.listActivities).not.toHaveBeenCalled();
+  expect(source.getActivity).toHaveBeenCalledExactlyOnceWith("1");
+  expect(f.activities.get("1")?.detailStatus).toBe("unavailable");
+  expect(f.activities.get("2")?.detailStatus).toBe("error");
+  expect(f.activities.get("3")?.detailStatus).toBe("ready");
+  expect(f.activities.get("4")?.detailStatus).toBe("pending");
+  expect(f.config.get("garminOffset")).toBe(99);
+  expect(f.config.get("sync")).toMatchObject({ lastSync: 123, state: "error" });
+  vi.mocked(source.getActivity).mockResolvedValue({
+    ...emptyDetail(),
+    rows: [
+      { x: 0, p: 0, ps: 0, hr: null, cad: null, elev: null, km: null, v: null },
+    ],
+  });
+  await new GarminSync(f.store, source, () => {}).run(["2"]);
+  expect(f.activities.get("2")?.detailStatus).toBe("ready");
+  expect(f.config.get("sync")).toMatchObject({
+    lastSync: 123,
+    state: "offline",
+  });
+  expect(f.config.get("garminOffset")).toBe(99);
+});

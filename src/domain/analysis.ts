@@ -1,3 +1,4 @@
+import { LOAD_PROVENANCE, sampleCoverage } from "./coverage";
 import type {
   Activity,
   ActivityDetail,
@@ -167,7 +168,14 @@ export function realDataset(
   athlete: Athlete,
 ): Dataset {
   const today = Date.now(),
-    dated = activities.filter((a) => a.tss !== null).sort((a, b) => a.date - b.date);
+    dated = activities
+      .filter((a) => a.tss !== null)
+      .sort((a, b) => a.date - b.date);
+  const missingDays = new Set(
+    activities
+      .filter((a) => a.tss === null)
+      .map((a) => Math.floor(a.date / DAY)),
+  );
   const load: ChartRow[] = [];
   if (dated.length) {
     let ctl = 0,
@@ -186,7 +194,13 @@ export function realDataset(
         tsb = ctl - atl;
       ctl += (tss - ctl) / 42;
       atl += (tss - atl) / 7;
-      load.push({ x: d * DAY, tss, ctl, atl, tsb });
+      load.push({
+        x: d * DAY,
+        tss: missingDays.has(d) ? null : tss,
+        ctl,
+        atl,
+        tsb,
+      });
     }
   }
   const curve: ChartRow[] = DURATIONS.map((t) => ({ x: t }));
@@ -206,6 +220,9 @@ export function realDataset(
     months.set(mo, monthly);
   });
   return {
+    sampleCoverage: Object.fromEntries(
+      activities.map((a, i) => [a.id, sampleCoverage(details[i] ?? null)]),
+    ),
     today,
     athlete,
     activities,
@@ -215,8 +232,7 @@ export function realDataset(
     load,
     curve: curve.filter((r) => Object.keys(r).length > 1),
     bests: [...months.values()].sort((a, b) => Number(a.x) - Number(b.x)),
-    coverage:
-      "La carga parte de CTL/ATL 0 y solo incluye actividades con TSS. Las actividades sin TSS se excluyen del cálculo.",
+    coverage: `${activities.filter((a) => a.tss === null).length} actividades sin TSS en todo el histórico; también pueden afectar a la carga del periodo seleccionado. ${LOAD_PROVENANCE}`,
   };
 }
 

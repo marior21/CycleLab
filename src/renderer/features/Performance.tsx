@@ -1,3 +1,4 @@
+import { Coverage } from "./Coverage";
 import { useState } from "react";
 import {
   Button,
@@ -14,11 +15,12 @@ import { ratio, type PageProps } from "./shared";
 const ticks = [1, 5, 15, 60, 300, 1200, 3600, 14400];
 export function Performance(p: PageProps) {
   const keys = [
-    ...new Set(
-      p.data.curve.flatMap((r) =>
+    ...new Set([
+      ...p.data.activities.map((a) => "s" + new Date(a.date).getUTCFullYear()),
+      ...p.data.curve.flatMap((r) =>
         Object.keys(r).filter((k) => k.startsWith("s")),
       ),
-    ),
+    ]),
   ]
     .sort()
     .reverse();
@@ -98,6 +100,17 @@ export function Performance(p: PageProps) {
           Analizar con IA
         </Button>
       </div>
+      <Coverage
+        p={p}
+        activities={p.data.activities.filter((a) =>
+          seasons.includes("s" + new Date(a.date).getUTCFullYear()),
+        )}
+        period={
+          seasons.length
+            ? seasons.map((s) => s.slice(1)).join(", ")
+            : "Ninguna temporada seleccionada"
+        }
+      />
       <div className="strip metrics-five">
         <Metric
           size="l"
@@ -173,7 +186,9 @@ export function Performance(p: PageProps) {
                 </Button>
               }
             />
-          ) : series.length && curve.length ? (
+          ) : curve.some((row) =>
+              series.some((s) => typeof row[s.key] === "number"),
+            ) ? (
             <LineChart
               data={curve}
               xType="log"
@@ -205,14 +220,14 @@ export function Performance(p: PageProps) {
           ) : (
             <StateBlock
               title={
-                keys.length
+                !seasons.length && keys.length
                   ? "Ninguna temporada seleccionada"
                   : "Sin datos de potencia"
               }
               detail={
-                keys.length
+                !seasons.length && keys.length
                   ? "Activa al menos una temporada para dibujar la curva."
-                  : "Sincroniza actividades con potenciómetro."
+                  : "No hay muestras de potencia suficientes en las temporadas seleccionadas."
               }
             />
           )}

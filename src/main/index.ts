@@ -297,6 +297,19 @@ async function boot() {
     return count;
   });
   register("models", () => openrouter().models());
+  register("retry-downloads", async (rawIds) => {
+    const ids = z
+      .array(z.string().regex(/^\d+$/))
+      .min(1)
+      .max(10000)
+      .parse(rawIds);
+    if (
+      store.settings().source !== "garmin" ||
+      !store.settings().garminConfigured
+    )
+      throw new Error("Configura Garmin para reintentar las descargas.");
+    await sync.run(ids);
+  });
   register("sync", async () => {
     if (store.settings().source === "garmin") {
       await sync.run();

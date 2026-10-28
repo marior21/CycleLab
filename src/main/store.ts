@@ -1,3 +1,5 @@
+import { sampleCoverage } from "../domain/coverage";
+import type { SampleCoverage } from "../shared/models";
 import { classifyActivity } from "../domain/classification";
 import Database from "better-sqlite3";
 import { automaticBackup, schemaVersion } from "./backup";
@@ -15,6 +17,7 @@ import { demoDataset, DemoGarminSource } from "../data/demo/provider";
 import { realDataset } from "../domain/analysis";
 export class Store {
   readonly db: Database.Database;
+  private coverageCache = new Map<string, SampleCoverage>();
   constructor(path: string) {
     this.db = new Database(path);
     const version = this.db.pragma("user_version", { simple: true }) as number;
@@ -38,6 +41,7 @@ export class Store {
     this.recover();
   }
   recover() {
+    this.coverageCache.clear();
     this.db
       .prepare(
         "UPDATE messages SET payload=json_set(payload,'$.status','error','$.text','La respuesta se interrumpió al cerrar CycleLab. Puedes volver a enviar la pregunta.') WHERE json_extract(payload,'$.status')='running'",
@@ -148,6 +152,7 @@ export class Store {
     return r?.detail ? (JSON.parse(r.detail) as ActivityDetail) : null;
   }
   saveDetail(source: Source, id: string, detail: ActivityDetail) {
+    this.coverageCache.delete(`${source}:${id}`);
     this.db
       .prepare("UPDATE activities SET detail=?,best=? WHERE source=? AND id=?")
       .run(JSON.stringify(detail), JSON.stringify(detail.best), source, id);
@@ -171,10 +176,21 @@ export class Store {
     })();
   }
   dataset(source: Source) {
+    const activities = this.activities(source);
+    const coverage = Object.fromEntries(
+      activities.map((a) => {
+        const key = `${source}:${a.id}`;
+        let value = this.coverageCache.get(key);
+        if (!value) {
+          value = sampleCoverage(this.detail(source, a.id));
+          this.coverageCache.set(key, value);
+        }
+        return [a.id, value];
+      }),
+    );
     if (source === "demo")
-      return { ...demoDataset, activities: this.activities("demo") };
-    const activities = this.activities("garmin");
-    return realDataset(
+      return { ...demoDataset, activities, sampleCoverage: coverage };
+    const data = realDataset(
       activities,
       (
         this.db
@@ -192,6 +208,7 @@ export class Store {
       })),
       this.settings().athlete,
     );
+    return { ...data, sampleCoverage: coverage };
   }
   segment(source: Source, id: string): Segment | null {
     const row = this.db

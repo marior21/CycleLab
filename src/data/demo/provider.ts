@@ -1,3 +1,4 @@
+import { sampleCoverage } from "../../domain/coverage";
 import type { GarminSource } from "../../domain/providers";
 import type { Dataset } from "../../shared/models";
 import {
@@ -25,6 +26,9 @@ export class DemoGarminSource implements GarminSource {
   }
 }
 export const demoDataset: Dataset = {
+  sampleCoverage: Object.fromEntries(
+    ACTS.map((a) => [a.id, sampleCoverage(getStream(a))]),
+  ),
   today: TODAY,
   athlete: ATH,
   activities: ACTS,

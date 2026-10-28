@@ -148,6 +148,7 @@ export default function App() {
       theme: state.settings.theme,
       data: state.dataset,
       demo,
+      syncing: state.sync.state === "syncing",
       openActivity,
       go: setScreen,
       ask,

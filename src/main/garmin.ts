@@ -260,9 +260,9 @@ export class GarminSync {
     private changed: () => void,
     private finished: () => void = () => {},
   ) {}
-  run() {
+  run(retryIds?: string[]) {
     if (this.running) return this.running;
-    this.running = this.import().finally(() => {
+    this.running = this.import(retryIds).finally(() => {
       this.running = null;
       this.finished();
     });
@@ -279,18 +279,19 @@ export class GarminSync {
     this.store.set("sync", { ...old, ...patch });
     this.changed();
   }
-  private async import() {
-    let detailErrors = 0;
+  private async import(retryIds?: string[]) {
     try {
       this.update({
         state: "syncing",
-        phase: "Importando resúmenes",
+        phase: retryIds
+          ? "Reintentando muestras fallidas"
+          : "Importando resúmenes",
         completed: 0,
         total: null,
         error: undefined,
       });
       let offset = this.store.get("garminOffset", 0);
-      for (;;) {
+      for (; !retryIds;) {
         const batch = await this.source.listActivities(offset, 99);
         if (!batch.length) break;
         const existing = new Map(
@@ -316,8 +317,10 @@ export class GarminSync {
       }
       const pending = this.store
         .activities("garmin")
-        .filter(
-          (a) => a.detailStatus === "pending" || a.detailStatus === "error",
+        .filter((a) =>
+          retryIds
+            ? a.detailStatus === "error" && retryIds.includes(a.id)
+            : a.detailStatus === "pending" || a.detailStatus === "error",
         );
       this.update({
         phase: "Descargando muestras e intervalos",
@@ -346,13 +349,16 @@ export class GarminSync {
           )
             throw e;
           this.store.upsert("garmin", { ...a, detailStatus: "error" });
-          detailErrors++;
         }
         this.update({ completed: i + 1 });
       }
       const latest = this.store.activities("garmin")[0],
         settings = this.store.settings();
-      if (latest && (!settings.athlete.ftp || !settings.athlete.lthr)) {
+      if (
+        !retryIds &&
+        latest &&
+        (!settings.athlete.ftp || !settings.athlete.lthr)
+      ) {
         try {
           const thresholds = await this.source.thresholds(latest.id);
           this.store.set("settings", {
@@ -367,13 +373,28 @@ export class GarminSync {
           /* Optional thresholds do not discard a completed import. */
         }
       }
-      this.store.set("garminOffset", 0);
+      if (!retryIds) this.store.set("garminOffset", 0);
+      const activities = this.store.activities("garmin");
+      const detailErrors = activities.filter(
+        (a) => a.detailStatus === "error",
+      ).length;
+      const remaining = activities.filter(
+        (a) => a.detailStatus === "pending",
+      ).length;
       this.update({
-        state: detailErrors ? "error" : "synced",
+        state: detailErrors
+          ? "error"
+          : retryIds && remaining
+            ? "offline"
+            : "synced",
         phase: detailErrors
           ? `${detailErrors} actividades sin muestras; reintenta la sincronización.`
-          : "Sincronización completada",
-        lastSync: Date.now(),
+          : retryIds
+            ? remaining
+              ? `Muestras reintentadas; quedan ${remaining} pendientes de sincronizar.`
+              : "Reintento de muestras completado"
+            : "Sincronización completada",
+        ...(retryIds ? {} : { lastSync: Date.now() }),
         error: detailErrors
           ? "Algunas muestras no se han podido descargar. Los resúmenes se han conservado."
           : undefined,

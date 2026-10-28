@@ -1,3 +1,4 @@
+import { Coverage } from "./Coverage";
 import { weeklyActivityTotals } from "../../domain/classification";
 import { useMemo, useState } from "react";
 import {
@@ -19,7 +20,11 @@ export function Dashboard(p: PageProps) {
   const [range, setRange] = useState("12"),
     { data } = p;
   const weeks = Number(range),
-    load = data.load.slice(-weeks * 7),
+    load = data.load.filter(
+      (r) =>
+        Number(r.x) >=
+        Math.floor(data.today / DAY) * DAY - (weeks * 7 - 1) * DAY,
+    ),
     now = data.load.at(-1),
     prev = data.load.at(-8);
   const weekly = useMemo(
@@ -42,6 +47,9 @@ export function Dashboard(p: PageProps) {
   const tsb = pickNumber(now, "tsb"),
     ctl = pickNumber(now, "ctl"),
     atl = pickNumber(now, "atl");
+  const incompleteLoad = !p.demo && data.activities.some((a) => a.tss === null);
+  const loadValue = (value: number | null) =>
+    (value !== null && !p.demo ? "≈" : "") + number(value, 1);
   const longest = Math.max(
     0,
     ...data.activities
@@ -76,9 +84,11 @@ export function Dashboard(p: PageProps) {
           size="l"
           label="Forma (TSB)"
           accent="form"
-          value={number(tsb, 1)}
+          value={loadValue(tsb)}
           sub={
-            tsb !== null ? (
+            incompleteLoad ? (
+              <Badge tone="warning">Estimación · TSS incompleto</Badge>
+            ) : tsb !== null ? (
               <Badge
                 tone={tsb < -20 ? "warning" : tsb > 5 ? "info" : "success"}
               >
@@ -92,25 +102,25 @@ export function Dashboard(p: PageProps) {
         <Metric
           label="Fitness (CTL)"
           accent="fitness"
-          value={number(ctl, 1)}
+          value={loadValue(ctl)}
           delta={
             ctl !== null && pickNumber(prev, "ctl") !== null
               ? Math.round((ctl - pickNumber(prev, "ctl")!) * 10) / 10
               : undefined
           }
-          sub="vs. hace 7 días"
+          sub={p.demo ? "vs. hace 7 días" : "Estimación · vs. hace 7 días"}
         />
         <Metric
           label="Fatiga (ATL)"
           accent="fatigue"
-          value={number(atl, 1)}
+          value={loadValue(atl)}
           delta={
             atl !== null && pickNumber(prev, "atl") !== null
               ? Math.round((atl - pickNumber(prev, "atl")!) * 10) / 10
               : undefined
           }
           lowerIsBetter
-          sub="vs. hace 7 días"
+          sub={p.demo ? "vs. hace 7 días" : "Estimación · vs. hace 7 días"}
         />
         <Metric
           label="FTP"
@@ -130,11 +140,25 @@ export function Dashboard(p: PageProps) {
           sub={`${number(current.hours, 1)} h · semana anterior ${last.complete ? number(last.total) : "–"}`}
         />
       </div>
-      {!p.demo && <div className="small cl-faint">{data.coverage}</div>}
+      <Coverage
+        p={p}
+        activities={data.activities.filter(
+          (a) =>
+            a.date >=
+              Math.floor(data.today / DAY) * DAY - (weeks * 7 - 1) * DAY &&
+            a.date <= data.today,
+        )}
+        period={`${weeks} semanas`}
+      />
+      {!p.demo && <div className="small cl-muted">{data.coverage}</div>}
       <div className="row">
         <Panel
           className="grow"
-          title="Carga de entrenamiento"
+          title={
+            p.demo
+              ? "Carga de entrenamiento"
+              : "Carga de entrenamiento · estimación"
+          }
           subtitle="CTL 42 d · ATL 7 d · TSB = CTL − ATL de ayer"
           actions={
             <Button
@@ -155,6 +179,9 @@ export function Dashboard(p: PageProps) {
               zeroBased={false}
               xFormat={(v) => date(v)}
               tooltipTitle={(v) => date(v)}
+              tooltipExtra={(row) => (
+                <div>TSS del día: {number(row.tss as number | null)}</div>
+              )}
               series={[
                 {
                   key: "ctl",

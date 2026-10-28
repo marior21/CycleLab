@@ -208,7 +208,10 @@ describe("OpenRouter", () => {
     const provider = new OpenRouterCoachProvider(
       () => "key",
       "chosen",
-      { run } as unknown as AnalysisTools,
+      {
+        run,
+        coverage: () => "Cobertura de prueba: 2 actividades sin TSS.",
+      } as unknown as AnalysisTools,
       fetcher,
     );
     expect(
@@ -217,6 +220,7 @@ describe("OpenRouter", () => {
     expect(onTool).toHaveBeenCalledWith(tool);
     const body = JSON.parse(String(fetcher.mock.calls[1][1]?.body));
     expect(body.model).toBe("chosen");
+    expect(body.messages[0].content).toContain("2 actividades sin TSS");
     expect(JSON.parse(body.messages.at(-1).content)).toEqual(tool);
   });
   it("never selects a default model or falls back to a demo response", async () => {
@@ -251,6 +255,7 @@ describe("OpenRouter", () => {
     );
     const tools = {
       run: () => ({ rows: [], series: [] }),
+      coverage: () => "Sin datos",
     } as unknown as AnalysisTools;
     await expect(
       new OpenRouterCoachProvider(

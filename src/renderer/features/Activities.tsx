@@ -1,3 +1,4 @@
+import { Coverage } from "./Coverage";
 import { filterActivitiesByDate } from "../../domain/activityFilters";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -228,6 +229,7 @@ export function Activities(
             </Button>
           </div>
         </div>
+        <Coverage p={p} activities={list} period="Filtros actuales" />
         <div className="activity-list" role="listbox" aria-label="Actividades">
           {list.map((x) => (
             <div
@@ -320,7 +322,11 @@ export function Activities(
     </>
   );
 }
-function useDetail(id: string, demo: boolean) {
+function useDetail(
+  id: string,
+  demo: boolean,
+  status?: Activity["detailStatus"],
+) {
   const [detail, setDetail] = useState<Detail | null>(null),
     [error, setError] = useState(""),
     [retry, setRetry] = useState(0);
@@ -341,7 +347,7 @@ function useDetail(id: string, demo: boolean) {
     return () => {
       active = false;
     };
-  }, [id, demo, retry]);
+  }, [id, demo, retry, status]);
   return { detail, error, retry: () => setRetry((n) => n + 1) };
 }
 export function DetailSkeleton() {
@@ -356,7 +362,7 @@ export function DetailSkeleton() {
   );
 }
 function ActivityDetail(p: PageProps & { a: Activity }) {
-  const { detail, error, retry } = useDetail(p.a.id, p.demo);
+  const { detail, error, retry } = useDetail(p.a.id, p.demo, p.a.detailStatus);
   return error ? (
     <StateBlock
       kind="error"
@@ -897,7 +903,12 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
             />
           }
         >
-          {(zone === "power" ? ftp : data.athlete.lthr) ? (
+          {!rows.some((r) => (zone === "power" ? r.p : r.hr) !== null) ? (
+            <StateBlock
+              title="Sin muestras para calcular zonas"
+              detail="El tiempo en zonas es desconocido para este canal."
+            />
+          ) : (zone === "power" ? ftp : data.athlete.lthr) ? (
             <ZoneBar zones={zoneRows} format={shortDuration} />
           ) : (
             <StateBlock
@@ -917,8 +928,8 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
 function Comparison(
   p: PageProps & { a: Activity; b: Activity; onClose: () => void },
 ) {
-  const a = useDetail(p.a.id, p.demo),
-    b = useDetail(p.b.id, p.demo);
+  const a = useDetail(p.a.id, p.demo, p.a.detailStatus),
+    b = useDetail(p.b.id, p.demo, p.b.detailStatus);
   if (a.error || b.error)
     return (
       <StateBlock

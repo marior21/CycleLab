@@ -235,3 +235,39 @@ consultas de pago ni importación de una cuenta real. La detención espera la pe
 actual y sus reintentos. El borrado no es forense, no elimina copias ya existentes ni
 reduce inmediatamente el archivo SQLite: el espacio se reutiliza. No se ha repetido
 la suite visual completa ni la validación de instaladores.
+
+
+## Fase 2.1 — Segmentos y puertos en el entrenador (28/10/2026)
+
+- `comparar_ascensiones` consulta `segments` y `segment_results` del origen activo,
+  igual que Segmentos/Puertos; deja de usar el catálogo antiguo, también en demo.
+- Resuelve ID o nombre, ofrece candidatos cuando hay ambigüedad y filtra fechas
+  UTC inclusivas (`desde`/`hasta`). Ordena por fecha descendente y, dentro de una
+  sesión, por el inicio del intento; muestra los dos últimos del periodo.
+- Conserva métricas nulas y referencias históricas del atleta. Envía al modelo y
+  muestra en la tabla la misma procedencia, cobertura y advertencias: búsqueda
+  pendiente, en curso, interrumpida o desactualizada; ausencia de GPS/muestras y
+  coincidencias aproximadas. No envía coordenadas ni muestras GPS.
+- Las actividades de la tabla se abren desde la página y el panel lateral del chat.
+  El contador suma intentos persistidos de segmentos marcados como puerto y avisa
+  de búsquedas incompletas. Los mensajes guardados conservan su resultado original.
+
+Validación: lint, typecheck, build y 114 pruebas unitarias correctos. Nuevos casos
+para histórico Garmin sin catálogo antiguo, orden de intentos, fechas inclusivas,
+periodos inválidos, métricas ausentes, ambigüedad, aislamiento y resultados
+provisionales. Prueba Electron con perfil temporal: mismos intentos en Puertos y
+chat, apertura de actividad, contador al desmarcar un puerto y al cambiar de origen,
+ambos temas y sin errores de renderer. Capturas en
+`test-results/coach-segments-{dark,light}.png`.
+
+Comparación visual ejecutada con `scripts/visual.mjs` y prototipo abierto en
+Chromium, revisando Entrenador en ambos temas. Se mantienen componentes y tokens;
+las diferencias incluyen navegación, contexto y contador de la app actual frente
+al prototipo. Capturas y comparativa en `artifacts/visual/`.
+
+Límites: no se han hecho llamadas de pago a OpenRouter ni una nueva sincronización
+Garmin real; se verifican las herramientas con datos controlados y el flujo UI con
+la demo. No se ha ejecutado toda la suite Electron ni los instaladores. El segmento
+seleccionado en pantalla todavía no viaja en el contexto (fase 2.2): con varios
+candidatos hay que indicar su nombre. Los resultados GPS siguen siendo aproximados;
+la herramienta consulta el estado persistido y no inicia nuevas descargas.

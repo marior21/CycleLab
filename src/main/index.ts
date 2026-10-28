@@ -37,9 +37,22 @@ function changed() {
 }
 function state() {
   const settings = store.settings();
+  const segments = store.segments(settings.source);
+  const reports = segments
+    .filter((s) => s.isClimb)
+    .map((s) => store.segmentResults(settings.source, s.id));
   return {
     settings,
-    segments: store.segments(settings.source),
+    ascents: {
+      count: reports.reduce((n, r) => n + (r?.attempts.length ?? 0), 0),
+      incomplete: reports.some(
+        (r) =>
+          !r ||
+          r.status !== "done" ||
+          r.revision !== store.get(`activityRevision:${settings.source}`, 0),
+      ),
+    },
+    segments,
     dataset: store.dataset(settings.source),
     messages: store.messages(settings.source),
     sync:

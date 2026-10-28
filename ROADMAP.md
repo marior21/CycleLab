@@ -97,6 +97,8 @@ Es la carencia funcional más clara: la interfaz de Puertos usa segmentos guarda
 
 **Terminado cuando:** «Compara mis dos últimas subidas a este puerto» usa los mismos intentos que la pantalla Puertos, enlaza las actividades y explica cuándo faltan datos o las coincidencias son aproximadas.
 
+**Completada el 28/10/2026.** El entrenador consulta segmentos y resultados persistidos por origen, selecciona los dos últimos intentos con filtros de fecha y muestra cobertura, estado y límites de las coincidencias GPS. Las tablas abren las actividades y el contador suma los intentos de los segmentos marcados como puerto. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-21--segmentos-y-puertos-en-el-entrenador-28102026).
+
 ### 2.2. Preguntar por la selección actual · P1 · M
 
 El contexto enviado al entrenador incluye pantalla y actividad, pero no el intervalo seleccionado, el segmento ni la pareja que se compara.

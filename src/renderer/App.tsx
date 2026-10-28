@@ -256,6 +256,7 @@ export default function App() {
     case "coach":
       body = (
         <CoachPage
+          openActivity={openActivity}
           state={state}
           context={context}
           onSettings={settings}
@@ -340,6 +341,7 @@ export default function App() {
           >
             {drawer && (
               <ChatPanel
+                openActivity={openActivity}
                 state={state}
                 context={context}
                 compact

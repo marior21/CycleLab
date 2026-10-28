@@ -9,6 +9,10 @@ describe("coach tools", () => {
     const store = {
       dataset: () => demoDataset,
       detail: () => detail,
+      segments: () => [
+        { id: "segment", name: "Puerto" },
+        { id: "other", name: "Otro" },
+      ],
     } as unknown as Store;
     const tools = new AnalysisTools(store, "demo");
     expect(() =>
@@ -46,5 +50,125 @@ describe("coach tools", () => {
     expect(
       tools.run("buscar_actividades", {}, { screen: "coach" }).rows.length,
     ).toBeLessThanOrEqual(20);
+  });
+});
+
+describe("persisted segment comparisons", () => {
+  const attempts = [
+    {
+      id: "old",
+      activityId: "a",
+      activityName: "Antigua",
+      date: Date.parse("2025-01-01"),
+      i0: 0,
+      dur: 600,
+      avgP: 200,
+      hr: 140,
+      original: true,
+    },
+    {
+      id: "latest",
+      activityId: "b",
+      activityName: "Última",
+      date: Date.parse("2026-10-28T23:59:00Z"),
+      i0: 100,
+      dur: 580,
+      avgP: null,
+      hr: null,
+      original: false,
+    },
+    {
+      id: "previous",
+      activityId: "b",
+      activityName: "Última",
+      date: Date.parse("2026-10-28T23:59:00Z"),
+      i0: 0,
+      dur: 590,
+      avgP: 210,
+      hr: 150,
+      original: false,
+    },
+  ];
+  function setup(status = "done", revision = 3, present = true) {
+    const sources: string[] = [];
+    const store = {
+      dataset: () => ({ ...demoDataset, climbs: [], attempts: [] }),
+      segments: (source: string) => {
+        sources.push(source);
+        return [
+          { id: "p", name: "Puerto" },
+          { id: "q", name: "Puerto norte" },
+        ];
+      },
+      segmentResults: (source: string) => {
+        sources.push(source);
+        return present
+          ? { status, revision, total: 10, scanned: 8, skipped: 2, attempts }
+          : null;
+      },
+      get: () => 3,
+    } as unknown as Store;
+    return { tools: new AnalysisTools(store, "garmin"), sources };
+  }
+  it("uses persisted attempts, chronological order, null metrics and activity references without GPS", () => {
+    const { tools, sources } = setup();
+    const result = tools.run(
+      "comparar_ascensiones",
+      { puerto: "Puerto" },
+      { screen: "climbs" },
+    );
+    expect(result.rows.map((r) => r.id)).toEqual(["latest", "previous"]);
+    expect(result.rows[0]).toMatchObject({
+      activityId: "b",
+      tiempo: 580,
+      potencia: null,
+      FC: null,
+    });
+    expect(result.note).toContain("8 de 10");
+    expect(result.note).toContain("2 sin GPS");
+    expect(result.note).toContain("aproximados");
+    expect(sources).toEqual(["garmin", "garmin"]);
+    expect(JSON.stringify(result)).not.toMatch(/"(lat|lon|points|rowsGPS)":/);
+  });
+  it("filters inclusive UTC dates and rejects invalid or reversed periods", () => {
+    const { tools } = setup();
+    const run = (args: object) =>
+      tools.run(
+        "comparar_ascensiones",
+        { puerto: "p", ...args },
+        { screen: "coach" },
+      );
+    expect(run({ desde: "2026-10-28", hasta: "2026-10-28" }).rows).toHaveLength(
+      2,
+    );
+    expect(run({ hasta: "2025-01-01" }).rows.map((r) => r.id)).toEqual(["old"]);
+    expect(run({ desde: "2027-01-01" }).note).toContain("No hay dos intentos");
+    expect(() => run({ desde: "2026-02-30" })).toThrow();
+    expect(() => run({ desde: "2026-01-01", hasta: "2025-01-01" })).toThrow();
+  });
+  it.each([
+    ["running", 3, true],
+    ["error", 3, true],
+    ["done", 2, true],
+    ["done", 3, false],
+  ])("marks incomplete results (%s, %s, %s)", (status, revision, present) => {
+    const { tools } = setup(status, revision, present);
+    expect(
+      tools.run("comparar_ascensiones", { puerto: "p" }, { screen: "coach" })
+        .note,
+    ).toContain("Resultados provisionales");
+  });
+  it("lists candidates instead of silently choosing an ambiguous or missing segment", () => {
+    const { tools } = setup();
+    expect(
+      tools.run("comparar_ascensiones", {}, { screen: "coach" }).rows,
+    ).toHaveLength(2);
+    const missing = tools.run(
+      "comparar_ascensiones",
+      { puerto: "Inexistente" },
+      { screen: "coach" },
+    );
+    expect(missing.rows).toEqual([]);
+    expect(missing.note).toContain("No hay segmentos");
   });
 });

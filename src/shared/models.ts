@@ -264,6 +264,7 @@ export interface CoachContext {
 export interface AppState {
   settings: Settings;
   segments: Segment[];
+  ascents: { count: number; incomplete: boolean };
   dataset: Dataset;
   sync: SyncState;
   messages: ChatMessage[];

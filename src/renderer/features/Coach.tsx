@@ -16,7 +16,7 @@ import { date, effort, number } from "../format";
 import { MarkdownMessage } from "../components/MarkdownMessage";
 const suggestions = [
   "¿Cómo va mi forma para La Cantabrona?",
-  "Compara mis dos últimas subidas a Palombera",
+  "Compara mis dos últimos intentos en un puerto",
   "Analiza los intervalos del último martes",
   "Analiza mi curva de potencia frente a 2025",
   "Simular un error de herramienta",
@@ -26,10 +26,17 @@ interface Props {
   context: CoachContext;
   onClose?: () => void;
   onSettings: () => void;
+  openActivity: (id: string) => void;
   compact?: boolean;
   send: (text: string) => Promise<void>;
 }
-function ToolVisualization({ tool: t }: { tool: ToolView }) {
+function ToolVisualization({
+  tool: t,
+  openActivity,
+}: {
+  tool: ToolView;
+  openActivity: (id: string) => void;
+}) {
   return (
     <>
       {t.kind === "table" ? (
@@ -39,11 +46,21 @@ function ToolVisualization({ tool: t }: { tool: ToolView }) {
           columns={(t.columns ?? []).map((c) => ({
             ...c,
             render: (r: Record<string, unknown>) =>
-              r[c.key] == null
-                ? "–"
-                : typeof r[c.key] === "number"
-                  ? number(r[c.key] as number)
-                  : String(r[c.key]),
+              c.key === "actividad" && typeof r.activityId === "string" ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => openActivity(String(r.activityId))}
+                >
+                  {String(r[c.key])}
+                </Button>
+              ) : r[c.key] == null ? (
+                "–"
+              ) : typeof r[c.key] === "number" ? (
+                number(r[c.key] as number)
+              ) : (
+                String(r[c.key])
+              ),
           }))}
         />
       ) : t.rows.length ? (
@@ -156,7 +173,7 @@ export function ChatPanel(p: Props) {
                 title={t.title}
                 status="done"
               >
-                <ToolVisualization tool={t} />
+                <ToolVisualization tool={t} openActivity={p.openActivity} />
               </ToolResult>
             ))}
             {m.status === "running" ? (
@@ -214,6 +231,7 @@ export function ChatPanel(p: Props) {
                 ? suggestions
                 : [
                     "Resume mi entrenamiento reciente",
+                    "Compara mis dos últimos intentos en un puerto",
                     "Analiza mis intervalos",
                     "Analiza mi curva de potencia",
                     "¿Cómo va mi carga?",
@@ -302,8 +320,9 @@ export function CoachPage(p: Props) {
               {number(d.athlete.weight)} kg
             </span>
             <span>
-              {d.activities.length} actividades · {d.attempts.length}{" "}
-              ascensiones
+              {d.activities.length} actividades · {p.state.ascents.count}{" "}
+              ascensiones identificadas
+              {p.state.ascents.incomplete ? " · búsqueda incompleta" : ""}
             </span>
             {d.goals.length > 0 && (
               <span>Objetivos: {d.goals.map((g) => g.name).join(", ")}</span>

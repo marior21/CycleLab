@@ -231,3 +231,40 @@ it("retries only selected failed downloads without changing import progress", as
   });
   expect(f.config.get("garminOffset")).toBe(99);
 });
+
+it.each(["pause", "cancel"] as const)(
+  "%s preserves the in-flight download and stops before the next",
+  async (action) => {
+    const f = fixture();
+    f.activities.set("1", { ...f.a(1), detailStatus: "pending" });
+    f.activities.set("2", { ...f.a(2), detailStatus: "pending" });
+    f.config.set("garminOffset", 99);
+    let release!: (detail: ActivityDetail) => void;
+    const source = {
+      listActivities: vi.fn().mockResolvedValue([]),
+      getActivity: vi.fn().mockImplementation(
+        () =>
+          new Promise<ActivityDetail>((r) => {
+            release = r;
+          }),
+      ),
+    } as unknown as GarminPersonalSource;
+    const sync = new GarminSync(f.store, source, () => {});
+    const running = sync.run();
+    await vi.waitFor(() => expect(source.getActivity).toHaveBeenCalledTimes(1));
+    const stopped = sync.stop(action);
+    release(emptyDetail());
+    await stopped;
+    await running;
+    expect(f.details.has("1")).toBe(true);
+    expect(f.activities.get("2")?.detailStatus).toBe("pending");
+    expect(f.config.get("garminOffset")).toBe(action === "pause" ? 99 : 0);
+    expect(f.config.get("garminAutoSync")).toBe(false);
+    expect(f.config.get("sync")).toMatchObject({ state: "offline" });
+    vi.mocked(source.getActivity).mockResolvedValue(emptyDetail());
+    await sync.run();
+    expect(f.details.size).toBe(2);
+    expect(source.getActivity).toHaveBeenCalledTimes(2);
+    expect(f.config.get("garminAutoSync")).toBe(true);
+  },
+);

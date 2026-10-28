@@ -203,3 +203,35 @@ La clasificación por patrón es una heurística explicable, no una garantía de
 - La copia del perfil migra a v5 y la app permanece abierta. Verificado externamente el JSON de la copia previa (263.156.524 bytes), su versión de origen 4 y su checksum. Tres pruebas Electron de copias correctas, incluida una nueva migración con 192 mensajes de 1 MiB; conserva los registros y genera la copia previa. Lint, typecheck y 105 pruebas unitarias correctos.
 - `npm run package` ejecuta ahora la prueba existente de la app empaquetada: arranque, SQLite, cifrado de prueba y persistencia tras reiniciar, siempre en un perfil temporal. Disponible también como `npm run test:package`, con ruta opcional al ejecutable. Sin cambios visuales ni de diseño.
 - Límite pendiente: restaurar sigue leyendo y validando una copia completa en memoria; la escritura se acota al tamaño de un registro, no a un número fijo de bytes. La app local continúa sin firma ni notarización.
+
+
+## Fase 1.5 — Mantenimiento y privacidad (28/10/2026)
+
+- Ajustes muestra tamaño SQLite/WAL/SHM, copias automáticas y contadores por origen.
+- Pausa y cancelación cooperativas guardan la petición en curso; la pausa conserva el
+  offset y cancelar lo reinicia. Ninguna borra muestras ni se reanuda automáticamente.
+- Borrado transaccional por origen, de conversaciones o de todo el histórico local;
+  confirmación nativa con alcance explícito, bloqueo durante importación/respuestas,
+  perfil Garmin incluido y claves/copias/otro origen conservados. La demo borrada no
+  se regenera al reiniciar; tampoco se muestran sus agregados estáticos tras borrarla.
+- Consentimiento nativo antes del primer mensaje real, previo a persistir/enviar la
+  pregunta. Explica historial, contexto y resultados enviados. La aceptación no viaja
+  en las copias. La preferencia de importación automática sí se conserva en ellas.
+- Diagnóstico JSON construido por lista permitida de campos: versiones, plataforma,
+  tamaños y contadores; sin contenido de actividades, chats, GPS, claves ni errores.
+- README y AGENTS actualizados a seis accesos, proveedores reales y MapLibre/MapTiler.
+
+Validación: lint, typecheck y build; 107 pruebas unitarias (incluidas pausa/cancelación
+con una descarga pendiente y reanudación sin repetirla). Pruebas Electron de
+mantenimiento y copias: confirmación/cancelación, aislamiento de orígenes, conservación
+de claves, diagnóstico, consentimiento previo, reapertura, restauración y migraciones.
+Capturas de Ajustes y prototipo en ambos temas en `test-results/maintenance-*.png`.
+Revisión visual de colores, paneles y controles; el prototipo no contiene Ajustes,
+por lo que no hay comparación píxel a píxel de esta pantalla. Sin errores de renderer
+observados en el recorrido.
+
+Límites: pruebas con perfiles aislados y proveedores simulados/sin configurar, sin
+consultas de pago ni importación de una cuenta real. La detención espera la petición
+actual y sus reintentos. El borrado no es forense, no elimina copias ya existentes ni
+reduce inmediatamente el archivo SQLite: el espacio se reutiliza. No se ha repetido
+la suite visual completa ni la validación de instaladores.

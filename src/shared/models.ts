@@ -271,7 +271,25 @@ export interface AppState {
 export type MapResource =
   | { kind: "json"; data: Record<string, unknown> }
   | { kind: "binary"; data: Uint8Array };
+export interface MaintenanceInfo {
+  databaseBytes: number;
+  backupBytes: number;
+  sources: {
+    source: Source;
+    activities: number;
+    ready: number;
+    pending: number;
+    failed: number;
+    unavailable: number;
+    messages: number;
+    segments: number;
+  }[];
+}
 export interface CycleLabAPI {
+  maintenance(): Promise<MaintenanceInfo>;
+  stopSync(action: "pause" | "cancel"): Promise<void>;
+  deleteLocal(source: Source, scope: "messages" | "all"): Promise<boolean>;
+  exportDiagnostic(): Promise<string | null>;
   exportBackup(): Promise<string | null>;
   restoreBackup(): Promise<string | null>;
   mapResource(path: string): Promise<MapResource>;

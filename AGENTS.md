@@ -2,12 +2,12 @@
 
 ## Qué es
 CycleLab es una app de escritorio para macOS que sirve para analizar entrenamientos de ciclismo sincronizados desde Garmin. Incluye un entrenador IA (vía OpenRouter) que responde con gráficas y tablas.
-Tu trabajo es implementar la app real a partir del diseño que hay en `design/`.
+La app real ya está implementada. Evoluciona sus funciones siguiendo `ROADMAP.md` y el sistema visual de `design/`; el prototipo conserva las cinco pantallas originales.
 
 ## Stack
 - Electron + React 18 + TypeScript, empaquetado con Vite (por ejemplo, electron-vite).
-- Gráficos en SVG propio, como en el diseño. Añade una librería solo si te ahorra mucho código y respeta el aspecto del diseño.
-- Mapa: de momento, el `RouteMap` simulado del diseño. Los tiles reales (MapLibre) son una fase posterior.
+- Gráficos ECharts con renderer SVG y APIs del diseño; reutiliza los componentes existentes.
+- Mapa: MapLibre + MapTiler para datos reales, con recursos por IPC; `RouteMap` simulado en demo y como alternativa sin cartografía.
 
 ## Fuente de verdad del diseño (`design/`)
 Léelo en este orden antes de escribir código:
@@ -27,8 +27,8 @@ Material de referencia, que no se copia tal cual:
 2. Tokens → CSS, fuentes (Barlow, Barlow Condensed y JetBrains Mono, empaquetadas en local, no desde Google Fonts) y selector de tema.
 3. Componentes base: Icon, Button, Segmented, Chip, Badge, Metric, Progress, Panel, Sidebar, SyncStatus, StateBlock, Skeleton.
 4. Gráficos y datos: LineChart, BarChart, Legend, ZoneBar, RouteMap, DataTable.
-5. Pantallas, en el orden del prototipo: Dashboard, Actividades, Rendimiento, Puertos y Entrenador IA, más el panel IA lateral (⌘J) y la navegación ⌘1–⌘5.
-6. Capa de datos detrás de interfaces: `GarminSource` y `CoachProvider`. Por ahora, implementaciones simuladas con los datos de demostración del prototipo. Más adelante: Garmin real y OpenRouter, con la clave guardada en el llavero de macOS (`safeStorage`) y nunca en el renderer.
+5. Pantallas, en el orden del prototipo: Dashboard, Actividades, Rendimiento, Segmentos, Puertos y Entrenador IA, más Ajustes, el panel IA lateral (⌘J) y la navegación ⌘1–⌘6.
+6. Capa de datos detrás de interfaces: `GarminSource` y `CoachProvider`. Implementaciones reales Garmin Personal y OpenRouter, además de la demo aislada. Claves cifradas con `safeStorage` y nunca devueltas al renderer.
 
 ## Reglas
 - Los textos de la interfaz van en español de España, tal como aparecen en el prototipo.

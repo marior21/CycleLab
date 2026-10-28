@@ -85,6 +85,8 @@ Actualmente el perfil contiene un único valor de cada magnitud. Eso limita la i
 - Permitir exportar un diagnóstico sin claves, coordenadas ni contenido privado por defecto.
 - Alinear la documentación inicial con las funciones actuales: seis accesos principales, mapas reales y proveedores reales.
 
+**Completada el 28/10/2026.** Ajustes incorpora almacenamiento y estado por origen, pausa/cancelación persistentes, borrado confirmado, explicación y aceptación previa al entrenador real y diagnóstico sin contenido privado. Documentación actualizada y pruebas de aislamiento, persistencia y reanudación. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-15--mantenimiento-y-privacidad-28102026).
+
 ## Fase 2 — Conectar las funciones que ya están
 
 ### 2.1. Que el entrenador entienda tus segmentos y puertos · P1 · M

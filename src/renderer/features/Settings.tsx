@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import type {
   AppState,
   Model,
+  MaintenanceInfo,
   Settings as SettingsValue,
 } from "../../shared/models";
 import {
@@ -26,6 +27,35 @@ interface Props {
 }
 export function Settings(p: Props) {
   const { settings: s, sync } = p.state;
+  const [maintenance, setMaintenance] = useState<MaintenanceInfo | null>(null);
+  const [maintenanceBusy, setMaintenanceBusy] = useState(false);
+  useEffect(() => {
+    void window.cyclelab
+      .maintenance()
+      .then(setMaintenance)
+      .catch(() => setMaintenance(null));
+  }, [p.state]);
+  async function maintain(action: () => Promise<unknown>) {
+    setMaintenanceBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await action();
+      await p.refresh();
+      if (result)
+        setNotice(
+          typeof result === "string"
+            ? `Diagnóstico guardado en ${result}`
+            : "Datos borrados.",
+        );
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "No se pudo completar la operación.",
+      );
+    } finally {
+      setMaintenanceBusy(false);
+    }
+  }
   const [models, setModels] = useState<Model[]>([]),
     [search, setSearch] = useState(""),
     [loading, setLoading] = useState(false),
@@ -114,6 +144,81 @@ export function Settings(p: Props) {
         />
       </Panel>
       <Panel
+        title="Mantenimiento y privacidad"
+        subtitle="Gestiona cada origen por separado. El borrado requiere confirmación."
+      >
+        {maintenance ? (
+          <>
+            <p className="small cl-muted">
+              Base de datos y archivos auxiliares:{" "}
+              {number(maintenance.databaseBytes / 1048576, 2)} MB · Copias
+              automáticas: {number(maintenance.backupBytes / 1048576, 2)} MB
+            </p>
+            {maintenance.sources.map((item) => (
+              <div key={item.source}>
+                <p>
+                  <strong>
+                    {item.source === "demo" ? "Demostración" : "Garmin"}
+                  </strong>{" "}
+                  · {number(item.activities)} actividades ·{" "}
+                  {number(item.segments)} segmentos · {number(item.messages)}{" "}
+                  mensajes
+                </p>
+                <p className="small cl-muted">
+                  Muestras: {number(item.ready)} descargadas ·{" "}
+                  {number(item.pending)} pendientes · {number(item.failed)}{" "}
+                  fallidas · {number(item.unavailable)} no disponibles
+                </p>
+                <div className="toolbar">
+                  <Button
+                    disabled={maintenanceBusy || sync.state === "syncing"}
+                    onClick={() =>
+                      void maintain(() =>
+                        window.cyclelab.deleteLocal(item.source, "messages"),
+                      )
+                    }
+                  >
+                    Borrar conversaciones de{" "}
+                    {item.source === "demo" ? "demostración" : "Garmin"}
+                  </Button>
+                  <Button
+                    disabled={maintenanceBusy || sync.state === "syncing"}
+                    onClick={() =>
+                      void maintain(() =>
+                        window.cyclelab.deleteLocal(item.source, "all"),
+                      )
+                    }
+                  >
+                    Borrar datos de{" "}
+                    {item.source === "demo" ? "demostración" : "Garmin"}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <p>No se pudo consultar el almacenamiento.</p>
+        )}
+        <p className="small cl-faint">
+          El borrado conserva las claves y las copias existentes; no borra datos
+          en Garmin. SQLite reutiliza el espacio liberado. Las copias exportadas
+          fuera del perfil no se incluyen en el tamaño.
+        </p>
+        <Button
+          disabled={maintenanceBusy}
+          onClick={() =>
+            void maintain(() => window.cyclelab.exportDiagnostic())
+          }
+        >
+          Exportar diagnóstico
+        </Button>
+        <p className="small cl-faint">
+          Incluye versión, plataforma, tamaño y contadores. No incluye claves,
+          coordenadas, rutas de archivos, nombres, fechas de actividad,
+          conversaciones ni registros de errores.
+        </p>
+      </Panel>
+      <Panel
         title="Copias de seguridad"
         subtitle="Conserva actividades, segmentos, conversaciones y ajustes de ambos orígenes. Las copias no incluyen las claves."
       >
@@ -169,11 +274,34 @@ export function Settings(p: Props) {
           >
             Sincronizar ahora
           </Button>
+          {s.source === "garmin" && sync.state === "syncing" && (
+            <>
+              <Button
+                disabled={maintenanceBusy}
+                onClick={() =>
+                  void maintain(() => window.cyclelab.stopSync("pause"))
+                }
+              >
+                Pausar importación
+              </Button>
+              <Button
+                disabled={maintenanceBusy}
+                onClick={() =>
+                  void maintain(() => window.cyclelab.stopSync("cancel"))
+                }
+              >
+                Cancelar importación
+              </Button>
+            </>
+          )}
         </div>
         <p className="small cl-faint">
           La sincronización recorre todo el histórico disponible, sin límite de
           temporada. En Actividades, «Todo» muestra todas las fechas
-          descargadas.
+          descargadas. Pausar conserva el punto de avance; cancelar reinicia el
+          recorrido de resúmenes en la próxima sincronización. Ambas opciones
+          guardan la descarga en curso y conservan lo ya descargado. No se
+          reanudan automáticamente al abrir la app.
         </p>
         {s.source === "demo" && (
           <p className="small cl-faint">
@@ -277,6 +405,21 @@ export function Settings(p: Props) {
             de tokens: entrada / salida.
           </span>
         </div>
+      </Panel>
+      <Panel title="Privacidad del entrenador">
+        <p>
+          Antes del primer envío real se pide aceptación. OpenRouter y el
+          proveedor del modelo reciben tu pregunta, hasta 20 mensajes recientes,
+          la pantalla y actividad seleccionadas, cobertura y resultados de
+          análisis con nombres, fechas y métricas.
+        </p>
+        <p className="small cl-muted">
+          No se adjuntan GPS, FIT ni claves guardadas al contexto. El texto que
+          escribas sí se envía: evita incluir secretos o ubicaciones privadas.
+          La clave de OpenRouter se utiliza para autenticar la conexión. Las
+          consultas pueden tener coste y están sujetas a las políticas del
+          proveedor. La demo funciona localmente.
+        </p>
       </Panel>
       <Panel
         title="MapTiler"

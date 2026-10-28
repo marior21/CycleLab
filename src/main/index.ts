@@ -2,7 +2,8 @@ import { withProfileEntries } from "../domain/athlete";
 import { MapTilerSource } from "./maptiler";
 import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
 import { join } from "node:path";
-import { mkdirSync } from "node:fs";
+import { maintenance, deleteLocal, diagnostic } from "./maintenance";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { settingsSchema } from "../shared/settings";
@@ -119,6 +120,65 @@ async function boot() {
     ),
   );
   register("state", () => state());
+  register("maintenance", () => maintenance(store));
+  register("sync-stop", async (action) => {
+    await sync.stop(z.enum(["pause", "cancel"]).parse(action));
+  });
+  register("diagnostic-export", async () => {
+    const { canceled, filePath } = await dialog.showSaveDialog(win!, {
+      title: "Exportar diagnóstico sin contenido privado",
+      defaultPath: "CycleLab-diagnostic.json",
+      filters: [{ name: "Diagnóstico JSON", extensions: ["json"] }],
+    });
+    if (canceled || !filePath) return null;
+    writeFileSync(
+      filePath,
+      JSON.stringify(diagnostic(store, app.getVersion()), null, 2),
+      { flag: "wx", mode: 0o600 },
+    );
+    return filePath;
+  });
+  register("local-delete", async (rawSource, rawScope) => {
+    const source = sourceSchema.parse(rawSource);
+    const scope = z.enum(["messages", "all"]).parse(rawScope);
+    const ensureIdle = () => {
+      if (
+        busy.size ||
+        store.get<SyncState | null>("sync", null)?.state === "syncing" ||
+        store.get<SyncState | null>("demoSync", null)?.state === "syncing"
+      )
+        throw new Error(
+          "Espera a que terminen la importación y las respuestas antes de borrar.",
+        );
+    };
+    ensureIdle();
+    restoring = true;
+    try {
+      const { response } = await dialog.showMessageBox(win!, {
+        type: "warning",
+        title: "Borrar datos locales",
+        message: `Borrar ${scope === "messages" ? "conversaciones" : "todos los datos"} de ${source === "demo" ? "Demostración" : "Garmin"}`,
+        detail:
+          (scope === "messages"
+            ? "Se eliminarán todas las preguntas y respuestas de este origen."
+            : "Se eliminarán actividades, muestras, segmentos, resultados y conversaciones de este origen." +
+              (source === "garmin"
+                ? " También el perfil del atleta. Se desactiva la importación automática hasta que pulses Sincronizar ahora."
+                : " La demo no se regenerará al reiniciar.")) +
+          " No afecta al otro origen, las claves, los ajustes generales, las copias de seguridad ni los datos en Garmin. No se crea una copia automática de lo borrado. Esta acción no se puede deshacer.",
+        buttons: ["Cancelar", "Borrar"],
+        defaultId: 0,
+        cancelId: 0,
+      });
+      if (response !== 1) return false;
+      ensureIdle();
+      deleteLocal(store, source, scope);
+      changed();
+      return true;
+    } finally {
+      restoring = false;
+    }
+  });
   register("backup-export", async () => {
     const { canceled, filePath } = await dialog.showSaveDialog(win!, {
       title: "Exportar copia de seguridad",
@@ -241,7 +301,8 @@ async function boot() {
     if (
       value.source === "garmin" &&
       before.source !== "garmin" &&
-      store.hasSecret("garmin")
+      store.hasSecret("garmin") &&
+      store.get("garminAutoSync", true)
     )
       void sync.run();
     return state();
@@ -365,6 +426,27 @@ async function boot() {
       source = store.settings().source;
     if (busy.has(source)) throw new Error("Ya hay una respuesta en curso.");
     busy.add(source);
+    if (source === "garmin" && !store.get("coachPrivacyAccepted", false)) {
+      try {
+        const { response } = await dialog.showMessageBox(win!, {
+          type: "info",
+          title: "Antes de enviar a OpenRouter",
+          message:
+            "Tu pregunta y datos de entrenamiento se enviarán a OpenRouter y al proveedor del modelo elegido.",
+          detail:
+            "Se envían los últimos 20 mensajes (hasta 12 000 caracteres por mensaje), la pantalla y el identificador de actividad, cobertura y procedencia, y resultados limitados de herramientas: nombres, fechas, métricas, intervalos, curvas y carga. No se adjuntan coordenadas GPS, archivos FIT ni claves guardadas como contexto; la clave de OpenRouter se usa solo para autenticar la conexión. Lo que escribas sí se envía: no incluyas secretos ni ubicaciones privadas. El proveedor aplica sus políticas de tratamiento de datos y la consulta puede tener coste. La demo no realiza este envío.",
+          buttons: ["Cancelar", "Aceptar y enviar"],
+          defaultId: 0,
+          cancelId: 0,
+        });
+        if (response !== 1)
+          throw new Error("Envío cancelado. No se ha enviado la pregunta.");
+        store.set("coachPrivacyAccepted", true);
+      } catch (e) {
+        busy.delete(source);
+        throw e;
+      }
+    }
     const user: ChatMessage = {
         id: randomUUID(),
         role: "user",
@@ -444,7 +526,11 @@ async function boot() {
   app.on("activate", () => {
     if (!win) createWindow();
   });
-  if (store.settings().source === "garmin" && store.hasSecret("garmin"))
+  if (
+    store.settings().source === "garmin" &&
+    store.hasSecret("garmin") &&
+    store.get("garminAutoSync", true)
+  )
     void sync.run();
 }
 app

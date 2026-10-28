@@ -194,7 +194,7 @@ export class Store {
         return [a.id, value];
       }),
     );
-    if (source === "demo")
+    if (source === "demo" && activities.length)
       return { ...demoDataset, activities, sampleCoverage: coverage };
     const data = realDataset(
       activities,

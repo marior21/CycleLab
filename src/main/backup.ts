@@ -216,6 +216,7 @@ const settingSchemas: Record<string, z.ZodType> = {
   sync,
   demoSync: sync,
   garminOffset: num.int().nonnegative(),
+  garminAutoSync: z.boolean(),
   demoSeeded: z.boolean(),
   classificationVersion: num.int().nonnegative(),
   "activityRevision:demo": num.int().nonnegative(),

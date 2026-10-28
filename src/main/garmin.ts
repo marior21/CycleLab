@@ -256,6 +256,28 @@ export class GarminPersonalSource implements GarminSource {
 }
 export class GarminSync {
   private running: Promise<void> | null = null;
+  private stopping: "pause" | "cancel" | null = null;
+  stop(action: "pause" | "cancel") {
+    this.store.set("garminAutoSync", false);
+    this.stopping = action;
+    if (this.running)
+      this.update({ phase: "Deteniendo tras guardar la descarga en curso…" });
+    else this.checkStopped();
+    return this.running;
+  }
+  private checkStopped() {
+    if (!this.stopping) return false;
+    if (this.stopping === "cancel") this.store.set("garminOffset", 0);
+    this.update({
+      state: "offline",
+      error: undefined,
+      phase:
+        this.stopping === "pause"
+          ? "Importación pausada. Pulsa Sincronizar ahora para reanudar."
+          : "Importación cancelada. Los datos descargados se conservan.",
+    });
+    return true;
+  }
   constructor(
     private store: Store,
     private source: GarminPersonalSource,
@@ -264,6 +286,8 @@ export class GarminSync {
   ) {}
   run(retryIds?: string[]) {
     if (this.running) return this.running;
+    this.stopping = null;
+    this.store.set("garminAutoSync", true);
     this.running = this.import(retryIds).finally(() => {
       this.running = null;
       this.finished();
@@ -294,6 +318,7 @@ export class GarminSync {
       });
       let offset = this.store.get("garminOffset", 0);
       for (; !retryIds;) {
+        if (this.checkStopped()) return;
         const batch = await this.source.listActivities(offset, 99);
         if (!batch.length) break;
         const existing = new Map(
@@ -317,6 +342,7 @@ export class GarminSync {
         })();
         this.update({ completed: offset });
       }
+      if (this.checkStopped()) return;
       const pending = this.store
         .activities("garmin")
         .filter((a) =>
@@ -330,6 +356,7 @@ export class GarminSync {
         total: pending.length,
       });
       for (let i = 0; i < pending.length; i++) {
+        if (this.checkStopped()) return;
         const a = pending[i];
         try {
           const detail = await this.source.getActivity(a.id);
@@ -354,6 +381,7 @@ export class GarminSync {
         }
         this.update({ completed: i + 1 });
       }
+      if (this.checkStopped()) return;
       const latest = this.store.activities("garmin")[0],
         settings = this.store.settings();
       if (
@@ -393,6 +421,7 @@ export class GarminSync {
           /* Optional thresholds do not discard a completed import. */
         }
       }
+      if (this.checkStopped()) return;
       if (!retryIds) this.store.set("garminOffset", 0);
       const activities = this.store.activities("garmin");
       const detailErrors = activities.filter(
@@ -420,6 +449,7 @@ export class GarminSync {
           : undefined,
       });
     } catch (e) {
+      if (this.checkStopped()) return;
       this.update({
         state: "error",
         error: e instanceof Error ? e.message : "No se pudo sincronizar.",

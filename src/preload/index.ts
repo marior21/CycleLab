@@ -9,6 +9,10 @@ async function call<T>(name: string, ...args: unknown[]): Promise<T> {
   return result.value;
 }
 const api: CycleLabAPI = {
+  maintenance: () => call("maintenance"),
+  stopSync: (action) => call("sync-stop", action),
+  deleteLocal: (source, scope) => call("local-delete", source, scope),
+  exportDiagnostic: () => call("diagnostic-export"),
   exportBackup: () => call("backup-export"),
   restoreBackup: () => call("backup-restore"),
   getState: () => call("state"),

@@ -91,7 +91,7 @@ La base de datos está en el directorio `userData` de Electron (`~/Library/Appli
 - `src/domain`: modelos de proveedor, cálculos, comparación de muestras y proyección de rutas; sin React.
 - `src/data/demo`: datos deterministas y proveedor simulado del prototipo.
 - `src/renderer/components`: controles, estados, tablas, mapa MapLibre (SVG en demo o sin cartografía) y gráficos ECharts con las APIs del diseño.
-- `src/renderer/features`: las cinco pantallas y Ajustes. `ChatPanel` se comparte con el panel lateral.
+- `src/renderer/features`: los seis accesos principales (Dashboard, Actividades, Rendimiento, Segmentos, Puertos y Entrenador IA) y Ajustes. `ChatPanel` se comparte con el panel lateral.
 - `src/renderer/styles`: tokens generados de `design/tokens.json`, medidas del prototipo y estilos. Las fuentes se empaquetan desde `@fontsource`.
 
 El renderer no dispone de Node, acceso al disco, SQLite ni credenciales persistidas. Las peticiones a proveedores se realizan en main. El entrenador consulta cinco herramientas sobre los datos locales; envía sus resultados limitados, no todo el histórico ni las coordenadas GPS. Se permiten como máximo cinco rondas de herramientas y una respuesta final sin herramientas. Cada respuesta conserva el modelo utilizado.
@@ -214,3 +214,33 @@ En Ajustes, «Perfil del atleta» permite guardar FTP, peso y LTHR con una fecha
 Zonas y W/kg utilizan los valores vigentes en la fecha de la actividad. Los valores anteriores sin fecha no se aplican al pasado. IF/TSS importados se conservan sin recálculo. En Rendimiento, W/kg corresponde a cada marca en vatios dividida por su peso histórico; el tooltip indica peso y fecha. Las referencias al FTP actual se etiquetan como tales.
 
 `npm run test:package` comprueba SQLite, cifrado y persistencia de la app empaquetada en un perfil temporal. Admite una ruta de ejecutable: `npm run test:package -- /ruta/a/CycleLab.app/Contents/MacOS/CycleLab`. Las copias se escriben por registros para evitar cargar todo el histórico en memoria durante una migración.
+
+## Mantenimiento y privacidad
+
+Ajustes muestra el tamaño de SQLite (incluidos WAL/SHM), las copias automáticas y los
+contadores de actividades, muestras descargadas/pendientes/fallidas/no disponibles,
+segmentos y mensajes de cada origen. Las copias exportadas fuera del perfil no se cuentan.
+
+Pausar espera a guardar la petición en curso y conserva el punto de avance. Cancelar
+conserva todo lo descargado y reinicia el recorrido de resúmenes en la siguiente
+sincronización, sin duplicar actividades ni repetir muestras ya descargadas. Ambas
+opciones desactivan el arranque automático hasta pulsar «Sincronizar ahora»; la petición
+en curso puede tardar en terminar por los reintentos de red.
+
+Se pueden borrar las conversaciones o todos los datos de un origen con confirmación
+nativa. Borrar todos los datos Garmin incluye el perfil del atleta y detiene futuras
+importaciones automáticas. Borrar demo no la regenera al reiniciar. Se conservan el otro
+origen, las claves, los ajustes generales y las copias existentes. No se crea una copia
+al borrar. SQLite reutiliza el espacio liberado: no es un borrado forense del disco.
+
+Antes de la primera pregunta real se explica y solicita aceptar el envío a OpenRouter
+y al proveedor del modelo: hasta 20 mensajes recientes, contexto de pantalla/actividad,
+cobertura y resultados limitados de herramientas (nombres, fechas y métricas). No se
+adjuntan GPS, FIT ni secretos guardados como contexto. Lo escrito por el usuario sí se
+envía; la clave de OpenRouter se utiliza para autenticar. La aceptación queda en este
+perfil local y no se exporta en copias. Comprobar claves y cargar modelos son peticiones
+independientes, sin contexto de entrenamiento.
+
+«Exportar diagnóstico» guarda únicamente versión, plataforma/arquitectura, esquema,
+tamaños y contadores. No exporta claves, coordenadas, nombres, rutas de archivo,
+fechas de actividades, conversaciones ni mensajes de error. No hace ninguna subida.

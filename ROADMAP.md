@@ -250,7 +250,7 @@ Agrupar recorridos completos parecidos y pedir revisión manual. Antes, medir el
 
 **Terminado cuando:** los grupos propuestos se pueden aceptar o corregir, persisten y el tiempo de cálculo con el histórico real está medido y documentado.
 
-**Medida el 29/10/2026.** Con las 241 actividades reales, agrupar todo el histórico cuesta unos 2,5 s en frío y una salida nueva, milisegundos. Unir pares en cadena mezcla rutas distintas; agrupar alrededor de un representante da 26 grupos con el 38 % de las salidas y buena coherencia. Viable; pendiente de decidir el alcance. Detalle en [VALIDATION.md](VALIDATION.md#fase-46--rutas-habituales-medición-previa-29102026).
+**Medida el 29/10/2026.** Con las 241 actividades reales, agrupar todo el histórico cuesta unos 2,5 s en frío y una salida nueva, milisegundos. Unir pares en cadena mezcla rutas distintas; agrupar alrededor de un representante da 26 grupos con el 38 % de las salidas y buena coherencia. Viable, pero **aplazada el 29/10/2026** por decisión del propietario: la versión mínima (grupos por representante al 80 %, firmas guardadas, lista con evolución y revisión manual) es una entrega grande y se retomará después de la fase 4. Detalle en [VALIDATION.md](VALIDATION.md#fase-46--rutas-habituales-medición-previa-29102026).
 
 ### 4.7. Informe de temporada · Bloque D · M
 

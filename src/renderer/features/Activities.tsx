@@ -1,6 +1,12 @@
 import { profileAt, profileNote } from "../../domain/athlete";
 import { Coverage } from "./Coverage";
 import { ActivityFeel } from "./ActivityFeel";
+import {
+  activitiesCsv,
+  activityReport,
+  comparisonReport,
+  comparisonValues,
+} from "../exports";
 import { filterActivitiesByDate } from "../../domain/activityFilters";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -51,7 +57,24 @@ export function Activities(
     [types, setTypes] = useState(Object.keys(TYPES) as ActivityType[]),
     [query, setQuery] = useState(""),
     [checked, setChecked] = useState<string[]>([]),
-    [comparing, setComparing] = useState(false);
+    [comparing, setComparing] = useState(false),
+    [transfer, setTransfer] = useState<{
+      busy?: boolean;
+      text?: string;
+      error?: boolean;
+    } | null>(null);
+  const run = async (task: () => Promise<string | null>) => {
+    setTransfer({ busy: true });
+    try {
+      const text = await task();
+      setTransfer(text ? { text } : null);
+    } catch (e) {
+      setTransfer({
+        text: e instanceof Error ? e.message : "No se pudo completar.",
+        error: true,
+      });
+    }
+  };
   const all = p.data.activities;
   const years = [
     ...new Set(all.map((a) => new Date(a.date).getUTCFullYear())),
@@ -204,6 +227,57 @@ export function Activities(
               ))}
           </div>
           <div className="toolbar compact">
+            {!p.demo && (
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="plus"
+                disabled={p.syncing || !!transfer?.busy}
+                onClick={() =>
+                  void run(async () => {
+                    const r = await window.cyclelab.importFit();
+                    return r
+                      ? `${r.imported.length} ${r.imported.length === 1 ? "actividad importada" : "actividades importadas"}` +
+                          r.skipped
+                            .map((s) => ` · ${s.file}: ${s.reason}`)
+                            .join("")
+                      : null;
+                  })
+                }
+              >
+                Importar FIT
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!list.length || !!transfer?.busy}
+              onClick={() =>
+                void run(async () => {
+                  const path = await window.cyclelab.saveExport(
+                    "csv",
+                    `CycleLab-actividades-${new Date().toISOString().slice(0, 10)}`,
+                    activitiesCsv(list, p.demo),
+                  );
+                  return (
+                    path &&
+                    `${list.length} ${list.length === 1 ? "actividad exportada" : "actividades exportadas"} a ${path}`
+                  );
+                })
+              }
+            >
+              Exportar CSV
+            </Button>
+          </div>
+          {transfer?.text && (
+            <p
+              role={transfer.error ? "alert" : "status"}
+              className={transfer.error ? "error-text" : "small cl-muted"}
+            >
+              {transfer.text}
+            </p>
+          )}
+          <div className="toolbar compact">
             <span className="small cl-faint grow">
               {checked.length
                 ? `${checked.length} de 2 seleccionadas para comparar`
@@ -313,7 +387,7 @@ export function Activities(
         ) : (
           <StateBlock
             title="Tu histórico está vacío"
-            detail="Configura Garmin para importar tus actividades."
+            detail="Configura Garmin para importar tus actividades o usa «Importar FIT» con archivos locales."
             action={
               <Button onClick={() => p.go("settings")}>
                 Configurar Garmin
@@ -322,6 +396,30 @@ export function Activities(
           />
         )}
       </div>
+    </>
+  );
+}
+function ReportButton({ name, html }: { name: string; html: () => string }) {
+  const [error, setError] = useState("");
+  return (
+    <>
+      <Button
+        onClick={async () => {
+          setError("");
+          try {
+            await window.cyclelab.saveExport("html", name, html());
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "No se pudo exportar.");
+          }
+        }}
+      >
+        Exportar informe
+      </Button>
+      {error && (
+        <span role="alert" className="error-text">
+          {error}
+        </span>
+      )}
     </>
   );
 }
@@ -533,7 +631,10 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           </div>
           <div className="small cl-faint">
             {date(a.date, true)} ·{" "}
-            {new Date(a.date).toISOString().slice(11, 16)} · Garmin {a.device}
+            {new Date(a.date).toISOString().slice(11, 16)} ·{" "}
+            {a.provenance
+              ? `Importada de ${a.provenance.file} · ${a.device}`
+              : `Garmin ${a.device}`}
             {p.demo ? " · potenciómetro + banda pectoral" : ""}
           </div>
         </div>
@@ -567,12 +668,18 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
             ? "Analizar este tramo"
             : "Preguntar a la IA"}
         </Button>
+        <ReportButton
+          name={`CycleLab-${new Date(a.date).toISOString().slice(0, 10)}-${a.name}`}
+          html={() => activityReport(a, d, data.athlete, p.demo)}
+        />
       </div>
       <p className="small cl-muted">
         {profileNote(data.athlete, a.date)}. Zonas y W/kg: cálculo local.{" "}
         {p.demo
           ? "IF/TSS de demostración."
-          : "IF/TSS importados de Garmin; umbral de origen no verificado."}
+          : a.provenance
+            ? "IF/TSS del archivo FIT, solo si el dispositivo los calculó; umbral de origen no verificado."
+            : "IF/TSS importados de Garmin; umbral de origen no verificado."}
       </p>
       {(a.classification || a.automaticType) && (
         <div className="small cl-faint">
@@ -1043,29 +1150,7 @@ function Comparison(
     );
   if (!a.detail || !b.detail) return <DetailSkeleton />;
   const rows = compareStreams(a.detail.rows, b.detail.rows);
-  const values: [string, number | null, number | null, string, number][] = [
-    ["Duración", p.a.dur, p.b.dur, "time", 0],
-    ["Distancia", p.a.dist, p.b.dist, "km", 1],
-    ["Desnivel", p.a.elev, p.b.elev, "m", 0],
-    ["Pot. normalizada", p.a.np, p.b.np, "W", 0],
-    ["Pot. media", p.a.avgP, p.b.avgP, "W", 0],
-    ["FC media", p.a.hr, p.b.hr, "ppm", 0],
-    [
-      "Eficiencia (NP/FC)",
-      p.a.np !== null && p.a.hr ? p.a.np / p.a.hr : null,
-      p.b.np !== null && p.b.hr ? p.b.np / p.b.hr : null,
-      "",
-      2,
-    ],
-    ["TSS", p.a.tss, p.b.tss, "", 0],
-    [
-      "Mejor 20 min",
-      a.detail.best.find((e) => e.t === 1200)?.p ?? null,
-      b.detail.best.find((e) => e.t === 1200)?.p ?? null,
-      "W",
-      0,
-    ],
-  ];
+  const values = comparisonValues(p.a, p.b, a.detail, b.detail);
   const metrics = values.map(([k, a, b, unit, digits], i) => ({
     id: k,
     k,
@@ -1098,6 +1183,19 @@ function Comparison(
         >
           Explicar esta comparación
         </Button>
+        <ReportButton
+          name={`CycleLab-comparacion-${new Date(p.a.date).toISOString().slice(0, 10)}-${new Date(p.b.date).toISOString().slice(0, 10)}`}
+          html={() =>
+            comparisonReport(
+              p.a,
+              p.b,
+              a.detail!,
+              b.detail!,
+              p.data.athlete,
+              p.demo,
+            )
+          }
+        />
         <Button className="push" icon="close" onClick={p.onClose}>
           Cerrar comparación
         </Button>

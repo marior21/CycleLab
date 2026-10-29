@@ -552,3 +552,36 @@ de la marca de 20 min con su tramo. Revisión visual en ambos temas sin errores
 en consola. Límites: el tiempo en zonas lee las muestras de todo el periodo en
 cada consulta; el modelo no puede saber si un esfuerzo fue máximo; sin validar
 con datos reales de Garmin.
+
+## Fase 3.5 — Importación y exportación manual (29/10/2026)
+
+- «Importar FIT» en Actividades (solo con datos de Garmin; la demo no acepta
+  archivos reales) admite varios `.fit` o `.zip` y reutiliza el decodificador de
+  Garmin. Solo admite ciclismo. El resumen se calcula con las muestras; IF y TSS
+  se toman del archivo solo si el dispositivo los guardó.
+- Identidad: `fit-<inicio>-<número de serie>`, de modo que el mismo archivo se
+  reconoce como «Ya estaba importado». Duplicados: una actividad que empieza a
+  menos de 60 s de otra del histórico se rechaza. La regla es «la primera copia
+  gana»: si después llega de Garmin la misma salida, la sincronización la omite.
+- Procedencia: las actividades importadas guardan `provenance` (archivo de
+  origen), el detalle muestra «Importada de …» y la nota de IF/TSS lo indica. No
+  se piden umbrales a Garmin a partir de ellas.
+- «Exportar CSV» guarda la lista filtrada (RFC 4180, coma y punto decimal) con
+  sensaciones declaradas, etiqueta automática y procedencia; el texto que
+  empieza por `=`, `+`, `-` o `@` se protege para que una hoja de cálculo no lo
+  ejecute como fórmula.
+- «Exportar informe» guarda un HTML autónomo, sin scripts y con todo el texto
+  escapado, de una actividad (resumen, sensaciones declaradas, vueltas y mejores
+  esfuerzos) o de una comparación (A, B y cambio). Los datos de la demo llevan
+  siempre el aviso «Datos de demostración».
+- Los errores de lectura de disco no se reenvían al renderer porque incluyen
+  rutas locales.
+
+Validación: typecheck, lint y 145 pruebas unitarias correctos, incluidos la
+identidad y el tipo de una actividad FIT, el rechazo de no ciclismo y no FIT, la
+omisión en la sincronización de la copia de Garmin, el escape de CSV y HTML y el
+aviso de demo. Suite Electron completa correcta (20); una nueva importa con
+diálogos simulados, rechaza copia, archivo dañado, inexistente y duplicado por
+hora, y exporta CSV e informe. Revisión visual en ambos temas. Límites: sin
+probar con archivos FIT reales de otros fabricantes; el entrenador no recibe la
+procedencia; la plantilla del informe no sigue el tema de la app.

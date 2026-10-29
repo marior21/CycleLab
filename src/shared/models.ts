@@ -44,6 +44,8 @@ export interface Activity {
   };
   classification?: { reason: string; estimated: boolean };
   feel?: ActivityFeel;
+  /** Absent for Garmin sync; set when the activity came from a local file. */
+  provenance?: { kind: "fit"; file: string };
   automaticType?: ActivityType;
   device: string;
   dur: number;
@@ -344,7 +346,17 @@ export interface PeriodZones {
     noFtp: number;
   };
 }
+export interface FitImport {
+  imported: { id: string; name: string }[];
+  skipped: { file: string; reason: string }[];
+}
 export interface CycleLabAPI {
+  importFit(): Promise<FitImport | null>;
+  saveExport(
+    kind: "csv" | "html",
+    name: string,
+    content: string,
+  ): Promise<string | null>;
   periodZones(source: Source, from: number, to: number): Promise<PeriodZones>;
   maintenance(): Promise<MaintenanceInfo>;
   stopSync(action: "pause" | "cancel"): Promise<void>;

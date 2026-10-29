@@ -10,6 +10,8 @@ async function call<T>(name: string, ...args: unknown[]): Promise<T> {
 }
 const api: CycleLabAPI = {
   maintenance: () => call("maintenance"),
+  importFit: () => call("fit-import"),
+  saveExport: (kind, name, content) => call("export-save", kind, name, content),
   periodZones: (source, from, to) => call("period-zones", source, from, to),
   stopSync: (action) => call("sync-stop", action),
   deleteLocal: (source, scope) => call("local-delete", source, scope),

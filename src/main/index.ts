@@ -2,9 +2,9 @@ import { coachContextSchema } from "../shared/coachContext";
 import { profileAt, withProfileEntries } from "../domain/athlete";
 import { MapTilerSource } from "./maptiler";
 import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { maintenance, deleteLocal, diagnostic } from "./maintenance";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { activityFeelSchema } from "../shared/activityFeel";
@@ -16,7 +16,13 @@ import { createSegment, includedAttempts } from "../domain/segments";
 import { SegmentResults } from "./segmentResults";
 import { Store } from "./store";
 import { Credentials } from "./credentials";
-import { GarminPersonalSource, GarminSync, emptyDetail } from "./garmin";
+import {
+  GarminPersonalSource,
+  GarminSync,
+  emptyDetail,
+  fitActivity,
+  sameStart,
+} from "./garmin";
 import {
   AnalysisTools,
   DemoCoachProvider,
@@ -25,6 +31,7 @@ import {
 import type {
   ChatMessage,
   CoachContext,
+  FitImport,
   Result,
   Source,
   SyncState,
@@ -422,6 +429,96 @@ async function boot() {
       activityFeelSchema.nullable().parse(rawFeel),
     );
     changed();
+  });
+  register("fit-import", async () => {
+    if (store.settings().source !== "garmin")
+      throw new Error(
+        "Cambia a tus datos de Garmin para importar archivos; la demo no admite datos reales.",
+      );
+    if (store.get<SyncState | null>("sync", null)?.state === "syncing")
+      throw new Error(
+        "Espera a que termine la sincronización antes de importar.",
+      );
+    const { canceled, filePaths } = await dialog.showOpenDialog(win!, {
+      title: "Importar archivos FIT",
+      properties: ["openFile", "multiSelections"],
+      filters: [{ name: "Actividad FIT", extensions: ["fit", "zip"] }],
+    });
+    if (canceled) return null;
+    const result: FitImport = { imported: [], skipped: [] };
+    for (const path of filePaths.slice(0, 500)) {
+      const file = basename(path);
+      try {
+        let bytes: Buffer;
+        try {
+          if (statSync(path).size > 100 * 1024 * 1024)
+            throw new Error("too large");
+          bytes = readFileSync(path);
+        } catch (e) {
+          // fs errors carry local paths: never forward them to the renderer.
+          throw new Error(
+            e instanceof Error && e.message === "too large"
+              ? "El archivo supera el tamaño admitido."
+              : "No se pudo leer el archivo.",
+          );
+        }
+        const { activity, detail } = fitActivity(bytes, file);
+        const twin = store
+          .activities("garmin")
+          .find((a) => sameStart(a.date, activity.date));
+        if (twin)
+          throw new Error(
+            twin.id === activity.id
+              ? "Ya estaba importado."
+              : `Duplicado de «${twin.name}», que ya está en tu histórico.`,
+          );
+        store.db.transaction(() => {
+          store.upsert("garmin", activity);
+          store.saveDetail("garmin", activity.id, detail);
+        })();
+        result.imported.push({ id: activity.id, name: activity.name });
+      } catch (e) {
+        result.skipped.push({
+          file,
+          reason: e instanceof Error ? e.message : "No se pudo leer.",
+        });
+      }
+    }
+    if (result.imported.length) {
+      segmentResults.scheduleAll("garmin");
+      changed();
+    }
+    return result;
+  });
+  register("export-save", async (rawKind, rawName, rawContent) => {
+    const kind = z.enum(["csv", "html"]).parse(rawKind),
+      name = z
+        .string()
+        .trim()
+        .min(1)
+        .max(120)
+        .parse(rawName)
+        .replace(/[^\p{L}\p{N} ._-]/gu, "-"),
+      content = z
+        .string()
+        .max(50 * 1024 * 1024)
+        .parse(rawContent);
+    const { canceled, filePath } = await dialog.showSaveDialog(win!, {
+      title: kind === "csv" ? "Exportar tabla CSV" : "Exportar informe",
+      defaultPath: `${name}.${kind}`,
+      filters: [
+        {
+          name: kind === "csv" ? "Tabla CSV" : "Informe HTML",
+          extensions: [kind],
+        },
+      ],
+    });
+    if (canceled || !filePath) return null;
+    const path = filePath.endsWith("." + kind)
+      ? filePath
+      : `${filePath}.${kind}`;
+    writeFileSync(path, content, { mode: 0o600 });
+    return path;
   });
   register("period-zones", (rawSource, rawFrom, rawTo) => {
     const source = sourceSchema.parse(rawSource),

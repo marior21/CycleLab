@@ -75,17 +75,25 @@ export function normalizeActivity(value: unknown): Activity {
   });
 }
 export function decodeFit(bytes: Uint8Array): ActivityDetail {
+  return readFit(bytes)?.detail ?? emptyDetail();
+}
+type FitMessages = Record<string, Record<string, unknown>[]>;
+const fitTime = (v: unknown) =>
+  v instanceof Date ? v.getTime() / 1000 : typeof v === "number" ? v : NaN;
+function readFit(
+  bytes: Uint8Array,
+): { detail: ActivityDetail; messages: FitMessages; start: number } | null {
   if (bytes[0] === 80 && bytes[1] === 75) {
     const files = unzipSync(bytes, {
       filter: (f) =>
         /\.fit$/i.test(f.name) && f.originalSize < 100 * 1024 * 1024,
     });
     const fit = Object.entries(files).find(([name]) => /\.fit$/i.test(name));
-    if (!fit) return emptyDetail();
+    if (!fit) return null;
     bytes = fit[1];
   }
   const stream = Stream.fromByteArray(Array.from(bytes));
-  if (!Decoder.isFIT(stream)) return emptyDetail();
+  if (!Decoder.isFIT(stream)) return null;
   const decoded = new Decoder(stream).read({
     convertTypesToStrings: true,
     convertDateTimesToDates: true,
@@ -93,17 +101,13 @@ export function decodeFit(bytes: Uint8Array): ActivityDetail {
   });
   if (decoded.errors.length)
     throw new Error("No se pudo leer el archivo FIT de esta actividad.");
-  const messages = decoded.messages as unknown as Record<
-    string,
-    Record<string, unknown>[]
-  >;
+  const messages = decoded.messages as unknown as FitMessages;
   const records = messages.recordMesgs ?? [];
-  const time = (v: unknown) =>
-    v instanceof Date ? v.getTime() / 1000 : typeof v === "number" ? v : NaN;
+  const time = fitTime;
   const valid = records
     .filter((r) => Number.isFinite(time(r.timestamp)))
     .sort((a, b) => time(a.timestamp) - time(b.timestamp));
-  if (!valid.length) return emptyDetail();
+  if (!valid.length) return { detail: emptyDetail(), messages, start: NaN };
   const start = time(valid[0].timestamp);
   const rows: Sample[] = valid.map((r) => ({
     x: time(r.timestamp) - start,
@@ -144,12 +148,80 @@ export function decodeFit(bytes: Uint8Array): ActivityDetail {
     };
   });
   return {
-    rows,
-    laps,
-    ...projectRoute(rows),
-    features: [],
-    markers: [],
-    best: bestEfforts(rows),
+    start,
+    messages,
+    detail: {
+      rows,
+      laps,
+      ...projectRoute(rows),
+      features: [],
+      markers: [],
+      best: bestEfforts(rows),
+    },
+  };
+}
+export const sameStart = (a: number, b: number) => Math.abs(a - b) <= 60000;
+const FIT_SPORTS: Record<string, string> = {
+  mountain: "mountain_biking",
+  downhill: "mountain_biking",
+  gravelCycling: "gravel_cycling",
+  indoorCycling: "indoor_cycling",
+  virtualActivity: "virtual_ride",
+  spin: "indoor_cycling",
+  road: "road_biking",
+};
+/**
+ * A local FIT becomes an activity of the real source. Its id is derived from
+ * the file (start time and device serial) so importing it twice is detected.
+ */
+export function fitActivity(
+  bytes: Uint8Array,
+  fileName: string,
+): { activity: Activity; detail: ActivityDetail } {
+  const fit = readFit(bytes);
+  if (!fit) throw new Error("No es un archivo FIT válido.");
+  const { detail, messages, start } = fit;
+  if (!detail.rows.length)
+    throw new Error("El archivo no contiene muestras de actividad.");
+  const session = messages.sessionMesgs?.[0] ?? {},
+    file = messages.fileIdMesgs?.[0] ?? {};
+  if (session.sport !== undefined && session.sport !== "cycling")
+    throw new Error("No es una actividad de ciclismo.");
+  const summary = stats(detail.rows);
+  const serial = num(file.serialNumber);
+  const device =
+    typeof file.garminProduct === "string"
+      ? file.garminProduct
+      : typeof file.manufacturer === "string"
+        ? file.manufacturer
+        : "dispositivo desconocido";
+  return {
+    detail,
+    activity: classifyActivity(
+      {
+        id: `fit-${Math.round(start)}-${serial ?? 0}`,
+        name:
+          fileName.replace(/\.(fit|zip)$/i, "").slice(0, 100) ||
+          "Actividad importada",
+        date: start * 1000,
+        type: "cycling",
+        garminType: FIT_SPORTS[String(session.subSport)] ?? "cycling",
+        device,
+        dur: summary.dur,
+        dist: summary.dist,
+        elev: summary.gain,
+        np: summary.np,
+        avgP: summary.avgP,
+        hr: summary.hr,
+        cad: summary.cad,
+        kj: summary.avgP === null ? null : (summary.avgP * summary.dur) / 1000,
+        tss: num(session.trainingStressScore),
+        IF: num(session.intensityFactor),
+        detailStatus: "ready",
+        provenance: { kind: "fit", file: fileName.slice(0, 200) },
+      },
+      detail,
+    ),
   };
 }
 export class GarminPersonalSource implements GarminSource {
@@ -324,9 +396,13 @@ export class GarminSync {
         const existing = new Map(
           this.store.activities("garmin").map((a) => [a.id, a]),
         );
+        const imported = [...existing.values()].filter((a) => a.provenance);
         this.store.db.transaction(() => {
           for (const a of batch) {
             const old = existing.get(a.id);
+            // First copy wins: an imported FIT of the same ride hides Garmin's.
+            if (!old && imported.some((f) => sameStart(f.date, a.date)))
+              continue;
             this.store.upsert(
               "garmin",
               classifyActivity({
@@ -382,7 +458,8 @@ export class GarminSync {
         this.update({ completed: i + 1 });
       }
       if (this.checkStopped()) return;
-      const latest = this.store.activities("garmin")[0],
+      // Garmin thresholds can only be read from activities Garmin knows about.
+      const latest = this.store.activities("garmin").find((a) => !a.provenance),
         settings = this.store.settings();
       if (
         !retryIds &&

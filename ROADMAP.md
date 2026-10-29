@@ -186,6 +186,8 @@ La primera versión debe servir para contextualizar el seguimiento. No hace falt
 
 Importar FIT local reutilizando el decodificador; exportar tablas CSV y un informe sencillo de actividad o comparación. Resolver identidad, duplicados y procedencia antes de mezclar archivos con Garmin. Empezar por FIT y CSV; otros formatos solo si hay una necesidad concreta.
 
+**Completada el 29/10/2026.** Actividades importa archivos FIT locales al histórico real con identidad estable, rechazo de duplicados por hora de inicio en ambos sentidos y procedencia visible. Exporta la lista filtrada en CSV y un informe HTML de actividad o comparación, con la demo siempre marcada. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-35--importación-y-exportación-manual-29102026).
+
 ## Fase 4 — Cosas que podrían molar de verdad
 
 | Idea | Valor para el ciclista | Primera versión razonable | Dependencia |

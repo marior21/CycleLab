@@ -32,6 +32,11 @@ export const date = (v: number, long = false, weekday = false) =>
     .replaceAll(".", "");
 export const clock = (s: number) =>
   `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}`;
+export const FATIGUE = {
+  fresh: "Fresco",
+  normal: "Normal",
+  tired: "Cansado",
+} as const;
 export const TYPES = {
   endurance: { label: "Resistencia", tone: "z2" },
   intervals: { label: "Intervalos", tone: "z5" },

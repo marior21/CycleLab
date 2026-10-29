@@ -37,6 +37,32 @@ function fixture() {
   return { store, config, activities, details, a };
 }
 describe("resumable Garmin import", () => {
+  it("skips a Garmin ride already imported from a FIT file", async () => {
+    const f = fixture();
+    const garmin = f.a(7);
+    f.activities.set("fit-1", {
+      ...garmin,
+      id: "fit-1",
+      date: garmin.date + 30000,
+      detailStatus: "ready",
+      provenance: { kind: "fit", file: "salida.fit" },
+    });
+    f.store.settings = () =>
+      ({ athlete: { ftp: 1, lthr: 1, weight: null } }) as never;
+    const source = {
+      listActivities: vi
+        .fn()
+        .mockResolvedValueOnce([
+          garmin,
+          { ...f.a(8), date: garmin.date + 86400000 },
+        ])
+        .mockResolvedValueOnce([]),
+      getActivity: vi.fn().mockResolvedValue(emptyDetail()),
+      thresholds: vi.fn(),
+    } as unknown as GarminPersonalSource;
+    await new GarminSync(f.store, source, () => {}).run();
+    expect([...f.activities.keys()].sort()).toEqual(["8", "fit-1"]);
+  });
   it("dates imported thresholds to their activity without inventing a past profile", async () => {
     const f = fixture();
     f.store.settings = () => ({

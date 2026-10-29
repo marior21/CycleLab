@@ -7,14 +7,9 @@ import type {
   Source,
 } from "../../shared/models";
 import { Button, Panel } from "../components/ui";
-import { TYPES } from "../format";
+import { FATIGUE, TYPES } from "../format";
 
 const empty: Feel = { rpe: null, fatigue: null, notes: "", type: null };
-const fatigue: Record<Fatigue, string> = {
-  fresh: "Fresco",
-  normal: "Normal",
-  tired: "Cansado",
-};
 export function ActivityFeel({ a, source }: { a: Activity; source: Source }) {
   const saved = a.feel ?? empty;
   const [draft, setDraft] = useState(saved),
@@ -78,7 +73,7 @@ export function ActivityFeel({ a, source }: { a: Activity; source: Source }) {
             }
           >
             <option value="">Sin indicar</option>
-            {Object.entries(fatigue).map(([value, label]) => (
+            {Object.entries(FATIGUE).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>

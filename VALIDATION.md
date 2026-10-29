@@ -369,3 +369,37 @@ Garmin real ni ejecución de toda la suite Electron o instaladores. La distancia
 registrada y los extremos GPS pueden diferir entre intentos: los tiempos son
 aproximados, no cronometraje exacto de un mismo punto geográfico. No se reconstruyen
 recorridos sin distancia ni se rellenan grandes huecos.
+
+## Fase 2.4 — Gestión y revisión de segmentos (29/10/2026)
+
+- La lista de Segmentos y Puertos tiene buscador por nombre (sin distinguir
+  mayúsculas) y muestra primero los favoritos con la etiqueta «Favorito».
+  «Renombrar» edita el nombre en línea (1–100 caracteres, Esc cancela) y
+  «Marcar como favorito» alterna la marca. Un único IPC `segment-update`
+  validado con zod sustituye a `segment-climb` para nombre, puerto y favorito.
+- Cada coincidencia GPS (no la selección original) tiene «Excluir», que pide un
+  motivo (1–200 caracteres). Las exclusiones se listan con su motivo y
+  «Restaurar». Se guardan en el propio segmento (`excluded`, por identificador
+  de intento) mediante `segment-exclude`; los resultados brutos no se tocan, por
+  lo que nombre y exclusiones sobreviven a «Volver a buscar» y a cambios del
+  histórico. Copias de seguridad validan los nuevos campos.
+- Las exclusiones se aplican al recuento, mejor tiempo, último intento,
+  evolución, selección para comparar, contador de ascensiones y a
+  `comparar_ascensiones`, que indica cuántas coincidencias se descartaron.
+- Resultados muestra mejor tiempo y último intento con fecha, y una gráfica de
+  evolución del tiempo por fecha cuando hay al menos dos intentos.
+
+Validación: typecheck, lint, build y las 126 pruebas unitarias correctos. El
+recorrido Electron de resultados históricos excluye una coincidencia con motivo,
+comprueba recuento y último intento, renombra, marca favorito y busca (incluida
+búsqueda sin resultados); tras reiniciar y recalcular por nuevas muestras,
+nombre, favorito y exclusión se conservan y el intento sigue en los resultados
+brutos; «Restaurar» lo devuelve. Pasan también las pruebas Electron de segmentos
+y del entrenador con puertos. Capturas en
+`test-results/segment-review-{dark,light}.png`, revisadas en ambos temas.
+
+Límites: la exclusión se identifica por actividad y rango de muestras; si una
+nueva descarga desplaza las muestras, el intento reaparece para revisarlo. Las
+exclusiones huérfanas no se muestran. La columna «Revisión» aparece como
+ordenable, sin efecto. Sin resumen de marcas en la propia lista, sin nueva
+sincronización Garmin real ni ejecución de toda la suite Electron o instaladores.

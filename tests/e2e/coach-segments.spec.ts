@@ -29,7 +29,9 @@ test("coach shares persisted climb attempts, counts and activity navigation in b
         0,
         Math.min(50, detail.rows.length - 1),
       );
-      await window.cyclelab.setSegmentClimb("demo", segment.id, true);
+      await window.cyclelab.updateSegment("demo", segment.id, {
+        isClimb: true,
+      });
       return segment;
     });
     await expect
@@ -104,7 +106,7 @@ test("coach shares persisted climb attempts, counts and activity navigation in b
         .first(),
     ).toBeVisible();
     await page.evaluate(
-      (id) => window.cyclelab.setSegmentClimb("demo", id, false),
+      (id) => window.cyclelab.updateSegment("demo", id, { isClimb: false }),
       segment.id,
     );
     expect(

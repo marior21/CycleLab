@@ -21,8 +21,10 @@ const api: CycleLabAPI = {
     call("segment-results", source, id, retry),
   saveSegment: (source, activityId, name, i0, i1) =>
     call("segment-save", source, activityId, name, i0, i1),
-  setSegmentClimb: (source, id, isClimb) =>
-    call("segment-climb", source, id, isClimb),
+  updateSegment: (source, id, changes) =>
+    call("segment-update", source, id, changes),
+  setAttemptExcluded: (source, id, attemptId, reason) =>
+    call("segment-exclude", source, id, attemptId, reason),
   deleteSegment: (source, id) => call("segment-delete", source, id),
   getActivity: (source, id) => call("activity", source, id),
   saveSettings: (s) => call("settings", s),

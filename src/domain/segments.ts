@@ -1,4 +1,4 @@
-import type { Sample, Segment } from "../shared/models";
+import type { Sample, Segment, SegmentAttempt } from "../shared/models";
 import { segmentStats } from "./segmentMatching";
 
 export function createSegment(
@@ -30,3 +30,8 @@ export function createSegment(
     ...segmentStats(rows, i0, i1),
   };
 }
+
+export const includedAttempts = (
+  segment: Segment,
+  attempts: SegmentAttempt[],
+) => attempts.filter((a) => !segment.excluded?.[a.id]);

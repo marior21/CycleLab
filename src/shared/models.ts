@@ -126,6 +126,9 @@ export interface ActivityDetail {
 }
 export interface Segment extends Stats {
   isClimb?: boolean;
+  favorite?: boolean;
+  /** Attempt id → reason. Lives on the segment so rescans keep it. */
+  excluded?: Record<string, string>;
   id: string;
   name: string;
   activityId: string;
@@ -311,7 +314,17 @@ export interface CycleLabAPI {
     i0: number,
     i1: number,
   ): Promise<Segment>;
-  setSegmentClimb(source: Source, id: string, isClimb: boolean): Promise<void>;
+  updateSegment(
+    source: Source,
+    id: string,
+    changes: Partial<Pick<Segment, "name" | "isClimb" | "favorite">>,
+  ): Promise<void>;
+  setAttemptExcluded(
+    source: Source,
+    id: string,
+    attemptId: string,
+    reason: string | null,
+  ): Promise<void>;
   deleteSegment(source: Source, id: string): Promise<void>;
   getActivity(source: Source, id: string): Promise<ActivityDetail>;
   saveSettings(

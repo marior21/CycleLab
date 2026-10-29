@@ -1003,6 +1003,53 @@ test("segment results cover all years, repeated passes, persistence and refreshe
     await expect(comparison.locator(".chart-engine")).toHaveCount(4);
     await comparison.getByRole("button", { name: /^A ·/ }).click();
     await expect(page.locator(".sel-bar")).toContainText("Selección");
+    await page.keyboard.press("Meta+4");
+    await expect(
+      resultsTable.getByText("original", { exact: false }),
+    ).toHaveCount(1);
+    await expect(
+      resultsTable.getByRole("button", { name: "Excluir", exact: true }),
+    ).toHaveCount(2);
+    await resultsTable
+      .getByRole("button", { name: "Excluir", exact: true })
+      .first()
+      .click();
+    await page.getByLabel("Motivo de la exclusión").fill("Camino paralelo");
+    await page
+      .getByRole("button", { name: "Excluir coincidencia", exact: true })
+      .click();
+    await expect(
+      page.getByText("1 coincidencia excluida manualmente", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "Camino paralelo", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.locator(".cl-metric").filter({ hasText: "Resultados" }),
+    ).toContainText("2");
+    await expect(
+      page.locator(".cl-metric").filter({ hasText: "Último intento" }),
+    ).toContainText("2026");
+    await page.getByRole("button", { name: "Renombrar", exact: true }).click();
+    await page.getByLabel("Nuevo nombre").fill("Tramo renombrado");
+    await page
+      .getByRole("button", { name: "Guardar nombre", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Marcar como favorito", exact: true })
+      .click();
+    await expect(
+      page.getByRole("option", { name: /Tramo renombrado.*Favorito/ }),
+    ).toBeVisible();
+    await page.getByLabel("Buscar segmento").fill("zzz");
+    await expect(page.getByText("Ningún segmento coincide.")).toBeVisible();
+    await page.getByLabel("Buscar segmento").fill("RENOMBRADO");
+    await expect(
+      page.getByRole("option", { name: /Tramo renombrado/ }),
+    ).toBeVisible();
+    await page.screenshot({ path: "test-results/segment-review-dark.png" });
+    await page.getByRole("button", { name: "Cambiar tema" }).click();
+    await page.screenshot({ path: "test-results/segment-review-light.png" });
     expect(rendererErrors).toEqual([]);
     await app.close();
     app = await launch();
@@ -1054,6 +1101,31 @@ test("segment results cover all years, repeated passes, persistence and refreshe
           ).attempts.length,
       )
       .toBe(4);
+    const reviewed = (
+      await page.evaluate(() => window.cyclelab.getState())
+    ).segments.find((s) => s.id === segment.id)!;
+    expect(reviewed).toMatchObject({
+      name: "Tramo renombrado",
+      favorite: true,
+    });
+    expect(Object.values(reviewed.excluded!)).toEqual(["Camino paralelo"]);
+    expect(
+      (
+        await page.evaluate(
+          (id) => window.cyclelab.getSegmentResults("garmin", id),
+          segment.id,
+        )
+      ).attempts.map((a) => a.id),
+    ).toContain(Object.keys(reviewed.excluded!)[0]);
+    await page.keyboard.press("Meta+4");
+    await page.getByRole("button", { name: "Restaurar", exact: true }).click();
+    await expect(
+      page.getByText("coincidencia excluida manualmente", { exact: false }),
+    ).toHaveCount(0);
+    expect(
+      (await page.evaluate(() => window.cyclelab.getState())).segments[0]
+        .excluded,
+    ).toEqual({});
     const isolated = await page.evaluate(async (id) => {
       try {
         await window.cyclelab.getSegmentResults("demo", id);

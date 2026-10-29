@@ -129,6 +129,8 @@ const segment = stats.extend({
   start: num,
   end: num,
   isClimb: z.boolean().optional(),
+  favorite: z.boolean().optional(),
+  excluded: z.record(z.string(), z.string().max(200)).optional(),
 });
 const result = z.object({
   status: z.enum(["running", "done", "error"]),

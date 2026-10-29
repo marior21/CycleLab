@@ -1,5 +1,6 @@
 import { profileNote } from "../domain/athlete";
 import { coverageNote } from "../domain/coverage";
+import { includedAttempts } from "../domain/segments";
 import { DAY, stats, percentChange } from "../domain/analysis";
 import { z } from "zod";
 import type { CoachProvider } from "../domain/providers";
@@ -439,7 +440,7 @@ export class AnalysisTools {
     const stale =
       report &&
       report.revision !== this.store.get(`activityRevision:${this.source}`, 0);
-    const attempts = (report?.attempts ?? [])
+    const attempts = includedAttempts(segment, report?.attempts ?? [])
       .filter(
         (a) =>
           (!args.desde || a.date >= Date.parse(args.desde)) &&
@@ -491,6 +492,9 @@ export class AnalysisTools {
         `${attempts.length} intentos en el periodo; se muestran los dos últimos disponibles por fecha y orden del tramo en la actividad.`,
         selected.length < 2
           ? "No hay dos intentos identificados para comparar en este periodo."
+          : "",
+        Object.keys(segment.excluded ?? {}).length
+          ? `${Object.keys(segment.excluded!).length} coincidencias excluidas manualmente no se consideran.`
           : "",
         "Mismo recorrido y sentido. Coincidencias y tiempos aproximados según las muestras GPS; pueden confundirse caminos paralelos. Métricas ausentes no equivalen a cero.",
         coverageNote(

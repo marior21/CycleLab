@@ -1,7 +1,14 @@
 import { SegmentAttempts } from "./SegmentAttempts";
 import { useEffect, useState } from "react";
 import type { ActivityDetail } from "../../shared/models";
-import { Badge, Button, Metric, Panel, StateBlock } from "../components/ui";
+import {
+  Badge,
+  Button,
+  Icon,
+  Metric,
+  Panel,
+  StateBlock,
+} from "../components/ui";
 import { RouteMap } from "../components/RouteMap";
 import { routeSelection } from "../../domain/analysis";
 import { averageGrade } from "../../domain/segmentProfile";
@@ -9,21 +16,29 @@ import { duration, number, date } from "../format";
 import type { PageProps } from "./shared";
 
 export function Segments(p: PageProps & { climbsOnly?: boolean }) {
-  const segments = p.climbsOnly
-    ? p.segments.filter((s) => s.isClimb === true)
-    : p.segments;
+  const segments = (
+    p.climbsOnly ? p.segments.filter((s) => s.isClimb === true) : p.segments
+  ).toSorted((a, b) => Number(!!b.favorite) - Number(!!a.favorite));
+  const [query, setQuery] = useState("");
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const shown = segments.filter((s) =>
+    s.name
+      .toLocaleLowerCase("es")
+      .includes(query.trim().toLocaleLowerCase("es")),
+  );
   const [id, setId] = useState(segments[0]?.id);
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
-  const segment = segments.find((s) => s.id === id) ?? segments[0];
+  const segment = segments.find((s) => s.id === id) ?? shown[0] ?? segments[0];
   const activity = p.data.activities.find((a) => a.id === segment?.activityId);
   useEffect(() => {
     let cancelled = false;
     setDetail(null);
     setError("");
     setConfirm(false);
+    setRenaming(null);
     if (segment)
       window.cyclelab
         .getActivity(p.demo ? "demo" : "garmin", segment.activityId)
@@ -43,6 +58,27 @@ export function Segments(p: PageProps & { climbsOnly?: boolean }) {
       segmentId: segment?.id,
     });
   }, [p.onContext, p.climbsOnly, segment?.id]);
+  async function update(
+    changes: Parameters<typeof window.cyclelab.updateSegment>[2],
+  ) {
+    setBusy(true);
+    setError("");
+    try {
+      await window.cyclelab.updateSegment(
+        p.demo ? "demo" : "garmin",
+        segment!.id,
+        changes,
+      );
+      return true;
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "No se pudo guardar el cambio.",
+      );
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
   if (!segment)
     return (
       <div className="page">
@@ -73,13 +109,25 @@ export function Segments(p: PageProps & { climbsOnly?: boolean }) {
               ? "Segmentos marcados como puertos."
               : "Todos tus tramos guardados, incluidos los puertos."}
           </div>
+          <div className="search-field">
+            <Icon name="search" />
+            <input
+              value={query}
+              aria-label={p.climbsOnly ? "Buscar puerto" : "Buscar segmento"}
+              placeholder={p.climbsOnly ? "Buscar puerto" : "Buscar segmento"}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
         </div>
         <div
           className="activity-list"
           role="listbox"
           aria-label={p.climbsOnly ? "Puertos" : "Segmentos"}
         >
-          {segments.map((s) => (
+          {!shown.length && (
+            <p className="small cl-faint">Ningún segmento coincide.</p>
+          )}
+          {shown.map((s) => (
             <div
               className="climb-item"
               role="option"
@@ -95,7 +143,8 @@ export function Segments(p: PageProps & { climbsOnly?: boolean }) {
               }}
             >
               <div className="act-name">
-                {s.name} {s.isClimb && <Badge>Puerto</Badge>}
+                {s.name} {s.favorite && <Badge>Favorito</Badge>}{" "}
+                {s.isClimb && <Badge>Puerto</Badge>}
               </div>
               <div className="act-meta">
                 {number(s.dist, 2)} km · {number(s.gain)} m+ ·{" "}
@@ -132,28 +181,50 @@ export function Segments(p: PageProps & { climbsOnly?: boolean }) {
             </Button>
           </div>
           <div className="toolbar">
+            {renaming === null ? (
+              <Button disabled={busy} onClick={() => setRenaming(segment.name)}>
+                Renombrar
+              </Button>
+            ) : (
+              <form
+                className="toolbar compact"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void update({ name: renaming }).then(
+                    (ok) => ok && setRenaming(null),
+                  );
+                }}
+              >
+                <input
+                  className="input"
+                  autoFocus
+                  maxLength={100}
+                  aria-label="Nuevo nombre"
+                  value={renaming}
+                  onChange={(e) => setRenaming(e.target.value)}
+                  onKeyDown={(e) => e.key === "Escape" && setRenaming(null)}
+                />
+                <Button type="submit" disabled={busy || !renaming.trim()}>
+                  Guardar nombre
+                </Button>
+                <Button disabled={busy} onClick={() => setRenaming(null)}>
+                  Cancelar
+                </Button>
+              </form>
+            )}
+            <Button
+              disabled={busy}
+              aria-pressed={!!segment.favorite}
+              onClick={() => void update({ favorite: !segment.favorite })}
+            >
+              {segment.favorite
+                ? "Quitar de favoritos"
+                : "Marcar como favorito"}
+            </Button>
             <Button
               disabled={busy}
               aria-pressed={!!segment.isClimb}
-              onClick={async () => {
-                setBusy(true);
-                setError("");
-                try {
-                  await window.cyclelab.setSegmentClimb(
-                    p.demo ? "demo" : "garmin",
-                    segment.id,
-                    !segment.isClimb,
-                  );
-                } catch (e) {
-                  setError(
-                    e instanceof Error
-                      ? e.message
-                      : "No se pudo cambiar la clasificación.",
-                  );
-                } finally {
-                  setBusy(false);
-                }
-              }}
+              onClick={() => void update({ isClimb: !segment.isClimb })}
             >
               {segment.isClimb
                 ? "Quitar marca de puerto"

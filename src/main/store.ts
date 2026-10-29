@@ -249,13 +249,14 @@ export class Store {
       .prepare("INSERT INTO segments VALUES (?,?,?)")
       .run(source, segment.id, JSON.stringify(segment));
   }
-  setSegmentClimb(source: Source, id: string, isClimb: boolean) {
-    const result = this.db
-      .prepare(
-        "UPDATE segments SET payload=json_set(payload,'$.isClimb',json(?)) WHERE source=? AND id=?",
-      )
-      .run(JSON.stringify(isClimb), source, id);
-    if (!result.changes) throw new Error("El segmento ya no está disponible.");
+  updateSegment(source: Source, id: string, edit: (s: Segment) => Segment) {
+    this.db.transaction(() => {
+      const segment = this.segment(source, id);
+      if (!segment) throw new Error("El segmento ya no está disponible.");
+      this.db
+        .prepare("UPDATE segments SET payload=? WHERE source=? AND id=?")
+        .run(JSON.stringify(edit(segment)), source, id);
+    })();
   }
   deleteSegment(source: Source, id: string) {
     this.db.transaction(() => {

@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { settingsSchema } from "../shared/settings";
 import { writeBackup, restoreBackup } from "./backup";
-import { createSegment } from "../domain/segments";
+import { createSegment, includedAttempts } from "../domain/segments";
 import { SegmentResults } from "./segmentResults";
 import { Store } from "./store";
 import { Credentials } from "./credentials";
@@ -41,7 +41,12 @@ function state() {
   const segments = store.segments(settings.source);
   const reports = segments
     .filter((s) => s.isClimb)
-    .map((s) => store.segmentResults(settings.source, s.id));
+    .map((s) => {
+      const report = store.segmentResults(settings.source, s.id);
+      return (
+        report && { ...report, attempts: includedAttempts(s, report.attempts) }
+      );
+    });
   return {
     settings,
     ascents: {
@@ -285,11 +290,41 @@ async function boot() {
       return segment;
     },
   );
-  register("segment-climb", (rawSource, rawId, rawClimb) => {
-    store.setSegmentClimb(
+  register("segment-update", (rawSource, rawId, rawChanges) => {
+    const changes = z
+      .object({
+        name: z.string().trim().min(1).max(100).optional(),
+        isClimb: z.boolean().optional(),
+        favorite: z.boolean().optional(),
+      })
+      .strict()
+      .parse(rawChanges);
+    store.updateSegment(
       sourceSchema.parse(rawSource),
       z.string().uuid().parse(rawId),
-      z.boolean().parse(rawClimb),
+      (s) => ({ ...s, ...changes }),
+    );
+    changed();
+  });
+  register("segment-exclude", (rawSource, rawId, rawAttempt, rawReason) => {
+    const attemptId = z.string().min(1).max(300).parse(rawAttempt);
+    const reason = z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .nullable()
+      .parse(rawReason);
+    store.updateSegment(
+      sourceSchema.parse(rawSource),
+      z.string().uuid().parse(rawId),
+      ({ excluded = {}, ...s }) => {
+        const { [attemptId]: _, ...rest } = excluded;
+        return {
+          ...s,
+          excluded: reason ? { ...rest, [attemptId]: reason } : rest,
+        };
+      },
     );
     changed();
   });

@@ -128,6 +128,8 @@ La tabla histórica es útil; el siguiente salto es saber dónde se ganó o perd
 
 Esto es especialmente importante porque la tolerancia GPS puede confundir caminos paralelos. Primero dar control sobre las coincidencias; después ampliar la detección automática.
 
+**Completada el 29/10/2026.** Segmentos y Puertos permiten buscar por nombre, renombrar y marcar favoritos (primeros en la lista). Cada coincidencia GPS se puede excluir con motivo y restaurar; las exclusiones y el nombre se guardan en el segmento, sobreviven al recálculo y a las copias, y se aplican en mejor tiempo, comparación, contador de ascensiones y entrenador. Resultados muestra mejor marca, último intento y evolución del tiempo por fecha. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-24--gestión-y-revisión-de-segmentos-29102026).
+
 ### 2.5. Un chat más cómodo y trazable · P1 · M
 
 - Cancelación de una respuesta en curso y texto progresivo cuando el proveedor lo permita.

@@ -302,7 +302,7 @@ Cada entrega se cierra como en la fase 4: lint, typecheck, pruebas unitarias y s
 
 **5.4 completada el 29/10/2026.** Las actividades se fechan con el día local del lugar donde se grabaron, a partir del desfase de Garmin o del FIT, con la zona del Mac como respaldo. Evidencia en [VALIDATION.md](VALIDATION.md#fase-54--día-local-de-cada-actividad-29102026).
 
-**5.5 completada el 29/10/2026.** Primeros pasos en Actividades hasta la primera sincronización, filtros conservados al volver y revisión a 1200 × 760 y 1440 × 900 en ambos temas con prueba propia. Quedan dos ajustes de maquetación a 1200 px y la revisión con VoiceOver. Evidencia en [VALIDATION.md](VALIDATION.md#fase-55--acabado-de-escritorio-29102026).
+**5.5 completada el 29/10/2026.** Primeros pasos en Actividades hasta la primera sincronización, filtros conservados al volver y revisión a 1200 × 760 y 1440 × 900 en ambos temas con prueba propia. Queda la revisión con VoiceOver. Evidencia en [VALIDATION.md](VALIDATION.md#fase-55--acabado-de-escritorio-29102026).
 
 **5.6 preparada el 29/10/2026.** Firma y notarización activadas por los secretos del propietario, macOS 12+ y un instalador por arquitectura, documentación de instalación, actualización y recuperación. Falta la primera release firmada, la prueba en un Mac limpio y las actualizaciones automáticas, que dependen de las credenciales del propietario. Evidencia en [VALIDATION.md](VALIDATION.md#fase-56--distribución-29102026).
 

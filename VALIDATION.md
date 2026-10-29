@@ -1032,9 +1032,12 @@ muestran la hora local sin indicar la zona.
   la tiene: las 26 comparaciones dan exactamente las mismas cifras que la
   versión 0.1.3.
 
-Hallazgos de la revisión a 1200 × 760 que quedan pendientes: el título del
-detalle de actividad se parte en una columna estrecha junto a sus tres botones
-y la etiqueta «POT. NORMALIZADA» roza el borde de su celda. No se han hecho una
+Hallazgos de la revisión a 1200 × 760, corregidos después: el título del
+detalle de actividad se partía en una columna estrecha junto a sus tres botones
+(ahora los botones bajan juntos a otra fila cuando no caben) y la etiqueta
+«POT. NORMALIZADA» se salía de su celda (ahora salta de línea por debajo de
+1280 px, como en los resúmenes de cinco métricas). A 1440 × 900 no cambia nada y
+las 26 comparaciones con el prototipo siguen iguales. No se han hecho una
 revisión con VoiceOver ni con movimiento reducido activado en el sistema;
 siguen las reglas existentes (foco visible, `prefers-reduced-motion`).
 

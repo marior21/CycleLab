@@ -711,7 +711,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
   ] as const;
   return (
     <div className="page">
-      <div className="toolbar">
+      <div className="toolbar detail-toolbar">
         <div className="min-zero">
           <div className="toolbar">
             <div className="detail-heading">{a.name}</div>
@@ -728,40 +728,41 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
             {p.demo ? " · potenciómetro + banda pectoral" : ""}
           </div>
         </div>
-        <div className="push" />
-        <Button
-          icon="route"
-          disabled={rows.length < 2}
-          onClick={() =>
-            p.createSegment(
-              a,
-              d,
-              range && range[1] > range[0] ? range : [0, rows.length - 1],
-            )
-          }
-        >
-          Crear segmento
-        </Button>
-        <Button
-          icon="coach"
-          onClick={() =>
-            p.ask(
-              range || selectedLaps.length
-                ? "Analiza exclusivamente los tramos de la selección actual"
-                : a.type === "intervals"
-                  ? "Analiza los intervalos de esta sesión"
-                  : "Resume esta actividad",
-            )
-          }
-        >
-          {range || selectedLaps.length
-            ? "Analizar este tramo"
-            : "Preguntar a la IA"}
-        </Button>
-        <ReportButton
-          name={`CycleLab-${new Date(a.date).toISOString().slice(0, 10)}-${a.name}`}
-          html={() => activityReport(a, d, data.athlete, p.demo)}
-        />
+        <div className="toolbar">
+          <Button
+            icon="route"
+            disabled={rows.length < 2}
+            onClick={() =>
+              p.createSegment(
+                a,
+                d,
+                range && range[1] > range[0] ? range : [0, rows.length - 1],
+              )
+            }
+          >
+            Crear segmento
+          </Button>
+          <Button
+            icon="coach"
+            onClick={() =>
+              p.ask(
+                range || selectedLaps.length
+                  ? "Analiza exclusivamente los tramos de la selección actual"
+                  : a.type === "intervals"
+                    ? "Analiza los intervalos de esta sesión"
+                    : "Resume esta actividad",
+              )
+            }
+          >
+            {range || selectedLaps.length
+              ? "Analizar este tramo"
+              : "Preguntar a la IA"}
+          </Button>
+          <ReportButton
+            name={`CycleLab-${new Date(a.date).toISOString().slice(0, 10)}-${a.name}`}
+            html={() => activityReport(a, d, data.athlete, p.demo)}
+          />
+        </div>
       </div>
       <p className="small cl-muted">
         {profileNote(data.athlete, a.date)}. Zonas y W/kg: cálculo local.{" "}

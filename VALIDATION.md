@@ -659,12 +659,28 @@ Cierre del bloque A: `npm run package` y `test:package` correctos. Pendiente:
   principal (2560 × 1600), la ventana de 1440 × 900 queda en unos 803 px de
   alto y las capturas no tienen el tamaño de la referencia. Hay que repetirlo
   con un monitor externo como pantalla principal.
-- Suite Electron: 20 de 21. «Garmin settings accepts the plain JWT token
-  response» completa todos sus pasos, pero la app no se cierra después de
-  pulsar «Cambiar clave». También falla con la versión 4.1 ya publicada, que
-  pasó la misma prueba una hora antes; no lo causa este cambio y queda sin
-  diagnosticar.
+- Suite Electron: 21 de 21 tras corregir la prueba de clave de Garmin (ver
+  abajo).
 
 Límites: tramos de distancia fija, no por cambios de pendiente (las filas
 alineadas no incluyen elevación); un tramo con hueco reparte el tiempo solo
 entre sus extremos medidos.
+
+### Cierre de la app en la prueba de clave de Garmin (29/10/2026)
+
+«Garmin settings accepts the plain JWT token response» se quedaba sin cerrar la
+app después de completar todos sus pasos. Reproducciones aisladas: el cierre de
+Playwright (`app.close()`) justo después de guardar o desconectar la clave
+tardaba de 0,6 a 8,5 s y a veces más de 90 s; en esos casos la ventana empezaba
+a cerrarse antes de `before-quit` y no terminaba. Descartados: el foco del campo
+de contraseña, «Cambiar clave», llamadas IPC en curso sin Garmin, el tamaño del
+estado (80 KB), un aviso oculto del llavero y la latencia de `safeStorage`
+(3–8 ms). Cerrando como ⌘Q (`app.quit()`) en el mismo escenario, la app salía
+en 73–439 ms en 8 de 8 intentos: la aplicación sale bien y el atasco está en la
+secuencia de cierre de Playwright.
+
+La prueba cierra ahora con `app.quit()` y espera a que el proceso termine.
+Repetida 3 veces (menos de 4 s cada una) y suite completa 21 de 21 en 2,8 min,
+sin procesos de Electron colgados. No se ha determinado por qué el cierre de
+Playwright empezó a atascarse en este equipo; el resto de pruebas mantiene
+`app.close()`.

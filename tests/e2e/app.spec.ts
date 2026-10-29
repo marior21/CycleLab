@@ -383,7 +383,11 @@ test("Garmin settings accepts the plain JWT token response", async () => {
         .garminConfigured,
     ).toBe(false);
   } finally {
-    await app.close();
+    // Playwright's close tears the window down first and can stall for minutes
+    // after this flow; quitting like ⌘Q exits in well under a second.
+    const exited = new Promise((r) => app.process().once("exit", r));
+    await app.evaluate(({ app }) => setTimeout(() => app.quit(), 0));
+    await exited;
   }
 });
 

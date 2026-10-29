@@ -25,6 +25,7 @@ export const settingsSchema = z
     source: z.enum(["demo", "garmin"]),
     model: z.string().max(200).nullable(),
     coachLimit: z.number().positive().max(100).nullable().optional(),
+    welcomed: z.boolean().optional(),
     athlete: z
       .object({
         history: z

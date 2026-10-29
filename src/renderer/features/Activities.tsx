@@ -49,6 +49,17 @@ import { clock, date, duration, number, shortDuration, TYPES } from "../format";
 import { ratio, type PageProps } from "./shared";
 // Rendering thousands of rows at once makes every keystroke in the search slow.
 const PAGE = 100;
+let kept_: {
+  demo: boolean;
+  range: string;
+  year: string;
+  from: string;
+  to: string;
+  types: ActivityType[];
+  query: string;
+  checked: string[];
+  shown: number;
+} | null = null;
 const ranges = [
   { value: "30", label: "30 d" },
   { value: "90", label: "90 d" },
@@ -58,15 +69,34 @@ export function Activities(
   p: PageProps & { actId: string | null; setActId: (id: string) => void },
 ) {
   const period = p.origin?.period;
-  const [range, setRange] = useState(period ? "custom" : p.demo ? "90" : "all"),
-    [year, setYear] = useState(""),
-    [from, setFrom] = useState(period?.[0] ?? ""),
-    [to, setTo] = useState(period?.[1] ?? ""),
-    [types, setTypes] = useState(Object.keys(TYPES) as ActivityType[]),
-    [query, setQuery] = useState(""),
-    [checked, setChecked] = useState<string[]>([]),
-    [shown, setShown] = useState(PAGE),
-    [comparing, setComparing] = useState(false),
+  // Coming back keeps the last filters of this source; a period link replaces them.
+  const kept = !period && kept_?.demo === p.demo ? kept_ : null;
+  const [range, setRange] = useState(
+      kept?.range ?? (period ? "custom" : p.demo ? "90" : "all"),
+    ),
+    [year, setYear] = useState(kept?.year ?? ""),
+    [from, setFrom] = useState(kept?.from ?? period?.[0] ?? ""),
+    [to, setTo] = useState(kept?.to ?? period?.[1] ?? ""),
+    [types, setTypes] = useState(
+      kept?.types ?? (Object.keys(TYPES) as ActivityType[]),
+    ),
+    [query, setQuery] = useState(kept?.query ?? ""),
+    [checked, setChecked] = useState<string[]>(kept?.checked ?? []),
+    [shown, setShown] = useState(kept?.shown ?? PAGE);
+  useEffect(() => {
+    kept_ = {
+      demo: p.demo,
+      range,
+      year,
+      from,
+      to,
+      types,
+      query,
+      checked,
+      shown,
+    };
+  }, [p.demo, range, year, from, to, types, query, checked, shown]);
+  const [comparing, setComparing] = useState(false),
     [transfer, setTransfer] = useState<{
       busy?: boolean;
       text?: string;

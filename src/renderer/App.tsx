@@ -16,6 +16,7 @@ import {
   SyncStatus,
 } from "./components/ui";
 import { Activities } from "./features/Activities";
+import { FirstRun } from "./features/FirstRun";
 import { Dashboard } from "./features/Dashboard";
 import { Performance } from "./features/Performance";
 import { SegmentCreator } from "./features/SegmentCreator";
@@ -114,6 +115,7 @@ export default function App() {
       source: s.source,
       model: s.model,
       coachLimit: s.coachLimit ?? null,
+      welcomed: s.welcomed,
       athlete: s.athlete,
     });
     await refresh();
@@ -368,6 +370,21 @@ export default function App() {
             )}
           </div>
         )}
+        {screen === "activities" &&
+          !draft &&
+          !state.settings.welcomed &&
+          !(state.settings.garminConfigured && state.sync.lastSync) && (
+            <FirstRun
+              state={state}
+              settings={settings}
+              sync={() =>
+                void window.cyclelab.sync().catch((e) => setError(e.message))
+              }
+              hide={() =>
+                void save({ welcomed: true }).catch((e) => setError(e.message))
+              }
+            />
+          )}
         <div
           className={`scroll ${!draft && ["activities", "segments", "climbs", "coach"].includes(screen) ? "split-view" : ""}`}
         >

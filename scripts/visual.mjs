@@ -1,4 +1,4 @@
-/* global document */
+/* global document, window */
 import { _electron as electron, chromium } from "@playwright/test";
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -25,6 +25,17 @@ try {
   await reference.goto(pathToFileURL(resolve("design/prototype.html")).href);
   await reference.locator(".cl-nav-item").first().waitFor();
   await actual.locator(".cl-nav-item").first().waitFor();
+  // The first steps are not in the prototype; they have their own captures.
+  await actual.evaluate(async () => {
+    const { settings: s } = await window.cyclelab.getState();
+    await window.cyclelab.saveSettings({
+      theme: s.theme,
+      source: s.source,
+      model: s.model,
+      welcomed: true,
+      athlete: s.athlete,
+    });
+  });
   const report = [];
   async function shot(name) {
     await Promise.all(

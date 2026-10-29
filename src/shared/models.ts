@@ -240,6 +240,8 @@ export interface Settings {
   model: string | null;
   /** Maximum USD per coach request; null means no limit. */
   coachLimit?: number | null;
+  /** The first steps were hidden. */
+  welcomed?: boolean;
   athlete: Athlete;
   garminConfigured: boolean;
   openrouterConfigured: boolean;
@@ -401,7 +403,7 @@ export interface CycleLabAPI {
   saveSettings(
     settings: Pick<
       Settings,
-      "theme" | "source" | "model" | "coachLimit" | "athlete"
+      "theme" | "source" | "model" | "coachLimit" | "welcomed" | "athlete"
     >,
   ): Promise<AppState>;
   saveCredential(

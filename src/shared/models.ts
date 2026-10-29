@@ -193,6 +193,8 @@ export interface SampleCoverage {
 }
 export interface Dataset {
   sampleCoverage: Record<string, SampleCoverage>;
+  /** Activity id → best efforts at WEEK_EFFORTS durations, with sample range. */
+  efforts: Record<string, Effort[]>;
   today: number;
   athlete: Athlete;
   activities: Activity[];

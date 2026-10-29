@@ -1,5 +1,6 @@
 import { profileMetrics } from "../../domain/athlete";
 import { sampleCoverage } from "../../domain/coverage";
+import { WEEK_EFFORTS } from "../../domain/analysis";
 import type { GarminSource } from "../../domain/providers";
 import type { Dataset } from "../../shared/models";
 import {
@@ -26,9 +27,16 @@ export class DemoGarminSource implements GarminSource {
     return getStream(a);
   }
 }
+const streams = ACTS.map(getStream);
 export const demoDataset: Dataset = {
   sampleCoverage: Object.fromEntries(
-    ACTS.map((a) => [a.id, sampleCoverage(getStream(a))]),
+    ACTS.map((a, i) => [a.id, sampleCoverage(streams[i])]),
+  ),
+  efforts: Object.fromEntries(
+    ACTS.map((a, i) => [
+      a.id,
+      streams[i].best.filter((e) => WEEK_EFFORTS.includes(e.t)),
+    ]),
   ),
   today: TODAY,
   athlete: {

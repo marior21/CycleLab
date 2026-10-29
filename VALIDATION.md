@@ -445,3 +445,30 @@ en los precios publicados; el cargo final lo determina OpenRouter. Cancelar
 detiene la descarga, pero el proveedor puede cobrar lo ya generado. La migración
 de mensajes antiguos solo se ha probado mediante copias sin conversaciones. Los
 periodos de `curva_potencia` (temporadas) no generan referencia.
+
+## Fase 3.1 — Resumen semanal (29/10/2026)
+
+- Panel «Resumen semanal» en el Dashboard con semanas de lunes a domingo (UTC):
+  tiempo, distancia, desnivel, carga, sesiones, intensidad y mejores esfuerzos
+  de 1, 5, 20 y 60 min. Se elige la semana (actual y tres anteriores) y la
+  referencia: semana anterior o media de las cuatro anteriores.
+- La semana en curso se marca «En curso · N de 7 días» y se compara con los
+  mismos días de cada semana de referencia.
+- Una métrica que falta no suma cero: el total excluye esas actividades y la
+  columna «Sin datos» las cuenta en la semana y en la referencia. Si ninguna
+  actividad de una semana tiene el dato, el total es desconocido y no hay cambio.
+  Una semana sin actividades sí cuenta como cero.
+- Al seleccionar una métrica se listan las actividades que forman el total y la
+  referencia, que se abren desde la tabla. Cada mejor esfuerzo abre su actividad
+  con el tramo seleccionado.
+- La intensidad clasifica el tiempo de cada sesión por su IF (< 0,75, 0,75–0,85,
+  ≥ 0,85 o sin IF). No es tiempo en zonas por muestras.
+- El resumen se calcula localmente y de forma determinista. «Explicar» envía ese
+  resumen al entrenador solo bajo demanda: abrir el Dashboard no genera
+  peticiones.
+
+Validación: typecheck, lint y 133 pruebas unitarias correctos, incluidos semana
+parcial, datos ausentes, semana vacía y media de cuatro semanas. Revisión en la
+app con la demo en ambos temas, sin errores en consola; el esfuerzo de 20 min
+abre «3×12′ sweet spot» con su tramo marcado. Sin validar con datos reales de
+Garmin ni con la suite Electron completa.

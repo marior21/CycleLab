@@ -672,3 +672,25 @@ input.cl-check {
   flex: none;
   white-space: nowrap;
 }
+.week-text {
+  margin: 0 0 var(--space-4);
+  font: var(--body-s);
+  max-width: 90ch;
+}
+.week-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: var(--space-6);
+}
+.week-grid .label {
+  margin-block: var(--space-4) var(--space-2);
+}
+.week-grid > div > .label:first-child {
+  margin-top: 0;
+}
+.week-breakdown .cl-table-wrap {
+  max-height: 180px;
+}
+.week-grid .cl-zonebar-list {
+  grid-template-columns: max-content 1fr auto var(--ref-40px);
+}

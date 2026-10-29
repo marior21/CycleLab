@@ -12,6 +12,7 @@ import type {
 } from "../shared/models";
 export const DAY = 86400000;
 export const DURATIONS = [1, 5, 15, 60, 300, 600, 1200, 3600, 14400, 18000];
+export const WEEK_EFFORTS = [60, 300, 1200, 3600];
 export const mean = (values: (number | null)[]) => {
   const valid = values.filter(
     (v): v is number => v !== null && Number.isFinite(v),
@@ -230,6 +231,12 @@ export function realDataset(
   return {
     sampleCoverage: Object.fromEntries(
       activities.map((a, i) => [a.id, sampleCoverage(details[i] ?? null)]),
+    ),
+    efforts: Object.fromEntries(
+      activities.map((a, i) => [
+        a.id,
+        (details[i]?.best ?? []).filter((e) => WEEK_EFFORTS.includes(e.t)),
+      ]),
     ),
     today,
     athlete,

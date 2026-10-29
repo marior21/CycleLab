@@ -151,6 +151,8 @@ Empezar con cálculos locales y un resumen determinista; añadir una explicació
 
 **Terminado cuando:** semanas parciales y datos ausentes están identificados y se puede reconstruir cada total desde sus actividades.
 
+**Completada el 29/10/2026.** Resumen semanal en el Dashboard: volumen, desnivel, carga, intensidad por IF y mejores esfuerzos frente a la semana anterior o la media de cuatro. La semana en curso se compara con los mismos días, los datos ausentes se cuentan aparte y nunca suman cero, y cada total y cada esfuerzo abre sus actividades. El resumen es local y determinista; la explicación IA solo se pide con «Explicar». Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-31--resumen-semanal-29102026).
+
 ### 3.2. Sensaciones y corrección manual · P1 · M
 
 Añadir RPE, notas y una valoración simple de fatiga por sesión; permitir corregir la etiqueta automática sin perder su motivo original. Una sesión puede sentirse dura aunque los vatios sean normales.

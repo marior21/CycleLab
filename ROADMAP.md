@@ -169,6 +169,8 @@ La primera versión debe servir para contextualizar el seguimiento. No hace falt
 
 **Terminado cuando:** se pueden crear, editar y archivar objetivos reales, persisten tras reiniciar y el entrenador no los confunde con eventos de demostración.
 
+**Completada el 29/10/2026.** El Dashboard permite crear, editar, archivar y restaurar objetivos reales con nombre, fecha, tipo de prueba y objetivo personal. Persisten por origen, entran en las copias de seguridad y la demo conserva sus objetivos ficticios sin poder editarlos. El entrenador recibe solo los activos, marcados como del usuario o de demostración. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-33--objetivos-reales-29102026).
+
 ### 3.4. Rendimiento con referencias útiles · P1 · L
 
 - Comparar últimos 42/90 días con otro periodo, además de años naturales.

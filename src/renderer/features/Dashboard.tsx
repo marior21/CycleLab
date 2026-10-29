@@ -1,20 +1,19 @@
 import { Coverage } from "./Coverage";
 import { WeeklySummary } from "./WeeklySummary";
+import { Goals } from "./Goals";
 import { weeklyActivityTotals } from "../../domain/classification";
 import { useMemo, useState } from "react";
 import {
   Badge,
   Button,
   DataTable,
-  Icon,
   Metric,
   Panel,
-  Progress,
   Segmented,
   StateBlock,
 } from "../components/ui";
 import { BarChart, LineChart } from "../components/charts";
-import { date, number, shortDuration, TYPES } from "../format";
+import { date, number, TYPES } from "../format";
 import { activityColumns, pickNumber, ratio, type PageProps } from "./shared";
 import { DAY } from "../../domain/analysis";
 export function Dashboard(p: PageProps) {
@@ -214,48 +213,13 @@ export function Dashboard(p: PageProps) {
             />
           )}
         </Panel>
-        <Panel
-          className="goals-panel"
-          title="Objetivos"
-          subtitle={p.demo ? "Fechas orientativas" : undefined}
-        >
-          {data.goals.length ? (
-            data.goals.map((g) => (
-              <div className="goal" key={g.id}>
-                <div className="goal-head">
-                  <Icon name="target" style={{ color: `var(--${g.tone})` }} />
-                  <b>{g.name}</b>
-                  <span className="countdown">
-                    {Math.round((g.date - data.today) / DAY)}{" "}
-                    <span className="small cl-muted">días</span>
-                  </span>
-                </div>
-                <div className="small cl-faint">
-                  {date(g.date)} {new Date(g.date).getUTCFullYear()} · {g.kind}
-                </div>
-                <Progress
-                  label="Fitness objetivo"
-                  valueLabel={`${number(ctl, 1)} / ${g.ctl} CTL`}
-                  value={ctl ?? 0}
-                  max={g.ctl}
-                  tone={g.tone}
-                />
-                <Progress
-                  label="Salida más larga (8 sem)"
-                  valueLabel={`${shortDuration(longest)} / ${shortDuration(g.long)}`}
-                  value={longest}
-                  max={g.long}
-                  tone={g.tone}
-                />
-              </div>
-            ))
-          ) : (
-            <StateBlock
-              title="Sin objetivos configurados"
-              detail="Los objetivos de demostración no se aplican a tus datos."
-            />
-          )}
-        </Panel>
+        <Goals
+          goals={data.goals}
+          today={data.today}
+          demo={p.demo}
+          ctl={ctl}
+          longest={longest}
+        />
       </div>
       <div className="row">
         <Panel

@@ -393,6 +393,20 @@ input.cl-check {
   height: 0;
 }
 
+.goal-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.goals-archived {
+  margin-top: var(--space-3);
+}
+.goal-archived {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
 .goal > .small {
   margin-top: calc(-1 * var(--ref-6px));
 }

@@ -8,6 +8,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { activityFeelSchema } from "../shared/activityFeel";
+import { goalInputSchema } from "../shared/goal";
 import { settingsSchema } from "../shared/settings";
 import { writeBackup, restoreBackup } from "./backup";
 import { createSegment, includedAttempts } from "../domain/segments";
@@ -420,6 +421,17 @@ async function boot() {
       activityFeelSchema.nullable().parse(rawFeel),
     );
     changed();
+  });
+  register("goal-save", (rawSource, rawGoal) => {
+    if (sourceSchema.parse(rawSource) !== "garmin")
+      throw new Error("Los objetivos de demostración no se pueden modificar.");
+    const { id, date, ...input } = goalInputSchema.parse(rawGoal);
+    if (id && !store.goals("garmin").some((g) => g.id === id))
+      throw new Error("El objetivo ya no está disponible.");
+    const goal = { ...input, id: id ?? randomUUID(), date: Date.parse(date) };
+    store.saveGoal("garmin", goal);
+    changed();
+    return goal;
   });
   register("models", () => openrouter().models());
   register("retry-downloads", async (rawIds) => {

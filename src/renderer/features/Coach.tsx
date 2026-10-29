@@ -623,8 +623,14 @@ export function CoachPage(p: Props) {
               ascensiones identificadas
               {p.state.ascents.incomplete ? " · búsqueda incompleta" : ""}
             </span>
-            {d.goals.length > 0 && (
-              <span>Objetivos: {d.goals.map((g) => g.name).join(", ")}</span>
+            {d.goals.some((g) => !g.archived) && (
+              <span>
+                Objetivos:{" "}
+                {d.goals
+                  .filter((g) => !g.archived)
+                  .map((g) => g.name)
+                  .join(", ")}
+              </span>
             )}
           </div>
         </div>

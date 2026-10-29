@@ -11,6 +11,7 @@ import type {
   ActivityFeel,
   ChatMessage,
   Conversation,
+  Goal,
   Settings,
   Source,
   Segment,
@@ -35,7 +36,7 @@ export class Store {
     this.db.pragma("foreign_keys = ON");
     this.db.transaction(() => {
       this.db.exec(
-        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS conversations (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS activity_feel (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 7;`,
+        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS conversations (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS activity_feel (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS goals (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 8;`,
       );
       if (version === 1)
         this.db.exec(
@@ -263,7 +264,23 @@ export class Store {
       })),
       this.settings().athlete,
     );
-    return { ...data, sampleCoverage: coverage };
+    return { ...data, sampleCoverage: coverage, goals: this.goals(source) };
+  }
+  goals(source: Source): Goal[] {
+    return (
+      this.db
+        .prepare(
+          "SELECT payload FROM goals WHERE source=? ORDER BY json_extract(payload,'$.date')",
+        )
+        .all(source) as { payload: string }[]
+    ).map((r) => JSON.parse(r.payload) as Goal);
+  }
+  saveGoal(source: Source, goal: Goal) {
+    this.db
+      .prepare(
+        "INSERT INTO goals VALUES (?,?,?) ON CONFLICT(source,id) DO UPDATE SET payload=excluded.payload",
+      )
+      .run(source, goal.id, JSON.stringify(goal));
   }
   segment(source: Source, id: string): Segment | null {
     const row = this.db

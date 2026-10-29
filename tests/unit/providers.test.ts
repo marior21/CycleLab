@@ -212,6 +212,7 @@ describe("OpenRouter", () => {
         run,
         selection: () => null,
         coverage: () => "Cobertura de prueba: 2 actividades sin TSS.",
+        goals: () => "[]",
       } as unknown as AnalysisTools,
       fetcher,
     );
@@ -258,6 +259,7 @@ describe("OpenRouter", () => {
       run: () => ({ rows: [], series: [] }),
       selection: () => null,
       coverage: () => "Sin datos",
+      goals: () => "[]",
     } as unknown as AnalysisTools;
     await expect(
       new OpenRouterCoachProvider(
@@ -330,6 +332,7 @@ describe("OpenRouter streaming, cancellation and cost", () => {
     run: () => ({ tool: "carga_entrenamiento", rows: [], series: [] }),
     selection: () => null,
     coverage: () => "",
+    goals: () => "[]",
   } as unknown as AnalysisTools;
   const sse = (...chunks: unknown[]) =>
     new Response(

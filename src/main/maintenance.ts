@@ -58,6 +58,7 @@ export function deleteLocal(
           "segment_results",
           "segments",
           "activity_feel",
+          "goals",
           "activities",
         ])
       store.db.prepare(`DELETE FROM ${table} WHERE source=?`).run(source);

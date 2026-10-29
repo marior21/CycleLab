@@ -494,3 +494,28 @@ fusión de la etiqueta manual y los campos declarados del entrenador. Pruebas
 Electron de app, copias y mantenimiento (12) correctas; el reetiquetado conserva
 tipo manual, RPE, fatiga y notas. Revisión en la app con la demo en ambos temas.
 Sin validar con datos reales de Garmin ni con una conversación real de OpenRouter.
+
+## Fase 3.3 — Objetivos reales (29/10/2026)
+
+- Con Garmin, el panel «Objetivos» del Dashboard permite crear, editar,
+  archivar y restaurar objetivos con nombre, fecha, tipo de prueba y objetivo
+  personal. Los archivados quedan plegados bajo «Archivados · N». Una fecha ya
+  pasada se marca «Pasado».
+- Se guardan en la tabla `goals` (esquema 8), separados por origen. En la demo
+  se siguen viendo los dos objetivos ficticios, que no se pueden modificar: el
+  IPC rechaza cualquier escritura en ese origen.
+- Los objetivos reales no llevan CTL ni salida larga objetivo; esas barras solo
+  aparecen en los de demostración. No se prescribe ningún valor automático.
+- El entrenador recibe los objetivos activos (no los archivados) con días
+  restantes, tipo de prueba, objetivo personal y `origen` «usuario» o
+  «demostración», y el prompt le indica que estos últimos son ficticios.
+- Las copias de seguridad incluyen los objetivos y «Borrar todo» de un origen
+  también los elimina.
+
+Validación: typecheck, lint y 136 pruebas unitarias correctos, incluido el
+filtro de archivados y el origen que recibe el entrenador. Pruebas Electron de
+app, copias y mantenimiento (13) correctas; una nueva crea, edita y archiva un
+objetivo desde la interfaz, reinicia, comprueba que persiste, lo restaura y
+verifica que la demo conserva solo sus objetivos ficticios. Revisión del panel en
+ambos temas sin errores en consola. Sin validar con una conversación real de
+OpenRouter.

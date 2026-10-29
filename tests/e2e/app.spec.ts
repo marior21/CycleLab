@@ -194,6 +194,97 @@ test("IPC validation, sandbox, offline profile and source isolation", async () =
   }
 });
 
+test("real goals can be created, edited, archived and survive a restart", async () => {
+  const userData = mkdtempSync(join(tmpdir(), "cyclelab-goals-"));
+  const launch = () =>
+    electron.launch({
+      args: ["out/main/index.js"],
+      env: { ...process.env, CYCLELAB_USER_DATA: userData },
+    });
+  let app = await launch();
+  try {
+    let page = await app.firstWindow();
+    await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
+    expect(
+      await page.evaluate(async () => {
+        try {
+          await window.cyclelab.saveGoal("demo", {
+            id: null,
+            name: "Falso",
+            date: "2027-01-01",
+            kind: "",
+            target: "",
+            archived: false,
+          });
+          return "accepted";
+        } catch (e) {
+          return (e as Error).message;
+        }
+      }),
+    ).toContain("demostración");
+    await page.context().setOffline(true);
+    await page.evaluate(async () => {
+      const s = (await window.cyclelab.getState()).settings;
+      await window.cyclelab.saveSettings({
+        theme: s.theme,
+        model: s.model,
+        athlete: s.athlete,
+        source: "garmin",
+      });
+    });
+    await page.keyboard.press("Meta+1");
+    const goals = page.locator(".goals-panel");
+    await goals.getByRole("button", { name: "Nuevo objetivo" }).click();
+    await goals.getByLabel("Nombre").fill("Quebrantahuesos");
+    await goals.getByLabel("Fecha").fill("2027-06-19");
+    await goals.getByLabel("Tipo de prueba").fill("Marcha de carretera");
+    await goals.getByLabel("Objetivo personal").fill("Menos de 8 h");
+    await goals.getByRole("button", { name: "Guardar" }).click();
+    await expect(goals.getByText("Menos de 8 h")).toBeVisible();
+    await goals.getByRole("button", { name: "Editar" }).click();
+    await goals.getByLabel("Objetivo personal").fill("Menos de 7 h 30");
+    await goals.getByRole("button", { name: "Guardar" }).click();
+    await expect(goals.getByText("Menos de 7 h 30")).toBeVisible();
+    await goals.getByRole("button", { name: "Archivar" }).click();
+    await expect(goals.getByText("Archivados · 1")).toBeVisible();
+    await expect(goals.getByText("Sin objetivos")).toBeVisible();
+    await app.close();
+    app = await launch();
+    page = await app.firstWindow();
+    await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
+    const state = await page.evaluate(() => window.cyclelab.getState());
+    expect(state.dataset.goals).toMatchObject([
+      {
+        name: "Quebrantahuesos",
+        date: Date.UTC(2027, 5, 19),
+        kind: "Marcha de carretera",
+        target: "Menos de 7 h 30",
+        archived: true,
+      },
+    ]);
+    await page.keyboard.press("Meta+1");
+    await page.getByText("Archivados · 1").click();
+    await page.getByRole("button", { name: "Restaurar" }).click();
+    await expect(page.getByText("Menos de 7 h 30")).toBeVisible();
+    await page.evaluate(async () => {
+      const s = (await window.cyclelab.getState()).settings;
+      await window.cyclelab.saveSettings({
+        theme: s.theme,
+        model: s.model,
+        athlete: s.athlete,
+        source: "demo",
+      });
+    });
+    expect(
+      (await page.evaluate(() => window.cyclelab.getState())).dataset.goals.map(
+        (g) => g.name,
+      ),
+    ).toEqual(["Soplao BTT", "La Cantabrona 2027"]);
+  } finally {
+    await app.close();
+  }
+});
+
 test("Garmin settings accepts the plain JWT token response", async () => {
   const app = await electron.launch({
     args: ["out/main/index.js"],

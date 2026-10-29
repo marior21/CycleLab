@@ -9,6 +9,7 @@ const data = {
   segments: [],
   segment_results: [],
   activity_feel: [],
+  goals: [],
 };
 function archive(tables: unknown = data, patch = {}) {
   const text = JSON.stringify(tables);
@@ -57,7 +58,7 @@ describe("backup validation", () => {
   it.each([
     "truncated",
     archive(data, { version: 2 }),
-    archive(data, { schemaVersion: 8 }),
+    archive(data, { schemaVersion: 9 }),
     archive(data, { sha256: "damaged" }),
     archive({ ...data, secrets: [] }),
     archive({

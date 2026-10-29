@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { AnalysisTools, toolNames } from "../../src/main/coach";
 import { demoDataset, DemoGarminSource } from "../../src/data/demo/provider";
 import type { Store } from "../../src/main/store";
+import { DAY } from "../../src/domain/analysis";
 describe("coach tools", () => {
   it("validates arguments and only emits bounded analysis data, without GPS", async () => {
     const activity = demoDataset.activities[0],
@@ -50,6 +51,40 @@ describe("coach tools", () => {
     expect(
       tools.run("buscar_actividades", {}, { screen: "coach" }).rows.length,
     ).toBeLessThanOrEqual(20);
+  });
+  it("passes only active goals and marks their origin", () => {
+    const goals = [
+      {
+        id: "a",
+        name: "Marcha",
+        date: demoDataset.today + 10 * DAY,
+        kind: "",
+        target: "Sub 8 h",
+      },
+      {
+        id: "b",
+        name: "Vieja",
+        date: demoDataset.today,
+        kind: "",
+        archived: true,
+      },
+    ];
+    const store = {
+      dataset: () => ({ ...demoDataset, goals }),
+    } as unknown as Store;
+    expect(JSON.parse(new AnalysisTools(store, "garmin").goals())).toEqual([
+      {
+        nombre: "Marcha",
+        fecha: new Date(goals[0].date).toISOString().slice(0, 10),
+        diasRestantes: 10,
+        tipoPrueba: null,
+        objetivoPersonal: "Sub 8 h",
+        origen: "usuario",
+      },
+    ]);
+    expect(new AnalysisTools(store, "demo").goals()).toContain(
+      '"origen":"demostración"',
+    );
   });
   it("labels declared feelings apart from recorded metrics", () => {
     const activity = {

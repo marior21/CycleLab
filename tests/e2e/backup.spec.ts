@@ -347,7 +347,7 @@ test("large pre-migration backups do not materialize the whole archive", async (
       },
       { dir, modulePath },
     );
-    expect(result).toEqual({ version: 7, count: 192 });
+    expect(result).toEqual({ version: 8, count: 192 });
   } finally {
     await app.close();
   }

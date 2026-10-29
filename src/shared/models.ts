@@ -190,9 +190,21 @@ export interface Goal {
   name: string;
   date: number;
   kind: string;
-  ctl: number;
-  long: number;
-  tone: string;
+  /** Personal target in the user's words; real goals only. */
+  target?: string;
+  archived?: boolean;
+  /** Demo-only reference values; real goals never get an automatic CTL. */
+  ctl?: number;
+  long?: number;
+  tone?: string;
+}
+export interface GoalInput {
+  id: string | null;
+  name: string;
+  date: string;
+  kind: string;
+  target: string;
+  archived: boolean;
 }
 export type ChartRow = Record<string, number | string | null>;
 export interface SampleCoverage {
@@ -371,6 +383,7 @@ export interface CycleLabAPI {
   sync(): Promise<void>;
   retryDownloads(ids: string[]): Promise<void>;
   reclassifyActivities(): Promise<number>;
+  saveGoal(source: Source, goal: GoalInput): Promise<Goal>;
   saveActivityFeel(
     source: Source,
     id: string,

@@ -10,6 +10,7 @@ const data = {
   segment_results: [],
   activity_feel: [],
   goals: [],
+  activity_blocks: [],
 };
 function archive(tables: unknown = data, patch = {}) {
   const text = JSON.stringify(tables);
@@ -55,10 +56,23 @@ describe("backup validation", () => {
     };
     expect(validateBackup(archive(tables))).toEqual(tables);
   });
+  it("keeps manual work blocks", () => {
+    const tables = {
+      ...data,
+      activity_blocks: [
+        { source: "garmin", id: "1", payload: "[[60,300],[600,840]]" },
+      ],
+    };
+    expect(validateBackup(archive(tables))).toEqual(tables);
+  });
   it.each([
     "truncated",
+    archive({
+      ...data,
+      activity_blocks: [{ source: "garmin", id: "1", payload: "[[300,60]]" }],
+    }),
     archive(data, { version: 2 }),
-    archive(data, { schemaVersion: 9 }),
+    archive(data, { schemaVersion: 10 }),
     archive(data, { sha256: "damaged" }),
     archive({ ...data, secrets: [] }),
     archive({

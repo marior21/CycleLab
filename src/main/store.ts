@@ -36,7 +36,7 @@ export class Store {
     this.db.pragma("foreign_keys = ON");
     this.db.transaction(() => {
       this.db.exec(
-        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS conversations (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS activity_feel (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS goals (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 8;`,
+        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS conversations (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS activity_feel (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS goals (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS activity_blocks (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 9;`,
       );
       if (version === 1)
         this.db.exec(
@@ -174,21 +174,33 @@ export class Store {
     ).map((r) => JSON.parse(r.summary) as Activity);
   }
   saveFeel(source: Source, id: string, feel: ActivityFeel | null) {
+    this.saveManual("activity_feel", source, id, feel);
+  }
+  saveBlocks(source: Source, id: string, blocks: [number, number][] | null) {
+    this.saveManual("activity_blocks", source, id, blocks);
+  }
+  // Manual input lives apart from synced summaries so sync and relabeling keep it.
+  private saveManual(
+    table: "activity_feel" | "activity_blocks",
+    source: Source,
+    id: string,
+    payload: unknown,
+  ) {
     if (
       !this.db
         .prepare("SELECT 1 FROM activities WHERE source=? AND id=?")
         .get(source, id)
     )
       throw new Error("La actividad ya no está disponible en este origen.");
-    if (feel)
+    if (payload !== null)
       this.db
         .prepare(
-          "INSERT INTO activity_feel VALUES (?,?,?) ON CONFLICT(source,id) DO UPDATE SET payload=excluded.payload",
+          `INSERT INTO ${table} VALUES (?,?,?) ON CONFLICT(source,id) DO UPDATE SET payload=excluded.payload`,
         )
-        .run(source, id, JSON.stringify(feel));
+        .run(source, id, JSON.stringify(payload));
     else
       this.db
-        .prepare("DELETE FROM activity_feel WHERE source=? AND id=?")
+        .prepare(`DELETE FROM ${table} WHERE source=? AND id=?`)
         .run(source, id);
   }
   detail(source: Source, id: string): ActivityDetail | null {
@@ -229,10 +241,19 @@ export class Store {
           .all(source) as { id: string; payload: string }[]
       ).map((r) => [r.id, JSON.parse(r.payload) as ActivityFeel]),
     );
-    // Sync and relabeling write raw summaries; manual input is merged only here.
-    const activities = this.activities(source).map((a) =>
-      withFeel(a, feel.get(a.id)),
+    const blocks = new Map(
+      (
+        this.db
+          .prepare("SELECT id, payload FROM activity_blocks WHERE source=?")
+          .all(source) as { id: string; payload: string }[]
+      ).map((r) => [r.id, JSON.parse(r.payload) as [number, number][]]),
     );
+    // Sync and relabeling write raw summaries; manual input is merged only here.
+    const activities = this.activities(source).map((a) => {
+      const merged = withFeel(a, feel.get(a.id)),
+        manual = blocks.get(a.id);
+      return manual ? { ...merged, blocks: manual } : merged;
+    });
     const coverage = Object.fromEntries(
       activities.map((a) => {
         const key = `${source}:${a.id}`;

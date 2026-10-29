@@ -44,6 +44,8 @@ export interface Activity {
   };
   classification?: { reason: string; estimated: boolean };
   feel?: ActivityFeel;
+  /** Manual work blocks [start, end] in elapsed seconds; replace the detected ones. */
+  blocks?: [number, number][];
   /** Absent for Garmin sync; set when the activity came from a local file. */
   provenance?: { kind: "fit"; file: string };
   automaticType?: ActivityType;
@@ -410,6 +412,11 @@ export interface CycleLabAPI {
   reclassifyActivities(): Promise<number>;
   saveGoal(source: Source, goal: GoalInput): Promise<Goal>;
   markRecordsSeen(source: Source, since: number): Promise<void>;
+  saveActivityBlocks(
+    source: Source,
+    id: string,
+    blocks: [number, number][] | null,
+  ): Promise<void>;
   saveActivityFeel(
     source: Source,
     id: string,

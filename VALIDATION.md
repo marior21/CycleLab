@@ -734,3 +734,56 @@ Límites: en terreno ondulado el VI sigue descartando la mayoría de tramos; par
 esos casos conviene seleccionar a mano un tramo estable. Una deriva negativa
 (la FC baja para la misma potencia) suele indicar un calentamiento incluido en
 el tramo, que no se detecta. El entrenador no recibe el valor.
+
+## Fase 4.4 — Detección de intervalos sin vueltas (29/10/2026)
+
+- Actividades añade el panel «Bloques de trabajo» bajo las vueltas. Sobre la
+  potencia suavizada en una ventana centrada de 10 s, un bloque empieza por
+  encima del 88 % del FTP de la fecha y termina por debajo del 75 %, así que
+  los over-unders no se parten. Bloques a menos de 15 s se unen; una pausa de
+  más de 30 s cierra el bloque. Se proponen los esfuerzos de 60 s o más; los de
+  20–60 s solo en series de 5 o más con recuperaciones de hasta 90 s (30/30), de
+  modo que un acelerón suelto no aparece. Sin FTP de la fecha no se propone
+  nada y se explica.
+- Si los bloques se repiten, el detector por vueltas existente (sin cambios)
+  los resume como patrón, con el aviso de que la repetición indica estructura,
+  no intención.
+- Corrección manual: «Descartar» un bloque, «Añadir selección» y «Restablecer
+  propuesta». Se guarda como tiempos transcurridos en la tabla nueva
+  `activity_blocks` (esquema 9), aparte del resumen sincronizado: la
+  sincronización y «Volver a etiquetar todo» no la tocan, entra en las copias
+  de seguridad (las anteriores siguen siendo válidas) y «Borrar datos» la
+  elimina. IPC validado: hasta 200 rangos con inicio < fin. Pulsar un bloque
+  selecciona el tramo (barra de selección y deriva).
+
+Validación: lint, typecheck y 174 pruebas unitarias correctas (12 nuevas: 4×4
+con patrón, 30/30, 3×20, over-unders, rodaje, tempo y sprints sin bloques,
+acelerones sueltos frente a series, bajada breve que no parte el esfuerzo,
+puerto único sin patrón, sin FTP y pausa, rangos guardados, y copias con
+bloques válidos y no válidos), todas con ruido de ±12 % por muestra. Suite
+Electron 22 + 1 nueva correcta: propuesta y patrón, rodaje sin bloques,
+selección, descartar, añadir la vuelta, conservación tras volver a etiquetar,
+reescribir el resumen como una sincronización y reiniciar, y restablecer.
+Capturas en ambos temas (`test-results/blocks-*.png`). La prueba de copias
+grandes compara ahora con la versión de esquema vigente.
+
+`test:visual`: solo cambian las capturas inferiores de Actividades (+0,40 %
+por el panel nuevo, que en la demo detecta el 3×12′ como 3 × 11:50 a 262 W) y
+la de selección (+0,02 %, métrica de deriva de la 4.3); el resto, idéntico.
+
+Ensayo de solo lectura con las 30 últimas actividades reales con potencia y el
+FTP histórico de cada fecha. La primera versión proponía 15–81 bloques por
+salida, casi todos acelerones de 20–60 s en terreno ondulado, y partía una
+repetición de 5,5 min por una bajada breve; se añadieron la unión a 15 s y la
+regla de series. Resultado final: en las 3 sesiones de intervalos el patrón
+coincide con las vueltas (4 × 114 s frente a 4 × 123 s, 3 × 340 s frente a
+4 × 334 s, 4 × 236 s frente a 4 × 242 s); en salidas normales, 0–28 bloques de
+1–11 min, esfuerzos reales en subidas. Hasta 2,5 ms por actividad. No se
+modificó la base del usuario.
+
+Límites: en recorridos con muchas subidas se proponen muchos bloques, que hay
+que descartar a mano; una repetición con una bajada de más de 15 s se parte
+(el 22/10 da 3 repeticiones de 4); intervalos por debajo del 88 % del FTP
+(tempo) o de menos de 20 s no se detectan; ← → sigue recorriendo las vueltas,
+no los bloques; los bloques no cambian la clasificación ni llegan al
+entrenador.

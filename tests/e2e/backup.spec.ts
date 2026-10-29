@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { quit } from "./quit";
+import { schemaVersion } from "../../src/main/backup";
 
 const modulePath = resolve("node_modules/better-sqlite3");
 const launch = (dir: string) =>
@@ -348,7 +349,7 @@ test("large pre-migration backups do not materialize the whole archive", async (
       },
       { dir, modulePath },
     );
-    expect(result).toEqual({ version: 8, count: 192 });
+    expect(result).toEqual({ version: schemaVersion, count: 192 });
   } finally {
     await quit(app);
   }

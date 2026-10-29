@@ -1,6 +1,7 @@
 import { profileAt, profileNote } from "../../domain/athlete";
 import { Coverage } from "./Coverage";
 import { ActivityFeel } from "./ActivityFeel";
+import { WorkBlocks } from "./WorkBlocks";
 import {
   activitiesCsv,
   activityReport,
@@ -1053,6 +1054,18 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           empty={<StateBlock title="Sin intervalos registrados" />}
         />
       </Panel>
+      <WorkBlocks
+        a={a}
+        rows={rows}
+        source={p.demo ? "demo" : "garmin"}
+        ftp={ftp}
+        range={range}
+        select={(r) => {
+          setCheckedLaps([]);
+          setLap(null);
+          setRange(r);
+        }}
+      />
       <div className="row">
         <Panel
           className="grow"

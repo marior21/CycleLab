@@ -58,6 +58,7 @@ export function deleteLocal(
           "segment_results",
           "segments",
           "activity_feel",
+          "activity_blocks",
           "goals",
           "activities",
         ])

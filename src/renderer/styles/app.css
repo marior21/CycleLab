@@ -353,6 +353,11 @@ textarea:focus-visible {
 .sel-bar {
   margin-bottom: var(--space-2);
 }
+.work-blocks .block-pattern,
+.work-blocks .error-text {
+  margin: 0;
+  padding: var(--space-2) var(--ref-16px) 0;
+}
 @media (max-width: 1280px) {
   .row > .profile-panel {
     width: 40%;

@@ -8,6 +8,7 @@ import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { activityFeelSchema } from "../shared/activityFeel";
+import { activityBlocksSchema } from "../shared/activityBlocks";
 import { goalInputSchema } from "../shared/goal";
 import { periodZones } from "../domain/powerCurve";
 import { settingsSchema } from "../shared/settings";
@@ -455,6 +456,14 @@ async function boot() {
       sourceSchema.parse(rawSource),
       z.string().min(1).max(100).parse(rawId),
       activityFeelSchema.nullable().parse(rawFeel),
+    );
+    changed();
+  });
+  register("activity-blocks", (rawSource, rawId, rawBlocks) => {
+    store.saveBlocks(
+      sourceSchema.parse(rawSource),
+      z.string().min(1).max(100).parse(rawId),
+      activityBlocksSchema.nullable().parse(rawBlocks),
     );
     changed();
   });

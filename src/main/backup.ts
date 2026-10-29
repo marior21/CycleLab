@@ -15,9 +15,10 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import { settingsSchema } from "../shared/settings";
 import { activityFeelSchema } from "../shared/activityFeel";
+import { activityBlocksSchema } from "../shared/activityBlocks";
 import { goalSchema } from "../shared/goal";
 
-export const schemaVersion = 8;
+export const schemaVersion = 9;
 const source = z.enum(["demo", "garmin"]),
   num = z.number(),
   nullable = num.nullable();
@@ -297,6 +298,17 @@ const tablesSchema = z
           .strict(),
       )
       .default([]),
+    activity_blocks: z
+      .array(
+        z
+          .object({
+            source,
+            id: z.string(),
+            payload: json(activityBlocksSchema),
+          })
+          .strict(),
+      )
+      .default([]),
     goals: z
       .array(
         z
@@ -325,6 +337,7 @@ const tables = [
   "segment_results",
   "activity_feel",
   "goals",
+  "activity_blocks",
 ] as const;
 const checksum = (data: string) =>
   createHash("sha256").update(data).digest("hex");

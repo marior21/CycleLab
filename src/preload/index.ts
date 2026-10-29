@@ -39,6 +39,8 @@ const api: CycleLabAPI = {
   reclassifyActivities: () => call("reclassify"),
   saveGoal: (source, goal) => call("goal-save", source, goal),
   markRecordsSeen: (source, since) => call("records-seen", source, since),
+  saveActivityBlocks: (source, id, blocks) =>
+    call("activity-blocks", source, id, blocks),
   saveActivityFeel: (source, id, feel) =>
     call("activity-feel", source, id, feel),
   sendMessage: (text, ctx, conversationId) =>

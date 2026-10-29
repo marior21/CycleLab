@@ -234,6 +234,8 @@ Proponer bloques de trabajo sobre la señal de potencia y permitir corregirlos. 
 
 **Terminado cuando:** se valida con señales sintéticas de protocolos variados (4×4, 30/30, 3×20, over-unders) y casos negativos; la corrección manual persiste tras sincronizar y volver a etiquetar.
 
+**Completada el 29/10/2026.** Actividades propone bloques de trabajo sobre la potencia (entrada al 88 % y salida al 75 % del FTP de la fecha; esfuerzos de 60 s o más y series de 5 o más de 20–60 s) y resume su patrón con el detector por vueltas, que no cambia. Se pueden descartar, añadir desde la selección y restablecer; la corrección se guarda aparte del resumen sincronizado y sobrevive a sincronizar y volver a etiquetar. En las sesiones reales el patrón coincide con las vueltas; en salidas con muchas subidas propone bastantes bloques. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-44--detección-de-intervalos-sin-vueltas-29102026).
+
 ### 4.5. Sugerir puertos del recorrido · Bloque C · M
 
 Detectar ascensos por perfil suavizado y proponer guardarlos como segmentos, reutilizando la creación y la búsqueda existentes.

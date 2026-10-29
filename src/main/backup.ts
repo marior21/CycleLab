@@ -15,7 +15,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import { settingsSchema } from "../shared/settings";
 
-export const schemaVersion = 5;
+export const schemaVersion = 6;
 const source = z.enum(["demo", "garmin"]),
   num = z.number(),
   nullable = num.nullable();
@@ -152,14 +152,28 @@ const result = z.object({
   note: z.string().optional(),
   error: z.string().optional(),
 });
+const conversation = z.object({
+  id: z.string(),
+  title: z.string().max(200),
+  createdAt: num,
+});
 const message = z.object({
   context: coachContextSchema.optional(),
   id: z.string(),
+  conversationId: z.string().optional(),
   role: z.enum(["user", "assistant"]),
   text: z.string(),
-  status: z.enum(["running", "done", "error"]),
+  status: z.enum(["running", "done", "error", "cancelled"]),
   createdAt: num,
   model: z.string().optional(),
+  usage: z
+    .object({
+      promptTokens: num,
+      completionTokens: num,
+      cost: nullable,
+      estimated: z.boolean(),
+    })
+    .optional(),
   tools: z.array(
     z.object({
       tool: z.enum([
@@ -255,6 +269,13 @@ const tablesSchema = z
     messages: z.array(
       z.object({ source, id: z.string(), payload: json(message) }).strict(),
     ),
+    conversations: z
+      .array(
+        z
+          .object({ source, id: z.string(), payload: json(conversation) })
+          .strict(),
+      )
+      .default([]),
     segments: z
       .array(
         z.object({ source, id: z.string(), payload: json(segment) }).strict(),
@@ -281,6 +302,7 @@ const tables = [
   "settings",
   "activities",
   "messages",
+  "conversations",
   "segments",
   "segment_results",
 ] as const;
@@ -317,7 +339,12 @@ export function validateBackup(text: string) {
     const backup = envelope.parse(JSON.parse(text));
     if (checksum(backup.data) !== backup.sha256) throw new Error("checksum");
     const data = tablesSchema.parse(JSON.parse(backup.data));
-    for (const table of ["activities", "messages", "segments"] as const)
+    for (const table of [
+      "activities",
+      "messages",
+      "conversations",
+      "segments",
+    ] as const)
       for (const row of data[table]) {
         const payload = JSON.parse(
           "summary" in row ? row.summary : row.payload,

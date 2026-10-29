@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import type { AppState, CoachContext, ToolView } from "../../shared/models";
+import type {
+  AppState,
+  ChatMessage as Message,
+  CoachContext,
+  ToolView,
+  Usage,
+} from "../../shared/models";
+import { messageReferences, type Reference } from "../../domain/references";
 import {
   Badge,
   Button,
@@ -27,8 +34,209 @@ interface Props {
   onClose?: () => void;
   onSettings: () => void;
   openActivity: (id: string, range?: [number, number]) => void;
+  openPeriod: (from: string, to: string) => void;
   compact?: boolean;
-  send: (text: string, context?: CoachContext) => Promise<void>;
+  conversation: string;
+  setConversation: (id: string | null) => void;
+  send: (text: string, context?: CoachContext) => Promise<Message["status"]>;
+}
+const day = (iso: string) => `${date(Date.parse(iso))} ${iso.slice(0, 4)}`;
+function referenceLabel(r: Reference) {
+  if (r.kind === "period")
+    return r.from && r.to
+      ? `Periodo ${day(r.from)} – ${day(r.to)}`
+      : r.from
+        ? `Desde ${day(r.from)}`
+        : `Hasta ${day(r.to)}`;
+  const when = r.date ? ` · ${day(r.date)}` : "";
+  return r.kind === "attempt"
+    ? `Intento · ${r.name}${when}`
+    : r.kind === "range"
+      ? `${r.name} · ${r.label ?? "Tramo"}`
+      : r.name + when;
+}
+function References(p: {
+  tools: ToolView[];
+  openActivity: Props["openActivity"];
+  openPeriod: Props["openPeriod"];
+}) {
+  const refs = messageReferences(p.tools);
+  if (!refs.length) return null;
+  return (
+    <div className="chat-refs" role="group" aria-label="Datos utilizados">
+      <span className="small cl-faint">Datos utilizados</span>
+      {refs.slice(0, 12).map((r) => (
+        <Button
+          key={r.key}
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            r.kind === "period"
+              ? p.openPeriod(r.from, r.to)
+              : p.openActivity(r.activityId, r.range)
+          }
+        >
+          {referenceLabel(r)}
+        </Button>
+      ))}
+      {refs.length > 12 && (
+        <span className="small cl-faint">y {refs.length - 12} más</span>
+      )}
+    </div>
+  );
+}
+function UsageLine({ usage: u }: { usage: Usage }) {
+  return (
+    <div className="small cl-faint">
+      {number(u.promptTokens + u.completionTokens)} tokens ·{" "}
+      {u.cost === null
+        ? "coste no informado por el proveedor"
+        : u.estimated
+          ? `≈ ${number(u.cost, 4)} US$ estimado con precios publicados`
+          : `${number(u.cost, 4)} US$ según OpenRouter`}
+    </div>
+  );
+}
+export function Conversations(
+  p: Pick<Props, "state" | "conversation" | "setConversation">,
+) {
+  const [query, setQuery] = useState(""),
+    [editing, setEditing] = useState<string | null>(null),
+    [title, setTitle] = useState(""),
+    [confirming, setConfirming] = useState<string | null>(null),
+    [error, setError] = useState("");
+  const busy = p.state.messages.some((m) => m.status === "running");
+  const q = query.trim().toLocaleLowerCase("es");
+  const list = p.state.conversations.filter(
+    (c) =>
+      !q ||
+      c.title.toLocaleLowerCase("es").includes(q) ||
+      p.state.messages.some(
+        (m) =>
+          m.conversationId === c.id &&
+          m.text.toLocaleLowerCase("es").includes(q),
+      ),
+  );
+  const run = (action: Promise<void>) => {
+    setError("");
+    return action.catch((e) =>
+      setError(e instanceof Error ? e.message : "No se pudo completar."),
+    );
+  };
+  return (
+    <div className="conversations">
+      <div className="toolbar compact">
+        <input
+          type="search"
+          aria-label="Buscar conversaciones"
+          placeholder="Buscar conversaciones"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <Button
+          size="sm"
+          icon="plus"
+          onClick={() => p.setConversation(crypto.randomUUID())}
+        >
+          Nueva
+        </Button>
+      </div>
+      <div className="conversation-list">
+        {list.map((c) => (
+          <div
+            key={c.id}
+            className="conversation"
+            aria-current={c.id === p.conversation || undefined}
+          >
+            {editing === c.id ? (
+              <input
+                aria-label="Título de la conversación"
+                autoFocus
+                maxLength={120}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => setEditing(null)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setEditing(null);
+                  if (e.key === "Enter" && title.trim())
+                    void run(
+                      window.cyclelab.renameConversation(c.id, title),
+                    ).then(() => setEditing(null));
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                className="conversation-open"
+                onClick={() => {
+                  setConfirming(null);
+                  p.setConversation(c.id);
+                }}
+              >
+                <span className="ellipsis">{c.title}</span>
+                <span className="small cl-faint">{date(c.createdAt)}</span>
+              </button>
+            )}
+            {c.id === p.conversation &&
+              editing !== c.id &&
+              (confirming === c.id ? (
+                <div className="toolbar compact">
+                  <Button
+                    size="sm"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(window.cyclelab.deleteConversation(c.id)).then(
+                        () => p.setConversation(null),
+                      )
+                    }
+                  >
+                    Confirmar borrado
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setConfirming(null)}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <div className="toolbar compact">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setTitle(c.title);
+                      setEditing(c.id);
+                    }}
+                  >
+                    Renombrar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => setConfirming(c.id)}
+                  >
+                    Borrar
+                  </Button>
+                </div>
+              ))}
+          </div>
+        ))}
+        {!list.length && (
+          <div className="small cl-faint">
+            {q ? "Sin coincidencias." : "Todavía no hay conversaciones."}
+          </div>
+        )}
+      </div>
+      {error && (
+        <div className="small" role="alert">
+          {error}
+        </div>
+      )}
+    </div>
+  );
 }
 function ToolVisualization({
   tool: t,
@@ -108,22 +316,27 @@ function ToolVisualization({
 }
 export function ChatPanel(p: Props) {
   const [text, setText] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [list, setList] = useState(false);
   const log = useRef<HTMLDivElement>(null);
   const busy = p.state.messages.some((m) => m.status === "running");
+  const messages = p.state.messages.filter(
+    (m) => m.conversationId === p.conversation,
+  );
   const demo = p.state.settings.source === "demo",
     ready =
       demo ||
       (p.state.settings.openrouterConfigured && !!p.state.settings.model);
   useEffect(() => {
     log.current?.scrollTo({ top: log.current.scrollHeight });
-  }, [p.state.messages]);
+  }, [p.state.messages, p.conversation]);
   async function send(value: string, context?: CoachContext) {
     if (!value.trim() || busy) return;
     setError("");
     setText("");
     try {
-      await p.send(value, context);
+      // Keep the question at hand when the answer fails or is stopped.
+      if ((await p.send(value, context)) !== "done") setText((t) => t || value);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "No se pudo enviar el mensaje.",
@@ -143,6 +356,16 @@ export function ChatPanel(p: Props) {
               : (p.state.settings.model ?? "OpenRouter · sin configurar")}
           </div>
         </div>
+        {p.compact && (
+          <Button
+            variant={list ? "secondary" : "ghost"}
+            size="sm"
+            aria-expanded={list}
+            onClick={() => setList(!list)}
+          >
+            Conversaciones
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -160,8 +383,18 @@ export function ChatPanel(p: Props) {
           />
         )}
       </div>
+      {p.compact && list && (
+        <Conversations
+          state={p.state}
+          conversation={p.conversation}
+          setConversation={(id) => {
+            p.setConversation(id);
+            setList(false);
+          }}
+        />
+      )}
       <div className="chat-log" ref={log} aria-live="polite">
-        {!p.state.messages.length && (
+        {!messages.length && (
           <ChatMessage role="assistant">
             <p>
               Hola. Puedo consultar tus actividades sincronizadas, tu curva de
@@ -170,60 +403,81 @@ export function ChatPanel(p: Props) {
             </p>
           </ChatMessage>
         )}
-        {p.state.messages.map((m, i) => (
-          <ChatMessage key={m.id} role={m.role}>
-            {m.tools.map((t, j) => (
-              <ToolResult
-                key={j}
-                tool={t.tool}
-                args={t.args}
-                title={t.title}
-                status="done"
-              >
-                <ToolVisualization tool={t} openActivity={p.openActivity} />
-              </ToolResult>
-            ))}
-            {m.status === "running" ? (
-              <ToolResult
-                tool="analizando"
-                status="running"
-                meta="consultando…"
-              >
-                <Skeleton height={120} />
-              </ToolResult>
-            ) : m.status === "error" ? (
-              <StateBlock
-                kind="error"
-                title="La herramienta falló"
-                detail={m.text}
-                action={
-                  <Button
-                    size="sm"
-                    icon="sync"
-                    disabled={busy}
-                    onClick={() => {
-                      const question = p.state.messages
-                        .slice(0, i)
-                        .reverse()
-                        .find((m) => m.role === "user");
-                      if (question)
-                        void send(
-                          demo && question.text.toLowerCase().includes("error")
-                            ? "Analiza mi curva de potencia"
-                            : question.text,
-                          question.context,
-                        );
-                    }}
-                  >
-                    Reintentar
-                  </Button>
-                }
-              />
-            ) : (
-              <MarkdownMessage text={m.text} />
-            )}
-          </ChatMessage>
-        ))}
+        {messages.map((m, i) => {
+          const retry = (
+            <Button
+              size="sm"
+              icon="sync"
+              disabled={busy}
+              onClick={() => {
+                const question = messages
+                  .slice(0, i)
+                  .reverse()
+                  .find((m) => m.role === "user");
+                if (question)
+                  void send(
+                    demo && question.text.toLowerCase().includes("error")
+                      ? "Analiza mi curva de potencia"
+                      : question.text,
+                    question.context,
+                  );
+              }}
+            >
+              Reintentar
+            </Button>
+          );
+          return (
+            <ChatMessage key={m.id} role={m.role}>
+              {m.tools.map((t, j) => (
+                <ToolResult
+                  key={j}
+                  tool={t.tool}
+                  args={t.args}
+                  title={t.title}
+                  status="done"
+                >
+                  <ToolVisualization tool={t} openActivity={p.openActivity} />
+                </ToolResult>
+              ))}
+              {m.status === "running" && !m.text ? (
+                <ToolResult
+                  tool="analizando"
+                  status="running"
+                  meta="consultando…"
+                >
+                  <Skeleton height={120} />
+                </ToolResult>
+              ) : m.status === "error" ? (
+                <StateBlock
+                  kind="error"
+                  title="La herramienta falló"
+                  detail={m.text}
+                  action={retry}
+                />
+              ) : (
+                <MarkdownMessage text={m.text} />
+              )}
+              {m.status === "running" && m.text && (
+                <div className="small cl-faint">Escribiendo…</div>
+              )}
+              {m.status === "cancelled" && (
+                <StateBlock
+                  title="Respuesta cancelada"
+                  detail="Se conserva lo recibido. Cancelar no anula el coste que el proveedor ya haya generado."
+                  action={retry}
+                />
+              )}
+              {m.role === "assistant" && m.status !== "running" && (
+                <References
+                  tools={m.tools}
+                  openActivity={p.openActivity}
+                  openPeriod={p.openPeriod}
+                />
+              )}
+              {m.usage && <UsageLine usage={m.usage} />}
+            </ChatMessage>
+          );
+        })}
       </div>
       <div className="chat-input">
         <div className="small cl-muted" aria-label="Contexto del entrenador">
@@ -286,14 +540,28 @@ export function ChatPanel(p: Props) {
                   }
                 }}
               />
-              <Button
-                variant="primary"
-                size="sm"
-                icon="send"
-                aria-label="Enviar"
-                disabled={busy || !text.trim()}
-                onClick={() => void send(text)}
-              />
+              {busy ? (
+                <Button
+                  size="sm"
+                  icon="close"
+                  onClick={() =>
+                    void window.cyclelab
+                      .cancelMessage()
+                      .catch((e) => setError(e.message))
+                  }
+                >
+                  Detener
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon="send"
+                  aria-label="Enviar"
+                  disabled={!text.trim()}
+                  onClick={() => void send(text)}
+                />
+              )}
             </div>
           </>
         )}
@@ -312,6 +580,10 @@ export function CoachPage(p: Props) {
   return (
     <div className="coach-page grow">
       <div className="coach-side">
+        <div>
+          <div className="label section-label">Conversaciones</div>
+          <Conversations {...p} />
+        </div>
         <div>
           <div className="label section-label">Herramientas de análisis</div>
           <div className="tool-list">

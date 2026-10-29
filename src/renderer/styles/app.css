@@ -611,3 +611,64 @@ input.cl-check {
   z-index: 1;
   background: var(--bg-100);
 }
+.chat-refs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+.conversations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  max-height: 40%;
+  overflow: auto;
+}
+.coach-side .conversations {
+  padding: 0;
+  border: 0;
+  max-height: none;
+}
+.conversations input {
+  flex: 1;
+  min-width: 0;
+}
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.conversation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+}
+.conversation[aria-current="true"] {
+  background: var(--bg-300);
+}
+.conversation-open {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.conversation-open:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.conversation-open > :last-child {
+  flex: none;
+  white-space: nowrap;
+}

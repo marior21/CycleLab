@@ -12,6 +12,7 @@ import type {
   Source,
   ToolName,
   ToolView,
+  Usage,
 } from "../shared/models";
 import type { Store } from "./store";
 import { request, type Fetcher } from "./http";
@@ -510,15 +511,44 @@ export class AnalysisTools {
     };
   }
 }
+type RespondOptions = Parameters<CoachProvider["respond"]>[3];
+const wait = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    signal?.throwIfAborted();
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      },
+      { once: true },
+    );
+  });
 export class DemoCoachProvider implements CoachProvider {
   constructor(private tools: AnalysisTools) {}
   async respond(
     messages: ChatMessage[],
     context: CoachContext,
     onTool: (t: ToolView) => void,
+    options: RespondOptions = {},
+  ) {
+    const reply = this.reply(messages, context, onTool, options.signal);
+    const words = (await reply).split(" ");
+    for (let i = 1; i <= words.length; i++) {
+      await wait(30, options.signal);
+      options.onText?.(words.slice(0, i).join(" "));
+    }
+    return words.join(" ");
+  }
+  private async reply(
+    messages: ChatMessage[],
+    context: CoachContext,
+    onTool: (t: ToolView) => void,
+    signal?: AbortSignal,
   ) {
     const text = messages.at(-1)?.text.toLowerCase() ?? "";
-    await new Promise((r) => setTimeout(r, 1100));
+    await wait(700, signal);
     if (text.includes("error"))
       throw new Error(
         "La herramienta no respondió a tiempo. Puedes reintentar el análisis.",
@@ -562,6 +592,97 @@ const modelsSchema = z.object({
     }),
   ),
 });
+// Published prices per model, in USD per million tokens; filled by models().
+const prices = new Map<string, Model>();
+const usageSchema = z
+  .object({
+    prompt_tokens: z.number(),
+    completion_tokens: z.number(),
+    cost: z.number().optional(),
+  })
+  .optional();
+const completionSchema = z.object({
+  choices: z
+    .array(
+      z.object({
+        message: z.object({
+          content: z.string().nullable().optional(),
+          tool_calls: z
+            .array(
+              z.object({
+                id: z.string(),
+                type: z.literal("function"),
+                function: z.object({
+                  name: z.enum(toolNames as [ToolName, ...ToolName[]]),
+                  arguments: z.string().max(10000),
+                }),
+              }),
+            )
+            .max(5)
+            .optional(),
+        }),
+      }),
+    )
+    .min(1),
+  usage: usageSchema,
+});
+/** Rebuilds a chat completion from OpenRouter server-sent events. */
+export async function readStream(
+  response: Response,
+  onContent: (delta: string) => void,
+): Promise<unknown> {
+  const reader = response
+    .body!.pipeThrough(new TextDecoderStream())
+    .getReader();
+  const calls: {
+    id: string;
+    type: "function";
+    function: { name: string; arguments: string };
+  }[] = [];
+  let buffer = "",
+    content = "",
+    usage: unknown;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const lines = (buffer + value).split("\n");
+    buffer = lines.pop()!;
+    for (const line of lines) {
+      const data = line.startsWith("data:") ? line.slice(5).trim() : "";
+      if (!data || data === "[DONE]") continue;
+      const chunk = JSON.parse(data);
+      if (chunk.error)
+        throw new Error("El proveedor interrumpió la respuesta.");
+      usage = chunk.usage ?? usage;
+      const delta = chunk.choices?.[0]?.delta;
+      if (typeof delta?.content === "string" && delta.content) {
+        content += delta.content;
+        onContent(delta.content);
+      }
+      for (const c of delta?.tool_calls ?? []) {
+        const call = (calls[c.index ?? 0] ??= {
+          id: "",
+          type: "function",
+          function: { name: "", arguments: "" },
+        });
+        call.id += c.id ?? "";
+        call.function.name += c.function?.name ?? "";
+        call.function.arguments += c.function?.arguments ?? "";
+      }
+    }
+  }
+  return {
+    choices: [
+      {
+        message: {
+          content,
+          tool_calls: calls.length ? calls.filter(Boolean) : undefined,
+        },
+      },
+    ],
+    usage,
+  };
+}
 export class OpenRouterCoachProvider implements CoachProvider {
   constructor(
     private key: () => string,
@@ -601,15 +722,28 @@ export class OpenRouterCoachProvider implements CoachProvider {
         (m) =>
           Number.isFinite(m.promptPrice) && Number.isFinite(m.completionPrice),
       )
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((m) => (prices.set(m.id, m), m));
+  }
+  private async price() {
+    if (!prices.has(this.model!)) await this.models().catch(() => []);
+    return prices.get(this.model!) ?? null;
   }
   async respond(
     history: ChatMessage[],
     context: CoachContext,
     onTool: (t: ToolView) => void,
+    { signal, onText, onUsage, limit }: RespondOptions = {},
   ) {
     if (!this.model)
       throw new Error("Elige un modelo de OpenRouter en Ajustes.");
+    const usage: Usage = {
+      promptTokens: 0,
+      completionTokens: 0,
+      cost: 0,
+      estimated: false,
+    };
+    let text = "";
     const selection = this.tools.selection(context);
     if (selection) onTool(selection);
     const messages: Record<string, unknown>[] = [
@@ -630,6 +764,35 @@ export class OpenRouterCoachProvider implements CoachProvider {
         .map((m) => ({ role: m.role, content: m.text.slice(0, 12000) })),
     ];
     for (let round = 0; round <= 5; round++) {
+      let maxTokens = 2000;
+      if (limit) {
+        const price = await this.price();
+        if (!price)
+          throw new Error(
+            "No se pudo consultar el precio del modelo para aplicar el límite de gasto. No se ha enviado la petición.",
+          );
+        // Conservative estimate: about three characters per token.
+        const promptCost =
+          ((JSON.stringify(messages).length +
+            JSON.stringify(definitions).length) /
+            3) *
+          (price.promptPrice / 1e6);
+        const remaining = limit - (usage.cost ?? 0) - promptCost;
+        maxTokens = price.completionPrice
+          ? Math.min(
+              2000,
+              Math.floor(remaining / (price.completionPrice / 1e6)),
+            )
+          : remaining > 0
+            ? 2000
+            : 0;
+        if (maxTokens < 256)
+          throw new Error(
+            round
+              ? `Análisis detenido para no superar el límite de ${limit.toLocaleString("es-ES")} US$ por petición. El coste ya generado no se anula.`
+              : `La petición podría superar el límite de ${limit.toLocaleString("es-ES")} US$ por petición. Súbelo en Ajustes o haz una pregunta más concreta. No se ha enviado.`,
+          );
+      }
       const response = await request(
         "https://openrouter.ai/api/v1/chat/completions",
         {
@@ -644,44 +807,55 @@ export class OpenRouterCoachProvider implements CoachProvider {
             messages,
             tools: definitions,
             tool_choice: round === 5 ? "none" : "auto",
-            max_tokens: 2000,
+            max_tokens: maxTokens,
+            stream: true,
+            usage: { include: true },
           }),
+          signal: signal
+            ? AbortSignal.any([signal, AbortSignal.timeout(120000)])
+            : AbortSignal.timeout(120000),
         },
         this.fetcher,
         0,
       );
-      const schema = z.object({
-        choices: z
-          .array(
-            z.object({
-              message: z.object({
-                content: z.string().nullable().optional(),
-                tool_calls: z
-                  .array(
-                    z.object({
-                      id: z.string(),
-                      type: z.literal("function"),
-                      function: z.object({
-                        name: z.enum(toolNames as [ToolName, ...ToolName[]]),
-                        arguments: z.string().max(10000),
-                      }),
-                    }),
-                  )
-                  .max(5)
-                  .optional(),
-              }),
-            }),
-          )
-          .min(1),
-      });
-      const msg = schema.parse(await response.json()).choices[0].message;
+      const before = text + (text && !text.endsWith("\n") ? "\n\n" : "");
+      let streamed = "";
+      const body = completionSchema.parse(
+        response.headers.get("content-type")?.includes("text/event-stream")
+          ? await readStream(response, (delta) => {
+              streamed += delta;
+              onText?.(before + streamed);
+            })
+          : await response.json(),
+      );
+      const msg = body.choices[0].message;
+      if (msg.content) text = before + msg.content;
+      if (body.usage) {
+        usage.promptTokens += body.usage.prompt_tokens;
+        usage.completionTokens += body.usage.completion_tokens;
+        if (body.usage.cost === undefined) usage.estimated = true;
+        const price = usage.estimated ? await this.price() : null;
+        usage.cost = !usage.estimated
+          ? usage.cost! + body.usage.cost!
+          : price
+            ? (usage.promptTokens * price.promptPrice +
+                usage.completionTokens * price.completionPrice) /
+              1e6
+            : null;
+        onUsage?.({ ...usage });
+      }
       if (!msg.tool_calls?.length) {
-        if (!msg.content)
+        if (!text.trim())
           throw new Error("El modelo no devolvió una respuesta.");
-        return msg.content;
+        onText?.(text);
+        return text.trim();
       }
       if (round === 5) break;
-      messages.push({ role: "assistant", ...msg });
+      messages.push({
+        role: "assistant",
+        ...msg,
+        content: msg.content || null,
+      });
       for (const call of msg.tool_calls) {
         let result: unknown;
         try {

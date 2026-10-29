@@ -51,8 +51,14 @@ export function deleteLocal(
 ) {
   store.db.transaction(() => {
     for (const table of scope === "messages"
-      ? ["messages"]
-      : ["messages", "segment_results", "segments", "activities"])
+      ? ["messages", "conversations"]
+      : [
+          "messages",
+          "conversations",
+          "segment_results",
+          "segments",
+          "activities",
+        ])
       store.db.prepare(`DELETE FROM ${table} WHERE source=?`).run(source);
     if (scope === "all") {
       store.set(

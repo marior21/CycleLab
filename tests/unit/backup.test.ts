@@ -5,6 +5,7 @@ const data = {
   settings: [],
   activities: [],
   messages: [],
+  conversations: [],
   segments: [],
   segment_results: [],
 };
@@ -55,7 +56,7 @@ describe("backup validation", () => {
   it.each([
     "truncated",
     archive(data, { version: 2 }),
-    archive(data, { schemaVersion: 6 }),
+    archive(data, { schemaVersion: 7 }),
     archive(data, { sha256: "damaged" }),
     archive({ ...data, secrets: [] }),
     archive({

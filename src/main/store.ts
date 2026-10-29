@@ -3,11 +3,13 @@ import { sampleCoverage } from "../domain/coverage";
 import type { SampleCoverage } from "../shared/models";
 import { classifyActivity } from "../domain/classification";
 import Database from "better-sqlite3";
+import { randomUUID } from "node:crypto";
 import { automaticBackup, schemaVersion } from "./backup";
 import type {
   Activity,
   ActivityDetail,
   ChatMessage,
+  Conversation,
   Settings,
   Source,
   Segment,
@@ -32,7 +34,7 @@ export class Store {
     this.db.pragma("foreign_keys = ON");
     this.db.transaction(() => {
       this.db.exec(
-        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 5;`,
+        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS conversations (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 6;`,
       );
       if (version === 1)
         this.db.exec(
@@ -48,6 +50,24 @@ export class Store {
         "UPDATE messages SET payload=json_set(payload,'$.status','error','$.text','La respuesta se interrumpió al cerrar CycleLab. Puedes volver a enviar la pregunta.') WHERE json_extract(payload,'$.status')='running'",
       )
       .run();
+    // Messages from before conversations (or old backups) go to one conversation per source.
+    for (const { source, createdAt } of this.db
+      .prepare(
+        "SELECT source, MIN(json_extract(payload,'$.createdAt')) AS createdAt FROM messages WHERE json_extract(payload,'$.conversationId') IS NULL GROUP BY source",
+      )
+      .all() as { source: Source; createdAt: number }[]) {
+      const conversation = {
+        id: randomUUID(),
+        title: "Conversación anterior",
+        createdAt,
+      };
+      this.saveConversation(source, conversation);
+      this.db
+        .prepare(
+          "UPDATE messages SET payload=json_set(payload,'$.conversationId',?) WHERE source=? AND json_extract(payload,'$.conversationId') IS NULL",
+        )
+        .run(conversation.id, source);
+    }
     if (this.get("classificationVersion", 0) < 2) this.reclassifyActivities();
     const old = this.get<SyncState | null>("sync", null);
     if (old?.state === "syncing")
@@ -283,6 +303,34 @@ export class Store {
         "INSERT INTO messages VALUES (?,?,?) ON CONFLICT(source,id) DO UPDATE SET payload=excluded.payload",
       )
       .run(source, message.id, JSON.stringify(message));
+  }
+  conversations(source: Source) {
+    return (
+      this.db
+        .prepare(
+          "SELECT payload FROM conversations WHERE source=? ORDER BY json_extract(payload,'$.createdAt') DESC",
+        )
+        .all(source) as { payload: string }[]
+    ).map((r) => JSON.parse(r.payload) as Conversation);
+  }
+  saveConversation(source: Source, conversation: Conversation) {
+    this.db
+      .prepare(
+        "INSERT INTO conversations VALUES (?,?,?) ON CONFLICT(source,id) DO UPDATE SET payload=excluded.payload",
+      )
+      .run(source, conversation.id, JSON.stringify(conversation));
+  }
+  deleteConversation(source: Source, id: string) {
+    this.db.transaction(() => {
+      this.db
+        .prepare(
+          "DELETE FROM messages WHERE source=? AND json_extract(payload,'$.conversationId')=?",
+        )
+        .run(source, id);
+      this.db
+        .prepare("DELETE FROM conversations WHERE source=? AND id=?")
+        .run(source, id);
+    })();
   }
   close() {
     this.db.close();

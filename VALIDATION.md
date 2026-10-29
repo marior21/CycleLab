@@ -403,3 +403,45 @@ nueva descarga desplaza las muestras, el intento reaparece para revisarlo. Las
 exclusiones huérfanas no se muestran. La columna «Revisión» aparece como
 ordenable, sin efecto. Sin resumen de marcas en la propia lista, sin nueva
 sincronización Garmin real ni ejecución de toda la suite Electron o instaladores.
+
+## Fase 2.5 — Un chat más cómodo y trazable (29/10/2026)
+
+- «Detener» sustituye a «Enviar» mientras hay una respuesta en curso. Un IPC
+  `message-cancel` aborta la petición (o la demo) con `AbortController`; el
+  mensaje queda como «Respuesta cancelada», conserva lo recibido, avisa de que
+  cancelar no anula el coste ya generado y ofrece «Reintentar». Si la respuesta
+  falla o se cancela, la pregunta vuelve al cuadro de texto.
+- OpenRouter se pide con `stream: true`: se reconstruyen texto y llamadas a
+  herramientas desde los eventos SSE y el texto aparece progresivamente (como
+  mucho cinco refrescos por segundo). Si el proveedor responde JSON sin
+  streaming, se procesa igual. La demo simula el texto progresivo.
+- Conversaciones separadas por origen (tabla `conversations`, esquema 6): título
+  automático con la primera pregunta, «Nueva», búsqueda por título o contenido,
+  «Renombrar» y «Borrar» con confirmación. Solo se envía al modelo el historial
+  de la conversación activa. Los mensajes anteriores y los de copias antiguas se
+  agrupan en «Conversación anterior». Copias, borrado local y diagnóstico
+  incluyen la nueva tabla.
+- Cada respuesta lista «Datos utilizados»: actividades, intentos de segmento,
+  tramos seleccionados y periodos consultados. Las actividades se abren en su
+  tramo y los periodos abren Actividades con ese filtro de fechas.
+- Consumo por respuesta: tokens y coste en US$. Si OpenRouter informa `cost` en
+  todas las llamadas se muestra como coste «según OpenRouter»; si no, se estima
+  con los precios publicados y se marca «≈ … estimado». En Ajustes se puede
+  definir un límite de gasto por petición (0,001–100 US$): antes de cada llamada
+  se estima el coste de entrada y se ajusta `max_tokens`; si podría superarse, no
+  se envía la llamada o se detiene el análisis, conservando el coste ya hecho.
+
+Validación: typecheck, lint, build y las 130 pruebas unitarias correctos, entre
+ellas reconstrucción SSE con herramientas fragmentadas, suma de coste observado,
+aborto y rechazo por límite. Pasa toda la suite Electron (17 pruebas): la nueva
+`coach-chat` crea dos conversaciones, cancela una respuesta en curso, comprueba
+que la pregunta se conserva, busca, renombra y borra, abre una referencia y
+verifica la persistencia tras reiniciar. Capturas en
+`test-results/coach-chat-{dark,light}.png`, revisadas en ambos temas.
+
+Límites: streaming, coste y límite no se han validado con una cuenta real de
+OpenRouter. El límite es una estimación (unos tres caracteres por token) basada
+en los precios publicados; el cargo final lo determina OpenRouter. Cancelar
+detiene la descarga, pero el proveedor puede cobrar lo ya generado. La migración
+de mensajes antiguos solo se ha probado mediante copias sin conversaciones. Los
+periodos de `curva_potencia` (temporadas) no generan referencia.

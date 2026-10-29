@@ -208,6 +208,8 @@ export interface Settings {
   theme: "dark" | "light";
   source: Source;
   model: string | null;
+  /** Maximum USD per coach request; null means no limit. */
+  coachLimit?: number | null;
   athlete: Athlete;
   garminConfigured: boolean;
   openrouterConfigured: boolean;
@@ -251,14 +253,28 @@ export interface ToolView {
   xType?: "linear" | "log";
   note?: string;
 }
+export interface Usage {
+  promptTokens: number;
+  completionTokens: number;
+  /** USD; observed when the provider reports it for every round, otherwise estimated from published prices. */
+  cost: number | null;
+  estimated: boolean;
+}
 export interface ChatMessage {
   context?: CoachContext;
   id: string;
+  conversationId: string;
   role: "user" | "assistant";
   text: string;
-  status: "running" | "done" | "error";
+  status: "running" | "done" | "error" | "cancelled";
   tools: ToolView[];
   model?: string;
+  usage?: Usage;
+  createdAt: number;
+}
+export interface Conversation {
+  id: string;
+  title: string;
   createdAt: number;
 }
 export interface CoachContext {
@@ -275,6 +291,7 @@ export interface AppState {
   dataset: Dataset;
   sync: SyncState;
   messages: ChatMessage[];
+  conversations: Conversation[];
 }
 export type MapResource =
   | { kind: "json"; data: Record<string, unknown> }
@@ -328,7 +345,10 @@ export interface CycleLabAPI {
   deleteSegment(source: Source, id: string): Promise<void>;
   getActivity(source: Source, id: string): Promise<ActivityDetail>;
   saveSettings(
-    settings: Pick<Settings, "theme" | "source" | "model" | "athlete">,
+    settings: Pick<
+      Settings,
+      "theme" | "source" | "model" | "coachLimit" | "athlete"
+    >,
   ): Promise<AppState>;
   saveCredential(
     provider: "garmin" | "openrouter" | "maptiler",
@@ -339,7 +359,14 @@ export interface CycleLabAPI {
   sync(): Promise<void>;
   retryDownloads(ids: string[]): Promise<void>;
   reclassifyActivities(): Promise<number>;
-  sendMessage(text: string, context: CoachContext): Promise<void>;
+  sendMessage(
+    text: string,
+    context: CoachContext,
+    conversationId: string,
+  ): Promise<ChatMessage["status"]>;
+  cancelMessage(): Promise<void>;
+  renameConversation(id: string, title: string): Promise<void>;
+  deleteConversation(id: string): Promise<void>;
   onChange(callback: () => void): () => void;
 }
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };

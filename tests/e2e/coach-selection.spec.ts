@@ -83,6 +83,16 @@ test("four intervals, comparison and selected segment reach the coach and link b
     expect(comparison.rows[0].activityId).not.toBe(
       comparison.rows[1].activityId,
     );
+    // The demo keeps streaming text after the tool result.
+    await expect
+      .poll(() =>
+        page.evaluate(async () =>
+          (await window.cyclelab.getState()).messages.some(
+            (m) => m.status === "running",
+          ),
+        ),
+      )
+      .toBe(false);
     await page.getByRole("button", { name: "Cerrar panel IA" }).click();
     await page.evaluate(async () => {
       const { dataset } = await window.cyclelab.getState();

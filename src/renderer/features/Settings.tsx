@@ -404,14 +404,39 @@ export function Settings(p: Props) {
             Solo modelos compatibles con herramientas. Precios en USD por millón
             de tokens: entrada / salida.
           </span>
+          <label htmlFor="coach-limit">
+            Límite de gasto por petición (US$)
+          </label>
+          <input
+            id="coach-limit"
+            type="number"
+            min={0.001}
+            max={100}
+            step={0.01}
+            placeholder="Sin límite"
+            defaultValue={s.coachLimit ?? ""}
+            onBlur={(e) => {
+              const value =
+                e.target.value === "" ? null : Number(e.target.value);
+              if (value === (s.coachLimit ?? null)) return;
+              if (value !== null && !(value > 0 && value <= 100))
+                setError("El límite debe estar entre 0,001 y 100 US$.");
+              else void save({ coachLimit: value });
+            }}
+          />
+          <span className="small cl-faint">
+            Antes de cada llamada se estima el coste con los precios publicados
+            y el análisis se detiene si podría superar el límite. Es una
+            estimación: el coste final lo determina OpenRouter.
+          </span>
         </div>
       </Panel>
       <Panel title="Privacidad del entrenador">
         <p>
           Antes del primer envío real se pide aceptación. OpenRouter y el
-          proveedor del modelo reciben tu pregunta, hasta 20 mensajes recientes,
-          la pantalla y actividad seleccionadas, cobertura y resultados de
-          análisis con nombres, fechas y métricas.
+          proveedor del modelo reciben tu pregunta, hasta 20 mensajes recientes
+          de la conversación, la pantalla y actividad seleccionadas, cobertura y
+          resultados de análisis con nombres, fechas y métricas.
         </p>
         <p className="small cl-muted">
           No se adjuntan GPS, FIT ni claves guardadas al contexto. El texto que

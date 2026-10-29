@@ -23,7 +23,12 @@ export interface PageProps {
   theme: "dark" | "light";
   openActivity: (id: string, range?: [number, number]) => void;
   onContext: (context: CoachContext) => void;
-  origin?: { id: string; range?: [number, number]; key: number };
+  origin?: {
+    id: string;
+    range?: [number, number];
+    period?: [string, string];
+    key: number;
+  };
   go: (screen: Screen) => void;
   ask: (text: string) => void;
 }

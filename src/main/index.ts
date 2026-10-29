@@ -30,6 +30,7 @@ let win: BrowserWindow | null = null,
   store: Store;
 let demoSyncCount = 0;
 const busy = new Set<Source>();
+const controllers = new Map<Source, AbortController>();
 let restoring = false;
 const sourceSchema = z.enum(["demo", "garmin"]),
   providerSchema = z.enum(["garmin", "openrouter", "maptiler"]);
@@ -61,6 +62,7 @@ function state() {
     segments,
     dataset: store.dataset(settings.source),
     messages: store.messages(settings.source),
+    conversations: store.conversations(settings.source),
     sync:
       settings.source === "demo"
         ? store.get<SyncState>("demoSync", {
@@ -455,9 +457,32 @@ async function boot() {
     });
     changed();
   });
-  register("message", async (text, ctx) => {
+  register("message-cancel", () => {
+    controllers.get(store.settings().source)?.abort();
+  });
+  register("conversation-rename", (rawId, rawTitle) => {
+    const source = store.settings().source,
+      conversation = store
+        .conversations(source)
+        .find((c) => c.id === z.string().uuid().parse(rawId));
+    if (!conversation) throw new Error("La conversación ya no existe.");
+    store.saveConversation(source, {
+      ...conversation,
+      title: z.string().trim().min(1).max(120).parse(rawTitle),
+    });
+    changed();
+  });
+  register("conversation-delete", (rawId) => {
+    const source = store.settings().source;
+    if (busy.has(source))
+      throw new Error("Espera a que termine la respuesta antes de borrar.");
+    store.deleteConversation(source, z.string().uuid().parse(rawId));
+    changed();
+  });
+  register("message", async (text, ctx, rawConversation) => {
     const value = z.string().trim().min(1).max(8000).parse(text),
       context = coachContextSchema.parse(ctx) as CoachContext,
+      conversationId = z.string().uuid().parse(rawConversation),
       source = store.settings().source;
     if (busy.has(source)) throw new Error("Ya hay una respuesta en curso.");
     busy.add(source);
@@ -469,7 +494,7 @@ async function boot() {
           message:
             "Tu pregunta y datos de entrenamiento se enviarán a OpenRouter y al proveedor del modelo elegido.",
           detail:
-            "Se envían los últimos 20 mensajes (hasta 12 000 caracteres por mensaje), la pantalla, los identificadores de actividades y segmentos, los tramos seleccionados y sus métricas calculadas localmente, cobertura y procedencia, y resultados limitados de herramientas: nombres, fechas, métricas, intervalos, curvas y carga. No se adjuntan coordenadas GPS, archivos FIT ni claves guardadas como contexto; la clave de OpenRouter se usa solo para autenticar la conexión. Lo que escribas sí se envía: no incluyas secretos ni ubicaciones privadas. El proveedor aplica sus políticas de tratamiento de datos y la consulta puede tener coste. La demo no realiza este envío.",
+            "Se envían los últimos 20 mensajes de la conversación (hasta 12 000 caracteres por mensaje), la pantalla, los identificadores de actividades y segmentos, los tramos seleccionados y sus métricas calculadas localmente, cobertura y procedencia, y resultados limitados de herramientas: nombres, fechas, métricas, intervalos, curvas y carga. No se adjuntan coordenadas GPS, archivos FIT ni claves guardadas como contexto; la clave de OpenRouter se usa solo para autenticar la conexión. Lo que escribas sí se envía: no incluyas secretos ni ubicaciones privadas. El proveedor aplica sus políticas de tratamiento de datos y la consulta puede tener coste. La demo no realiza este envío.",
           buttons: ["Cancelar", "Aceptar y enviar"],
           defaultId: 0,
           cancelId: 0,
@@ -482,8 +507,15 @@ async function boot() {
         throw e;
       }
     }
+    if (!store.conversations(source).some((c) => c.id === conversationId))
+      store.saveConversation(source, {
+        id: conversationId,
+        title: value.replace(/\s+/g, " ").slice(0, 80),
+        createdAt: Date.now(),
+      });
     const user: ChatMessage = {
         id: randomUUID(),
+        conversationId,
         role: "user",
         text: value,
         context,
@@ -493,6 +525,7 @@ async function boot() {
       },
       assistant: ChatMessage = {
         id: randomUUID(),
+        conversationId,
         role: "assistant",
         text: "",
         status: "running",
@@ -506,29 +539,54 @@ async function boot() {
     store.message(source, user);
     store.message(source, assistant);
     changed();
+    const controller = new AbortController();
+    controllers.set(source, controller);
+    let flushed = 0;
     try {
       const tools = new AnalysisTools(store, source),
         provider =
           source === "demo" ? new DemoCoachProvider(tools) : openrouter();
       assistant.text = await provider.respond(
-        store.messages(source).filter((m) => m.id !== assistant.id),
+        store
+          .messages(source)
+          .filter(
+            (m) => m.conversationId === conversationId && m.id !== assistant.id,
+          ),
         context,
         (t) => {
           assistant.tools.push(t);
           store.message(source, assistant);
           changed();
         },
+        {
+          signal: controller.signal,
+          limit: store.settings().coachLimit,
+          onUsage: (u) => (assistant.usage = u),
+          onText: (t) => {
+            assistant.text = t;
+            // Every refresh reloads the whole state; keep progressive text to a few per second.
+            if (Date.now() - flushed < 200) return;
+            flushed = Date.now();
+            store.message(source, assistant);
+            changed();
+          },
+        },
       );
       assistant.status = "done";
     } catch (e) {
-      assistant.status = "error";
-      assistant.text =
-        e instanceof Error ? e.message : "No se pudo completar la respuesta.";
+      if (controller.signal.aborted) assistant.status = "cancelled";
+      else {
+        assistant.status = "error";
+        assistant.text =
+          e instanceof Error ? e.message : "No se pudo completar la respuesta.";
+      }
     } finally {
+      controllers.delete(source);
       store.message(source, assistant);
       busy.delete(source);
       changed();
     }
+    return assistant.status;
   });
   function createWindow() {
     win = new BrowserWindow({

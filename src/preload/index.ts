@@ -34,7 +34,11 @@ const api: CycleLabAPI = {
   sync: () => call("sync"),
   retryDownloads: (ids) => call("retry-downloads", ids),
   reclassifyActivities: () => call("reclassify"),
-  sendMessage: (text, ctx) => call("message", text, ctx),
+  sendMessage: (text, ctx, conversationId) =>
+    call("message", text, ctx, conversationId),
+  cancelMessage: () => call("message-cancel"),
+  renameConversation: (id, title) => call("conversation-rename", id, title),
+  deleteConversation: (id) => call("conversation-delete", id),
   onChange: (callback) => {
     ipcRenderer.on("cyclelab:changed", callback);
     return () => ipcRenderer.removeListener("cyclelab:changed", callback);

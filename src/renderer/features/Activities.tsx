@@ -42,10 +42,11 @@ const ranges = [
 export function Activities(
   p: PageProps & { actId: string | null; setActId: (id: string) => void },
 ) {
-  const [range, setRange] = useState(p.demo ? "90" : "all"),
+  const period = p.origin?.period;
+  const [range, setRange] = useState(period ? "custom" : p.demo ? "90" : "all"),
     [year, setYear] = useState(""),
-    [from, setFrom] = useState(""),
-    [to, setTo] = useState(""),
+    [from, setFrom] = useState(period?.[0] ?? ""),
+    [to, setTo] = useState(period?.[1] ?? ""),
     [types, setTypes] = useState(Object.keys(TYPES) as ActivityType[]),
     [query, setQuery] = useState(""),
     [checked, setChecked] = useState<string[]>([]),

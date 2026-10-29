@@ -24,6 +24,7 @@ export const settingsSchema = z
     theme: z.enum(["dark", "light"]),
     source: z.enum(["demo", "garmin"]),
     model: z.string().max(200).nullable(),
+    coachLimit: z.number().positive().max(100).nullable().optional(),
     athlete: z
       .object({
         history: z

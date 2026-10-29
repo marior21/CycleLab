@@ -139,6 +139,8 @@ Esto es especialmente importante porque la tolerancia GPS puede confundir camino
 
 **Terminado cuando:** cancelar libera la interfaz, los fallos conservan la pregunta y cualquier conclusión importante puede rastrearse a sus datos. La cancelación no debe prometer anular costes ya incurridos.
 
+**Completada el 29/10/2026.** «Detener» cancela la respuesta en curso, conserva lo recibido y devuelve la pregunta al cuadro de texto; el texto de OpenRouter llega progresivamente. Las conversaciones están separadas por origen y tienen título, búsqueda, renombrado y borrado. Cada respuesta enlaza las actividades, intentos, tramos y periodos que ha utilizado. Muestra tokens y coste (observado o estimado) y admite un límite de gasto por petición. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-25--un-chat-más-cómodo-y-trazable-29102026).
+
 ## Fase 3 — Pasar del análisis puntual al seguimiento
 
 ### 3.1. Resumen semanal que invite a volver · P1 · M

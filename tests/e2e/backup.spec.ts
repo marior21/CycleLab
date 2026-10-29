@@ -45,9 +45,11 @@ test("backup export, clean-profile recovery, invalid files, cancellation and rol
       { id, end },
     );
     const busyError = await page.evaluate(async () => {
-      const response = window.cyclelab.sendMessage("¿Cómo va mi carga?", {
-        screen: "coach",
-      });
+      const response = window.cyclelab.sendMessage(
+        "¿Cómo va mi carga?",
+        { screen: "coach" },
+        crypto.randomUUID(),
+      );
       const error = await window.cyclelab
         .restoreBackup()
         .catch((e) => e.message);
@@ -345,7 +347,7 @@ test("large pre-migration backups do not materialize the whole archive", async (
       },
       { dir, modulePath },
     );
-    expect(result).toEqual({ version: 5, count: 192 });
+    expect(result).toEqual({ version: 6, count: 192 });
   } finally {
     await app.close();
   }

@@ -53,8 +53,12 @@ export default function App() {
   const [origin, setOrigin] = useState<{
     id: string;
     range?: [number, number];
+    period?: [string, string];
     key: number;
   }>();
+  // null follows the most recent conversation; a new id starts an empty one.
+  const [conversation, setConversation] = useState<string | null>(null),
+    [blank] = useState(() => crypto.randomUUID());
   const setScreen = (next: Screen) => {
     if (!["activities", "segments", "climbs", "coach"].includes(next))
       setSelectionContext(null);
@@ -76,6 +80,7 @@ export default function App() {
       setDraft(null);
       setSelectionContext(null);
       setOrigin(undefined);
+      setConversation(null);
     }
   }, []);
   useEffect(() => {
@@ -107,6 +112,7 @@ export default function App() {
       theme: s.theme,
       source: s.source,
       model: s.model,
+      coachLimit: s.coachLimit ?? null,
       athlete: s.athlete,
     });
     await refresh();
@@ -117,9 +123,10 @@ export default function App() {
     screen,
     activityId: screen === "activities" ? (actId ?? undefined) : undefined,
   };
-  const send = async (text: string, savedContext = context) => {
-    await window.cyclelab.sendMessage(text, savedContext);
-  };
+  const activeConversation =
+    conversation ?? state?.conversations[0]?.id ?? blank;
+  const send = (text: string, savedContext = context) =>
+    window.cyclelab.sendMessage(text, savedContext, activeConversation);
   const ask = (text: string) => {
     if (screen !== "coach") setDrawer(true);
     void send(text).catch((e) => setError(e.message));
@@ -128,6 +135,17 @@ export default function App() {
     setOrigin({ id, range, key: Date.now() });
     setActId(id);
     setScreen("activities");
+  };
+  const openPeriod = (from: string, to: string) => {
+    setOrigin({ id: actId ?? "", period: [from, to], key: Date.now() });
+    setScreen("activities");
+  };
+  const coachProps = {
+    openActivity,
+    openPeriod,
+    conversation: activeConversation,
+    setConversation,
+    send,
   };
   const settings = () => {
     setScreen("settings");
@@ -277,11 +295,10 @@ export default function App() {
     case "coach":
       body = (
         <CoachPage
-          openActivity={openActivity}
+          {...coachProps}
           state={state}
           context={context}
           onSettings={settings}
-          send={send}
         />
       );
       break;
@@ -362,13 +379,12 @@ export default function App() {
           >
             {drawer && (
               <ChatPanel
-                openActivity={openActivity}
+                {...coachProps}
                 state={state}
                 context={context}
                 compact
                 onClose={() => setDrawer(false)}
                 onSettings={settings}
-                send={send}
               />
             )}
           </aside>

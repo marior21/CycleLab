@@ -52,7 +52,11 @@ test("maintenance isolates deletion, exports only counters and gates the first r
       });
     }
     await page.evaluate(() =>
-      window.cyclelab.sendMessage("PRIVATE-TEXT", { screen: "coach" }),
+      window.cyclelab.sendMessage(
+        "PRIVATE-TEXT",
+        { screen: "coach" },
+        crypto.randomUUID(),
+      ),
     );
     await app.evaluate(({ dialog }, path) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath: path });
@@ -95,7 +99,7 @@ test("maintenance isolates deletion, exports only counters and gates the first r
     });
     const canceled = await page.evaluate(() =>
       window.cyclelab
-        .sendMessage("PRIVATE-TEXT", { screen: "coach" })
+        .sendMessage("PRIVATE-TEXT", { screen: "coach" }, crypto.randomUUID())
         .catch((e) => e.message),
     );
     expect(canceled).toContain("Envío cancelado");
@@ -109,7 +113,11 @@ test("maintenance isolates deletion, exports only counters and gates the first r
       });
     });
     await page.evaluate(() =>
-      window.cyclelab.sendMessage("PRIVATE-TEXT", { screen: "coach" }),
+      window.cyclelab.sendMessage(
+        "PRIVATE-TEXT",
+        { screen: "coach" },
+        crypto.randomUUID(),
+      ),
     );
     expect(
       (await page.evaluate(() => window.cyclelab.getState())).messages,

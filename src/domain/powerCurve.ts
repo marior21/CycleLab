@@ -38,6 +38,26 @@ export function periodBests(
   return out;
 }
 
+export interface NewRecord extends PeriodBest {
+  previous: PeriodBest;
+}
+/**
+ * Bests from activities after `since` that beat everything up to `since`.
+ * A duration with no earlier effort is not a record: the first one has nothing to beat.
+ */
+export function newRecords(
+  data: Pick<Dataset, "activities" | "efforts">,
+  since: number,
+): NewRecord[] {
+  const before = periodBests(data, -Infinity, since + 1),
+    after = periodBests(data, since + 1, Infinity);
+  return [...after.values()]
+    .flatMap((r) => {
+      const previous = before.get(r.t);
+      return previous && r.p > previous.p ? [{ ...r, previous }] : [];
+    })
+    .sort((a, b) => a.t - b.t);
+}
 export const CP_DURATIONS = [300, 600, 1200];
 export type CriticalPower =
   | { ok: true; cp: number; wPrime: number; r2: number }

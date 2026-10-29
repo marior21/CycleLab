@@ -33,6 +33,7 @@ import type {
   CoachContext,
   FitImport,
   Result,
+  Settings,
   Source,
   SyncState,
 } from "../shared/models";
@@ -58,22 +59,8 @@ function state() {
         report && { ...report, attempts: includedAttempts(s, report.attempts) }
       );
     });
-  return {
-    settings,
-    ascents: {
-      count: reports.reduce((n, r) => n + (r?.attempts.length ?? 0), 0),
-      incomplete: reports.some(
-        (r) =>
-          !r ||
-          r.status !== "done" ||
-          r.revision !== store.get(`activityRevision:${settings.source}`, 0),
-      ),
-    },
-    segments,
-    dataset: store.dataset(settings.source),
-    messages: store.messages(settings.source),
-    conversations: store.conversations(settings.source),
-    sync:
+  const dataset = store.dataset(settings.source),
+    sync: SyncState =
       settings.source === "demo"
         ? store.get<SyncState>("demoSync", {
             state: "synced",
@@ -88,8 +75,49 @@ function state() {
             completed: 0,
             total: null,
             lastSync: null,
-          }),
+          });
+  return {
+    settings,
+    ascents: {
+      count: reports.reduce((n, r) => n + (r?.attempts.length ?? 0), 0),
+      incomplete: reports.some(
+        (r) =>
+          !r ||
+          r.status !== "done" ||
+          r.revision !== store.get(`activityRevision:${settings.source}`, 0),
+      ),
+    },
+    segments,
+    dataset,
+    messages: store.messages(settings.source),
+    conversations: store.conversations(settings.source),
+    sync,
+    recordsSince: recordsSince(settings, dataset.activities, sync),
   };
+}
+/** Date up to which new power records were already shown; null until the first full import. */
+function recordsSince(
+  settings: Settings,
+  activities: { date: number }[],
+  sync: SyncState,
+) {
+  const key = `recordsSince:${settings.source}`,
+    since = store.get<number | null>(key, null);
+  // The first full import is history, not news: start after it, silently.
+  // Garmin pages oldest first, so a partial first import must not set it.
+  if (
+    since === null &&
+    activities.length &&
+    sync.state !== "syncing" &&
+    (settings.source === "demo" ||
+      sync.lastSync !== null ||
+      !settings.garminConfigured)
+  ) {
+    const latest = Math.max(...activities.map((a) => a.date));
+    store.set(key, latest);
+    return latest;
+  }
+  return since;
 }
 function register(name: string, fn: (...args: unknown[]) => unknown) {
   ipcMain.handle(
@@ -546,6 +574,13 @@ async function boot() {
     store.saveGoal("garmin", goal);
     changed();
     return goal;
+  });
+  register("records-seen", (rawSource, rawSince) => {
+    const key = `recordsSince:${sourceSchema.parse(rawSource)}`,
+      since = z.number().finite().parse(rawSince);
+    // Only forward: an older acknowledgement must not bring old records back.
+    store.set(key, Math.max(since, store.get<number>(key, -Infinity)));
+    changed();
   });
   register("models", () => openrouter().models());
   register("retry-downloads", async (rawIds) => {

@@ -316,6 +316,8 @@ export interface AppState {
   ascents: { count: number; incomplete: boolean };
   dataset: Dataset;
   sync: SyncState;
+  /** Activities dated after this produce new power records; null before the first full import. */
+  recordsSince: number | null;
   messages: ChatMessage[];
   conversations: Conversation[];
 }
@@ -407,6 +409,7 @@ export interface CycleLabAPI {
   retryDownloads(ids: string[]): Promise<void>;
   reclassifyActivities(): Promise<number>;
   saveGoal(source: Source, goal: GoalInput): Promise<Goal>;
+  markRecordsSeen(source: Source, since: number): Promise<void>;
   saveActivityFeel(
     source: Source,
     id: string,

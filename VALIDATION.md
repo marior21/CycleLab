@@ -585,3 +585,43 @@ diálogos simulados, rechaza copia, archivo dañado, inexistente y duplicado por
 hora, y exporta CSV e informe. Revisión visual en ambos temas. Límites: sin
 probar con archivos FIT reales de otros fabricantes; el entrenador no recibe la
 procedencia; la plantilla del informe no sigue el tema de la app.
+
+## Fase 4.1 — Récords personales al sincronizar (29/10/2026)
+
+- El Dashboard muestra «Nuevas marcas de potencia» cuando una actividad
+  posterior a la última revisión supera la mejor marca anterior de esa
+  duración en todo el histórico. Cada fila enlaza la actividad y el tramo de la
+  nueva marca y de la anterior. «Entendido» cierra el aviso.
+- Revisión: `recordsSince:<origen>` guarda la fecha de la última actividad
+  revisada. Solo avanza, entra en las copias de seguridad y es independiente
+  para la demo y para Garmin. Al cerrar el aviso avanza hasta la marca más
+  reciente, de modo que las actividades posteriores que aún esperan muestras
+  siguen pendientes.
+- Sin avalancha inicial: la primera importación completa se considera
+  histórico. La fecha se fija en silencio cuando no hay sincronización en
+  curso y ya hubo una completa (o Garmin no está configurado, en el caso de
+  importar solo FIT). Garmin descarga del más antiguo al más reciente, así que
+  una primera importación interrumpida no la fija.
+- Reutiliza los mejores esfuerzos guardados y su tramo (fase 3.4). Solo cuentan
+  ventanas con potencia en todo el tramo; una duración sin un esfuerzo anterior
+  no es una marca y los empates tampoco.
+
+Validación: lint, typecheck y 149 pruebas unitarias correctas (4 nuevas: marca
+frente a todo lo anterior, duración sin precedente, potencia ausente, límite
+de la fecha y empates). Suite Electron completa correcta (21). La nueva prueba
+siembra un histórico inicial que ya contiene una mejora y comprueba que no
+avisa; añade una marca y una actividad sin potencia y reinicia; comprueba una
+sola fila, abre el tramo, cierra el aviso, reinicia sin que vuelva a aparecer y
+verifica el aislamiento de la demo. Capturas revisadas en ambos temas
+(`test-results/records-dark.png`, `test-results/records-light.png`).
+
+Ensayo de solo lectura con las 241 actividades reales (80 con potencia, desde
+el 4/1/2026): sin marcas en los últimos 90 días, lo que coincide con una
+consulta SQL directa de máximos por año. Con fechas de revisión más antiguas
+detecta las marcas de marzo a julio. Menos de 1 ms por cálculo. No se modificó
+la base del usuario.
+
+Límites: una actividad importada con fecha anterior a la última revisión no
+genera aviso; un pico aislado del medidor puede aparecer como marca de 1 s o
+5 s, sin filtrado de valores atípicos; la demo no tiene marcas recientes, por
+lo que el panel no aparece en ella; el entrenador no recibe el aviso.

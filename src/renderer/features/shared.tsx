@@ -19,6 +19,8 @@ export interface PageProps {
   segments: Segment[];
   demo: boolean;
   syncing: boolean;
+  /** Date of the last acknowledged power record; null before the first full import. */
+  recordsSince: number | null;
   maptilerConfigured: boolean;
   theme: "dark" | "light";
   openActivity: (id: string, range?: [number, number]) => void;

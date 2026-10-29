@@ -241,6 +241,8 @@ const settingSchemas: Record<string, z.ZodType> = {
   classificationVersion: num.int().nonnegative(),
   "activityRevision:demo": num.int().nonnegative(),
   "activityRevision:garmin": num.int().nonnegative(),
+  "recordsSince:demo": num,
+  "recordsSince:garmin": num,
 };
 const tablesSchema = z
   .object({

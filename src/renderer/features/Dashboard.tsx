@@ -1,6 +1,7 @@
 import { Coverage } from "./Coverage";
 import { WeeklySummary } from "./WeeklySummary";
 import { Goals } from "./Goals";
+import { NewRecords } from "./NewRecords";
 import { weeklyActivityTotals } from "../../domain/classification";
 import { useMemo, useState } from "react";
 import {
@@ -151,6 +152,7 @@ export function Dashboard(p: PageProps) {
         period={`${weeks} semanas`}
       />
       {!p.demo && <div className="small cl-muted">{data.coverage}</div>}
+      <NewRecords p={p} />
       <WeeklySummary p={p} />
       <div className="row">
         <Panel

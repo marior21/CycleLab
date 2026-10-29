@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   criticalPower,
+  newRecords,
   periodBests,
   periodZones,
 } from "../../src/domain/powerCurve";
@@ -89,5 +90,56 @@ describe("power curve references", () => {
     });
     expect(result.zones.find((z) => z.label === "Z1")?.value).toBe(2);
     expect(result.zones.find((z) => z.label === "Z5")?.value).toBe(2);
+  });
+});
+
+describe("new records", () => {
+  const e = (t: number, p: number | null, i0 = 0) => ({
+    t,
+    l: `${t} s`,
+    p,
+    i0,
+    i1: i0 + t,
+  });
+  const data = {
+    activities: [
+      activity("old", 10 * DAY),
+      activity("seen", 20 * DAY),
+      activity("new1", 30 * DAY),
+      activity("new2", 31 * DAY),
+    ],
+    efforts: {
+      old: [e(300, 300), e(1200, 260)],
+      seen: [e(300, 310)],
+      new1: [e(300, 320, 40), e(1200, 250), e(5, 900)],
+      new2: [e(300, 315), e(1200, null)],
+    },
+  };
+  it("reports only later bests that beat everything up to the mark", () => {
+    const records = newRecords(data, 20 * DAY);
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      t: 300,
+      p: 320,
+      activityId: "new1",
+      i0: 40,
+      i1: 340,
+      previous: { p: 310, activityId: "seen" },
+    });
+  });
+  it("ignores durations without an earlier effort and missing power", () => {
+    expect(newRecords(data, 20 * DAY).some((r) => r.t === 5)).toBe(false);
+    expect(newRecords(data, 20 * DAY).some((r) => r.t === 1200)).toBe(false);
+  });
+  it("counts activities on the mark itself as already seen", () => {
+    expect(newRecords(data, 31 * DAY)).toEqual([]);
+    expect(newRecords(data, 30 * DAY)).toEqual([]);
+  });
+  it("does not report ties", () => {
+    const tie = {
+      ...data,
+      efforts: { ...data.efforts, new1: [e(300, 310)], new2: [] },
+    };
+    expect(newRecords(tie, 20 * DAY)).toEqual([]);
   });
 });

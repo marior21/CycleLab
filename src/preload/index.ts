@@ -38,6 +38,7 @@ const api: CycleLabAPI = {
   retryDownloads: (ids) => call("retry-downloads", ids),
   reclassifyActivities: () => call("reclassify"),
   saveGoal: (source, goal) => call("goal-save", source, goal),
+  markRecordsSeen: (source, since) => call("records-seen", source, since),
   saveActivityFeel: (source, id, feel) =>
     call("activity-feel", source, id, feel),
   sendMessage: (text, ctx, conversationId) =>

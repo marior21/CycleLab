@@ -188,6 +188,7 @@ export default function App() {
       data: state.dataset,
       demo,
       syncing: state.sync.state === "syncing",
+      recordsSince: state.recordsSince,
       openActivity,
       go: setScreen,
       ask,

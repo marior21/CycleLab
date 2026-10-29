@@ -210,6 +210,8 @@ Al terminar una sincronización o una importación FIT, mostrar las marcas de la
 
 **Terminado cuando:** una actividad nueva con una marca genera un aviso que abre su tramo; volver a sincronizar o reiniciar no repite el aviso; las actividades sin potencia o con cobertura insuficiente no generan marcas; la primera importación del histórico no inunda de avisos; la demo queda marcada.
 
+**Completada el 29/10/2026.** El Dashboard avisa de las marcas de potencia de las actividades posteriores a la última revisión que superan todo el histórico anterior, con enlace a su tramo y al de la marca previa. «Entendido» lo cierra para siempre; la primera importación completa se toma como histórico sin avisar. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-41--récords-personales-al-sincronizar-29102026).
+
 ### 4.2. Dónde gané tiempo · Bloque A · S
 
 Ampliar la comparación de intentos de la 2.3 con un desglose por tramos (kilómetro o cambio de pendiente) de dónde se ganó o perdió tiempo.

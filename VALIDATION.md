@@ -767,7 +767,8 @@ reescribir el resumen como una sincronización y reiniciar, y restablecer.
 Capturas en ambos temas (`test-results/blocks-*.png`). La prueba de copias
 grandes compara ahora con la versión de esquema vigente.
 
-`test:visual`: solo cambian las capturas inferiores de Actividades (+0,40 %
+Cierre del bloque B: `npm run package` y `test:package` correctos con el
+esquema 9. `test:visual`: solo cambian las capturas inferiores de Actividades (+0,40 %
 por el panel nuevo, que en la demo detecta el 3×12′ como 3 × 11:50 a 262 W) y
 la de selección (+0,02 %, métrica de deriva de la 4.3); el resto, idéntico.
 

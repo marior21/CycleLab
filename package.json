@@ -17,7 +17,8 @@
     "package": "npm run build && electron-builder --dir --publish never && npm run test:package",
     "dist": "npm run build && electron-builder --publish never",
     "test:visual": "npm run build && node scripts/visual.mjs",
-    "test:package": "node scripts/smoke-package.mjs"
+    "test:package": "node scripts/smoke-package.mjs",
+    "measure": "npm run build && node scripts/measure.mjs"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.2.0",

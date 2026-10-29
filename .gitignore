@@ -14,3 +14,4 @@ artifacts/visual/*.png
 artifacts/visual/comparison.json
 
 *.cyclelab-backup.json
+artifacts/measure/

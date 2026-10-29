@@ -287,6 +287,86 @@ test("migration preserves a credential-free snapshot before changing v1", async 
   }
 });
 
+test("every earlier schema migrates to the current one keeping its data", async () => {
+  // Table → first schema that had it; older profiles lack it.
+  const added = {
+    conversations: 5,
+    activity_feel: 6,
+    goals: 7,
+    activity_blocks: 9,
+  };
+  for (const version of [4, 5, 6, 7, 8]) {
+    const dir = mkdtempSync(join(tmpdir(), `cyclelab-migration-v${version}-`));
+    let app = await launch(dir);
+    try {
+      const page = await app.firstWindow();
+      await page
+        .getByRole("button", { name: "Ajustes", exact: true })
+        .waitFor();
+      const state = await page.evaluate(() => window.cyclelab.getState());
+      const id = state.dataset.activities[0].id;
+      await page.evaluate(
+        (id) =>
+          window.cyclelab.saveActivityFeel("demo", id, {
+            rpe: 7,
+            fatigue: null,
+            notes: "Migrada",
+            type: null,
+          }),
+        id,
+      );
+      await app.evaluate(
+        (_electron, { dir, modulePath, version, added }) => {
+          const DB = process
+            .getBuiltinModule("module")
+            .createRequire(modulePath)(modulePath);
+          const db = new DB(dir + "/cyclelab.db");
+          for (const [table, since] of Object.entries(added))
+            if (since > version) db.exec(`DROP TABLE ${table}`);
+          db.pragma(`user_version = ${version}`);
+          db.close();
+        },
+        { dir, modulePath, version, added },
+      );
+      await quit(app);
+      app = await launch(dir);
+      const migrated = await app.firstWindow();
+      await migrated
+        .getByRole("button", { name: "Ajustes", exact: true })
+        .waitFor();
+      const after = await migrated.evaluate(() => window.cyclelab.getState());
+      expect(after.dataset.activities.length).toBe(
+        state.dataset.activities.length,
+      );
+      expect(
+        after.dataset.activities.find((a) => a.id === id)?.feel?.notes ?? null,
+      ).toBe(version >= 6 ? "Migrada" : null);
+      expect(
+        readdirSync(join(dir, "backups")).some((f) =>
+          f.includes(`antes-de-migrar-v${version}`),
+        ),
+      ).toBe(true);
+      const current = await app.evaluate(
+        (_electron, { dir, modulePath }) => {
+          const DB = process
+            .getBuiltinModule("module")
+            .createRequire(modulePath)(modulePath);
+          const db = new DB(dir + "/cyclelab.db", { readonly: true });
+          try {
+            return db.pragma("user_version", { simple: true });
+          } finally {
+            db.close();
+          }
+        },
+        { dir, modulePath },
+      );
+      expect(current).toBe(schemaVersion);
+    } finally {
+      await quit(app);
+    }
+  }
+});
+
 test("large pre-migration backups do not materialize the whole archive", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cyclelab-large-backup-"));
   let app = await launch(dir);

@@ -23,6 +23,11 @@ import { realDataset } from "../domain/analysis";
 export class Store {
   readonly db: Database.Database;
   private coverageCache = new Map<string, SampleCoverage>();
+  // `best` sits after the large `detail` column, so SQLite reads every detail to reach it.
+  private bestCache: {
+    revision: number;
+    value: ActivityDetail["best"][];
+  } | null = null;
   constructor(path: string) {
     this.db = new Database(path);
     const version = this.db.pragma("user_version", { simple: true }) as number;
@@ -47,6 +52,7 @@ export class Store {
   }
   recover() {
     this.coverageCache.clear();
+    this.bestCache = null;
     this.db
       .prepare(
         "UPDATE messages SET payload=json_set(payload,'$.status','error','$.text','La respuesta se interrumpió al cerrar CycleLab. Puedes volver a enviar la pregunta.') WHERE json_extract(payload,'$.status')='running'",
@@ -267,21 +273,27 @@ export class Store {
     );
     if (source === "demo" && activities.length)
       return { ...demoDataset, activities, sampleCoverage: coverage };
+    const revision = this.get("activityRevision:garmin", 0);
+    if (this.bestCache?.revision !== revision)
+      this.bestCache = {
+        revision,
+        value: (
+          this.db
+            .prepare(
+              "SELECT best FROM activities WHERE source='garmin' ORDER BY date DESC",
+            )
+            .all() as { best: string | null }[]
+        ).map((r) => (r.best ? JSON.parse(r.best) : [])),
+      };
     const data = realDataset(
       activities,
-      (
-        this.db
-          .prepare(
-            "SELECT best FROM activities WHERE source='garmin' ORDER BY date DESC",
-          )
-          .all() as { best: string | null }[]
-      ).map((r) => ({
+      this.bestCache.value.map((best) => ({
         rows: [],
         laps: [],
         points: [],
         features: [],
         markers: [],
-        best: r.best ? JSON.parse(r.best) : [],
+        best,
       })),
       this.settings().athlete,
     );

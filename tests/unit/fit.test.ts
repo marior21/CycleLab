@@ -97,3 +97,33 @@ it("turns a local FIT into a traceable activity with a stable identity", () => {
     "No es un archivo FIT válido.",
   );
 });
+
+it("keeps problematic FIT files honest: pauses, no GPS and truncation", () => {
+  const encoder = new Encoder(),
+    start = new Date("2026-10-03T08:00:00Z");
+  encoder.onMesg(Profile.MesgNum.FILE_ID, {
+    manufacturer: "development",
+    serialNumber: 7,
+    timeCreated: start,
+    type: "activity",
+  } as FileIdMesg);
+  // Two minutes, a 10 min café stop, two more minutes; no position at all.
+  for (const offset of [0, 720])
+    for (let i = 0; i < 120; i++)
+      encoder.onMesg(Profile.MesgNum.RECORD, {
+        timestamp: new Date(+start + (offset + i) * 1000),
+        distance: (offset ? 960 : 0) + i * 8,
+        power: 220,
+      } as RecordMesg);
+  const bytes = encoder.close();
+  const { activity, detail } = fitActivity(bytes, "pausa.fit");
+  expect(detail.rows).toHaveLength(240);
+  expect(detail.pointIndices ?? []).toEqual([]);
+  expect(detail.rows.every((r) => r.lat == null && r.hr === null)).toBe(true);
+  // Elapsed time spans the stop; it is never filled with invented samples.
+  expect(detail.rows.at(-1)!.x - detail.rows[0].x).toBe(839);
+  expect(activity.hr).toBeNull();
+  expect(() =>
+    fitActivity(bytes.slice(0, Math.floor(bytes.length / 2)), "cortado.fit"),
+  ).toThrow();
+});

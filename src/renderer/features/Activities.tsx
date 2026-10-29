@@ -47,6 +47,8 @@ import { LineChart } from "../components/charts";
 import { RouteMap } from "../components/RouteMap";
 import { clock, date, duration, number, shortDuration, TYPES } from "../format";
 import { ratio, type PageProps } from "./shared";
+// Rendering thousands of rows at once makes every keystroke in the search slow.
+const PAGE = 100;
 const ranges = [
   { value: "30", label: "30 d" },
   { value: "90", label: "90 d" },
@@ -63,6 +65,7 @@ export function Activities(
     [types, setTypes] = useState(Object.keys(TYPES) as ActivityType[]),
     [query, setQuery] = useState(""),
     [checked, setChecked] = useState<string[]>([]),
+    [shown, setShown] = useState(PAGE),
     [comparing, setComparing] = useState(false),
     [transfer, setTransfer] = useState<{
       busy?: boolean;
@@ -351,7 +354,7 @@ export function Activities(
         </div>
         <Coverage p={p} activities={list} period="Filtros actuales" />
         <div className="activity-list" role="listbox" aria-label="Actividades">
-          {list.map((x) => (
+          {list.slice(0, shown).map((x) => (
             <div
               className="act-item"
               key={x.id}
@@ -397,6 +400,16 @@ export function Activities(
               </div>
             </div>
           ))}
+          {list.length > shown && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShown((n) => n + PAGE)}
+            >
+              Mostrar {Math.min(PAGE, list.length - shown)} más de{" "}
+              {number(list.length - shown)}
+            </Button>
+          )}
           {!list.length && (
             <StateBlock
               title="Sin actividades"

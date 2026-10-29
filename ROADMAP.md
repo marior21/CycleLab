@@ -285,6 +285,19 @@ La compilación actual está documentada como no firmada ni notarizada. Antes de
 
 **Terminado cuando:** se puede instalar, actualizar y recuperar datos en un entorno limpio; los límites conocidos y las conexiones efectivamente verificadas están documentados.
 
+### Entregas de la fase 5
+
+Cada entrega se cierra como en la fase 4: lint, typecheck, pruebas unitarias y suite Electron completas, entrada en `VALIDATION.md` y un commit.
+
+| Entrega | Terminado cuando |
+| --- | --- |
+| 5.1. Medición con un histórico grande | Hay un script reproducible que genera un perfil sintético de varios años y mide arranque, filtrado, memoria y búsqueda de segmentos; el punto de partida queda en `VALIDATION.md` y solo se optimiza lo que la medición justifica. |
+| 5.2. Integración continua | Cada push y pull request ejecuta lint, typecheck y pruebas unitarias, y la suite Electron en macOS. |
+| 5.3. Migraciones, restauración y FIT difíciles | Cada esquema anterior soportado migra al actual conservando datos con su copia previa; una copia de un esquema anterior se restaura en un perfil limpio; los FIT sin GPS, con pausas o truncados tienen casos de prueba. |
+| 5.4. Día local de cada actividad | Las actividades se agrupan por el día en que se hicieron, en la zona horaria del lugar, sin romper filtros, semanas, meses ni temporadas; el criterio queda documentado. |
+| 5.5. Acabado de escritorio | Volver a Actividades conserva filtros y selección; la primera ejecución ofrece demo, conexión Garmin, perfil y primera sincronización; los estados vacíos tienen una acción útil; revisado a 1200 × 760 y 1440 × 900 en ambos temas. |
+| 5.6. Distribución | La firma y notarización se activan con los secretos del propietario sin tocar el código; la política de arquitecturas y la prueba en un Mac limpio están documentadas. La firma real, el instalador firmado y las actualizaciones automáticas dependen de las credenciales del propietario. |
+
 ## Qué dejaría fuera por ahora
 
 - Red social, clasificaciones públicas y cuentas propias en la nube.

@@ -903,3 +903,77 @@ Entregadas 4.1, 4.2, 4.3, 4.4, 4.5 y 4.7; la 4.6 se midió y quedó aplazada por
 decisión del propietario. Cierre del bloque D (y de la fase): lint, typecheck,
 184 pruebas unitarias, 25 recorridos Electron, `test:visual`, `npm run package`
 y `test:package` correctos.
+
+## Fase 5.1 — Medición con un histórico grande (29/10/2026)
+
+`npm run measure -- <actividades>` (por defecto 1.000) genera un perfil
+temporal de Garmin con actividades sintéticas de 2 h a 1 Hz con GPS, potencia y
+FC (unos 0,9 MB por actividad, como el histórico real), lo abre en Electron y
+mide: arranque hasta ver la lista, `getState`, búsqueda por nombre, cambio de
+pantalla, memoria y búsqueda de un segmento que pasa dos veces por salida. El
+resultado queda en `artifacts/measure/<n>.json` (no se versiona) y el perfil se
+borra al terminar. `MEASURE_QUICK=1` omite la búsqueda de segmento.
+
+| 1.000 actividades (909 MB) | Antes | Después |
+| --- | ---: | ---: |
+| Arranque hasta la lista | 8,2 s | 7,0–12,1 s |
+| `getState` (cada refresco) | 840 ms | 24–39 ms |
+| Buscar «0777» / pulsación al escribir | 635 ms / – | 136–213 ms / 74–92 ms |
+| Cambiar a Rendimiento | 2.351 ms | 450–533 ms |
+| Volver a Actividades | 787 ms | 102–152 ms |
+| Memoria total (todos los procesos) | 529 MB | 436 MB |
+| Búsqueda de segmento (2.000 pasos) | 136 s | 23,7 s |
+
+Con 250 actividades: arranque 4,4 s, `getState` 9 ms, Rendimiento 516 ms,
+búsqueda de segmento 3 s (500 pasos) y `getState` durante esa búsqueda
+340 ms de mediana (470 ms de máximo). Con 10 actividades el arranque es 2,7 s:
+es el coste fijo de Electron.
+
+Causas y cambios justificados por la medición:
+- La columna `best` está detrás del detalle completo en la fila, así que leerla
+  obligaba a SQLite a recorrer todo el detalle de cada actividad en cada
+  refresco. Ahora se guarda en memoria hasta que cambia la revisión de
+  actividades. Eso explica también la búsqueda de segmentos: cada aviso de
+  progreso pedía un estado de casi 1 s.
+- La lista de Actividades pinta 100 filas y ofrece «Mostrar 100 más». Los
+  filtros, contadores e informes siguen usando la lista completa.
+
+No se ha optimizado, con su motivo:
+- El arranque crece unos 6–9 s por cada 1.000 actividades porque la cobertura
+  de muestras lee una vez cada detalle. Con un histórico como el real (241
+  actividades) son unos 1,7 s sobre el coste fijo. Guardarla exigiría un esquema
+  nuevo y cambios en las copias; se reconsiderará si los históricos reales lo
+  piden.
+- La búsqueda de segmentos sigue en el proceso principal cediendo el turno entre
+  actividades: la app responde en menos de 0,5 s mientras busca. Sin workers.
+- Escribir en la búsqueda cuesta 74–92 ms por pulsación con 1.000 actividades;
+  aceptable, sin virtualización.
+
+Validación: lint, typecheck, 185 pruebas unitarias y 26 recorridos Electron.
+
+## Fase 5.2 — Integración continua (29/10/2026)
+
+[CI](.github/workflows/ci.yml) se ejecuta en cada push a `main`, en cada pull
+request y a mano. En Ubuntu: lint, typecheck y pruebas unitarias. En macOS 15:
+la suite Electron completa (`npm run test:e2e`) y `scripts/visual.mjs`, que sube
+las capturas de ambos temas junto al prototipo como artefacto `visual-review`
+para revisarlas; no falla por diferencias. Si falla la suite, sube
+`test-results/`. Release conserva sus propias comprobaciones.
+
+Límite: el workflow no se ha ejecutado todavía en GitHub (el repositorio local
+no tiene `gh` y no se ha subido nada). El primer push mostrará si el llavero de
+los runners de macOS admite `safeStorage` sin intervención.
+
+## Fase 5.3 — Migraciones, restauración y FIT difíciles (29/10/2026)
+
+- Nueva prueba Electron: perfiles con esquema 4, 5, 6, 7 y 8 (sin las tablas que
+  llegaron después) migran al 9 al abrirse, conservan las actividades y las
+  sensaciones guardadas cuando su esquema ya las tenía y dejan la copia
+  `antes-de-migrar-v<n>`. Ya existían la migración desde la v1 con restauración
+  de su copia en el perfil y la copia previa de un perfil v4 grande.
+- Nueva prueba unitaria de FIT sin GPS, con una parada de 10 minutos (el tiempo
+  transcurrido la incluye y no se inventan muestras) y truncado a la mitad
+  (error, sin actividad). Los FIT de prueba se generan en la propia prueba con el
+  SDK de Garmin: no se versionan archivos de entrenamientos reales.
+
+Validación: lint, typecheck, 185 pruebas unitarias y 26 recorridos Electron.

@@ -14,6 +14,7 @@ export interface PageProps {
     activity: Activity,
     detail: ActivityDetail,
     range: [number, number],
+    climb?: boolean,
   ) => void;
   data: Dataset;
   segments: Segment[];

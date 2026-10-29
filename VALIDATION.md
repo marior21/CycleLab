@@ -788,3 +788,46 @@ que descartar a mano; una repetición con una bajada de más de 15 s se parte
 (tempo) o de menos de 20 s no se detectan; ← → sigue recorriendo las vueltas,
 no los bloques; los bloques no cambian la clasificación ni llegan al
 entrenador.
+
+## Fase 4.5 — Sugerir puertos del recorrido (29/10/2026)
+
+- Actividades añade «Puertos del recorrido»: subidas de al menos 0,5 km, 40 m
+  y 3 % sobre la altitud suavizada en ±100 m de distancia. Una bajada de más de
+  15 m (o del 10 % del desnivel acumulado) cierra la subida en su cima; los
+  llanos de antes y después se recortan (último punto a 3 m del mínimo, primero
+  a 3 m del máximo). Un salto de GPS (más de 200 m o retroceso), un hueco de más
+  de 30 s o un tramo largo sin altitud cortan el perfil, así que una subida
+  nunca los atraviesa.
+- «Guardar como puerto» abre el creador de segmentos existente con el tramo y
+  la casilla «Marcar como puerto» activada: nada se guarda hasta pulsar
+  «Guardar segmento». El IPC de guardado admite ahora la marca de puerto para
+  escribir el segmento en una sola operación. Después, la búsqueda histórica es
+  la misma que para un segmento manual.
+- Una subida que coincide en al menos la mitad con un segmento guardado
+  (creado desde esta actividad o encontrado en ella por la búsqueda histórica)
+  muestra «Ya guardado · nombre». Pulsar una subida la selecciona.
+
+Validación: lint, typecheck y 179 pruebas unitarias correctas (5 nuevas:
+subida con ruido barométrico de ±3 m y picos de 25 m, bajada breve frente a
+bajada real, toboganes, falso llano y rampa corta, salto de GPS, hueco de tiempo
+y altitud ausente, y datos sin distancia o altitud). Suite Electron completa
+correcta (24); la nueva comprueba que abrir y cancelar el creador no guarda
+nada, que guardar crea un puerto, que la búsqueda histórica encuentra las dos
+salidas y que ambas muestran «Ya guardado». Capturas en ambos temas
+(`test-results/climbs-*.png`). `test:visual`: solo cambian las capturas
+inferiores de Actividades (−0,07 %, panel nuevo; en la demo, «Sin subidas
+destacables»).
+
+Ensayo de solo lectura con las 40 últimas actividades reales, antes de la
+interfaz: 0–5 sugerencias por salida (53 en total, 17 salidas sin ninguna),
+de 0,5 a 6 km y del 3 % al 8,5 %; 10 de los 11 pasos por segmentos guardados
+quedan cubiertos por una sugerencia. Falta un paso de «Series Pérez Galdós»
+(1,47 km al 3,3 %, en el límite), cuyas otras repeticiones sí aparecen. Hasta
+2,3 ms por actividad. Las pruebas sintéticas encontraron antes dos fallos del
+recorte de llanos (la cima avanzaba por el llano superior y un pico aislado
+detenía el recorte), corregidos. No se modificó la base del usuario.
+
+Límites: valores sobre el perfil suavizado (una subida de 2 km al 6 % se
+muestra como 1,9 km al 5,9 %); subidas cortas y muy duras (menos de 0,5 km) o
+tendidas (menos del 3 %) no se proponen; «Ya guardado» depende de que la
+búsqueda histórica del segmento haya terminado; sin nombre sugerido.

@@ -13,13 +13,16 @@ export function SegmentCreator(
     activity: Activity;
     detail: ActivityDetail;
     range: [number, number];
+    /** Opened from a suggested climb: starts marked as a climb. */
+    climb?: boolean;
     onCancel: () => void;
-    onSaved: () => void;
+    onSaved: (climb: boolean) => void;
   },
 ) {
   const [range, setRange] = useState(p.range);
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
+  const [climb, setClimb] = useState(p.climb ?? false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [hover, setHover] = useState<number | null>(null);
@@ -108,8 +111,9 @@ export function SegmentCreator(
                     p.activity.id,
                     name,
                     ...range,
+                    climb,
                   );
-                  p.onSaved();
+                  p.onSaved(climb);
                 } catch (e) {
                   setError(
                     e instanceof Error
@@ -132,6 +136,16 @@ export function SegmentCreator(
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Por ejemplo, subida al mirador"
                 />
+              </label>
+              <label className="segment-climb">
+                <input
+                  type="checkbox"
+                  className="cl-check"
+                  checked={climb}
+                  disabled={busy}
+                  onChange={(e) => setClimb(e.target.checked)}
+                />
+                Marcar como puerto
               </label>
               <p className="small cl-faint">
                 Solo se guarda en CycleLab. No se publica en Strava ni en

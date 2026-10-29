@@ -22,8 +22,8 @@ const api: CycleLabAPI = {
   mapResource: (path) => call("map-resource", path),
   getSegmentResults: (source, id, retry) =>
     call("segment-results", source, id, retry),
-  saveSegment: (source, activityId, name, i0, i1) =>
-    call("segment-save", source, activityId, name, i0, i1),
+  saveSegment: (source, activityId, name, i0, i1, isClimb) =>
+    call("segment-save", source, activityId, name, i0, i1, isClimb),
   updateSegment: (source, id, changes) =>
     call("segment-update", source, id, changes),
   setAttemptExcluded: (source, id, attemptId, reason) =>

@@ -308,12 +308,13 @@ async function boot() {
   );
   register(
     "segment-save",
-    (rawSource, rawActivity, rawName, rawStart, rawEnd) => {
+    (rawSource, rawActivity, rawName, rawStart, rawEnd, rawClimb) => {
       const source = sourceSchema.parse(rawSource);
       const activityId = z.string().min(1).max(100).parse(rawActivity);
       const name = z.string().trim().min(1).max(100).parse(rawName);
       const i0 = z.number().int().nonnegative().parse(rawStart);
       const i1 = z.number().int().nonnegative().parse(rawEnd);
+      const isClimb = z.boolean().optional().parse(rawClimb);
       const detail = store.detail(source, activityId);
       if (!detail)
         throw new Error("Los datos de esta actividad no están disponibles.");
@@ -325,6 +326,7 @@ async function boot() {
         i0,
         i1,
       );
+      if (isClimb) segment.isClimb = true;
       store.saveSegment(source, segment);
       segmentResults.get(source, segment.id);
       changed();

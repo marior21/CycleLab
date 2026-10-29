@@ -43,6 +43,7 @@ export default function App() {
       activity: Activity;
       detail: ActivityDetail;
       range: [number, number];
+      climb?: boolean;
     } | null>(null),
     [actId, setActId] = useState<string | null>(null),
     [drawer, setDrawer] = useState(false),
@@ -176,8 +177,9 @@ export default function App() {
         activity: Activity,
         detail: ActivityDetail,
         range: [number, number],
+        climb?: boolean,
       ) => {
-        setDraft({ activity, detail, range });
+        setDraft({ activity, detail, range, climb });
         setDrawer(false);
       },
       origin,
@@ -312,7 +314,7 @@ export default function App() {
         {...pageProps}
         {...draft}
         onCancel={() => setDraft(null)}
-        onSaved={() => setScreen("segments")}
+        onSaved={(climb) => setScreen(climb ? "climbs" : "segments")}
       />
     );
   return (

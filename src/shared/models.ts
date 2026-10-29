@@ -381,6 +381,7 @@ export interface CycleLabAPI {
     name: string,
     i0: number,
     i1: number,
+    isClimb?: boolean,
   ): Promise<Segment>;
   updateSegment(
     source: Source,

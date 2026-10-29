@@ -2,6 +2,7 @@ import { profileAt, profileNote } from "../../domain/athlete";
 import { Coverage } from "./Coverage";
 import { ActivityFeel } from "./ActivityFeel";
 import { WorkBlocks } from "./WorkBlocks";
+import { ClimbSuggestions } from "./ClimbSuggestions";
 import {
   activitiesCsv,
   activityReport,
@@ -1059,6 +1060,17 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
         rows={rows}
         source={p.demo ? "demo" : "garmin"}
         ftp={ftp}
+        range={range}
+        select={(r) => {
+          setCheckedLaps([]);
+          setLap(null);
+          setRange(r);
+        }}
+      />
+      <ClimbSuggestions
+        page={p}
+        a={a}
+        d={d}
         range={range}
         select={(r) => {
           setCheckedLaps([]);

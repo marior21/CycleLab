@@ -242,6 +242,8 @@ Detectar ascensos por perfil suavizado y proponer guardarlos como segmentos, reu
 
 **Terminado cuando:** nada se guarda sin confirmación; se valida con altimetría ruidosa y GPS degradado; al guardar, la búsqueda histórica funciona como con un segmento manual.
 
+**Completada el 29/10/2026.** Actividades sugiere las subidas del recorrido (0,5 km, 40 m y 3 % sobre la altitud suavizada, sin atravesar saltos de GPS ni huecos) y marca las que ya están guardadas. «Guardar como puerto» abre el creador de segmentos con la marca de puerto y solo guarda al confirmar; la búsqueda histórica es la misma. En el histórico real cubre 10 de 11 pasos por segmentos guardados con 0–5 sugerencias por salida. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-45--sugerir-puertos-del-recorrido-29102026).
+
 ### 4.6. Rutas habituales · Bloque C · L
 
 Agrupar recorridos completos parecidos y pedir revisión manual. Antes, medir el coste con el histórico real; si no es razonable, recortar el alcance o aplazarla.

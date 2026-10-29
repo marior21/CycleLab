@@ -1,7 +1,21 @@
-import type { Activity, ActivityDetail, Athlete } from "../shared/models";
+import type {
+  Activity,
+  ActivityDetail,
+  Athlete,
+  SegmentAttempt,
+} from "../shared/models";
+import type { SeasonSummary } from "../domain/season";
 import { profileNote } from "../domain/athlete";
 import { percentChange } from "../domain/analysis";
-import { FATIGUE, TYPES, date, duration, effort, number } from "./format";
+import {
+  FATIGUE,
+  TYPES,
+  date,
+  duration,
+  effort,
+  number,
+  shortDuration,
+} from "./format";
 
 type Cell = string | number | null | undefined;
 const cell = (v: Cell) => {
@@ -208,6 +222,148 @@ export function comparisonReport(
             : `${change >= 0 ? "+" : ""}${number(change, 1)} %`,
         ];
       }),
+    )}`,
+  );
+}
+
+const MONTHS = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+const known = (
+  t: { value: number | null; missing: unknown[] },
+  u: string,
+  digits = 0,
+) =>
+  (t.value === null
+    ? "Sin datos"
+    : u === "hours"
+      ? shortDuration(t.value)
+      : unit(t.value, u, digits)) +
+  (t.value !== null && t.missing.length
+    ? ` (+${t.missing.length} sin dato)`
+    : "");
+export interface SeasonSegment {
+  name: string;
+  season: SegmentAttempt[];
+  before: SegmentAttempt[];
+}
+/** Season report: every total is the sum of the activities listed at the end. */
+export function seasonReport(
+  s: SeasonSummary,
+  segments: SeasonSegment[],
+  demo: boolean,
+) {
+  const title = `Temporada ${s.year}`,
+    t = s.totals;
+  const fastest = (list: SegmentAttempt[]) =>
+    list.reduce<SegmentAttempt | null>(
+      (best, a) => (!best || a.dur < best.dur ? a : best),
+      null,
+    );
+  const names = new Map(s.activities.map((a) => [a.id, a.name]));
+  return page(
+    title,
+    demo,
+    `<h1>${esc(title)}</h1><p class="muted">${esc(
+      s.partial
+        ? `Temporada en curso: del ${date(s.from, true)} al ${date(s.from + (s.days - 1) * 86400000, true)} (${s.days} de ${s.yearDays} días).`
+        : `Del ${date(s.from, true)} al ${date(s.to - 86400000, true)}.`,
+    )} Los datos ausentes no cuentan como cero: se indican aparte.</p><h2>Volumen</h2>${table(
+      ["Métrica", "Total"],
+      [
+        ["Sesiones", String(s.activities.length)],
+        ["Tiempo", known(t.dur, "hours")],
+        ["Distancia", known(t.dist, "km", 1)],
+        ["Desnivel", known(t.elev, "m")],
+        ["Carga (TSS)", known(t.tss, "")],
+      ],
+    )}<p class="muted">${esc(
+      `Sin potencia: ${s.noPower} sesiones · sin frecuencia cardíaca: ${s.noHeart}.`,
+    )}</p><h2>Por meses</h2>${table(
+      ["Mes", "Sesiones", "Tiempo", "Distancia", "Desnivel", "TSS"],
+      s.months.map((m) => [
+        MONTHS[m.month] + (m.partial ? " (en curso)" : ""),
+        String(m.count),
+        known(m.dur, "hours"),
+        known(m.dist, "km", 1),
+        known(m.elev, "m"),
+        known(m.tss, ""),
+      ]),
+    )}${
+      s.types.length
+        ? `<h2>Tipos de sesión</h2>${table(
+            ["Tipo", "Sesiones"],
+            s.types.map(([type, n]) => [TYPES[type].label, String(n)]),
+          )}`
+        : ""
+    }<h2>Mejores marcas de potencia</h2>${
+      s.bests.length
+        ? table(
+            ["Duración", "Potencia", "Fecha", "Actividad", `${s.year - 1}`],
+            s.bests.map((b) => [
+              effort(b.t),
+              unit(b.p, "W"),
+              date(b.date),
+              names.get(b.activityId) ?? "–",
+              b.previous ? unit(b.previous.p, "W") : "–",
+            ]),
+          )
+        : '<p class="muted">Sin muestras de potencia en la temporada.</p>'
+    }<h2>Segmentos favoritos</h2>${
+      segments.length
+        ? table(
+            [
+              "Segmento",
+              "Pasos",
+              "Mejor de la temporada",
+              "Fecha",
+              "Mejor anterior",
+            ],
+            segments.map((g) => {
+              const best = fastest(g.season),
+                before = fastest(g.before);
+              return [
+                g.name,
+                String(g.season.length),
+                best ? duration(best.dur) : "–",
+                best ? date(best.date) : "–",
+                before ? duration(before.dur) : "–",
+              ];
+            }),
+          )
+        : '<p class="muted">Marca segmentos como favoritos en Segmentos para incluirlos aquí.</p>'
+    }<h2>Actividades de la temporada</h2><p class="muted">Origen de todas las cifras anteriores.</p>${table(
+      [
+        "Fecha",
+        "Actividad",
+        "Tipo",
+        "Tiempo",
+        "Distancia",
+        "Desnivel",
+        "TSS",
+        "Procedencia",
+      ],
+      s.activities.map((a) => [
+        date(a.date),
+        a.name,
+        TYPES[a.type].label,
+        duration(a.dur),
+        unit(a.dist, "km", 1),
+        unit(a.elev, "m"),
+        number(a.tss),
+        origin(a, demo),
+      ]),
     )}`,
   );
 }

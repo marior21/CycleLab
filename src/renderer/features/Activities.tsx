@@ -8,7 +8,10 @@ import {
   activityReport,
   comparisonReport,
   comparisonValues,
+  seasonReport,
 } from "../exports";
+import { seasonSummary } from "../../domain/season";
+import { includedAttempts } from "../../domain/segments";
 import { filterActivitiesByDate } from "../../domain/activityFilters";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -79,6 +82,35 @@ export function Activities(
     }
   };
   const all = p.data.activities;
+  const season = year ? Number(year) : new Date(p.data.today).getUTCFullYear();
+  const exportSeason = () =>
+    run(async () => {
+      const summary = seasonSummary(p.data, season),
+        source = p.demo ? "demo" : "garmin";
+      const segments = await Promise.all(
+        p.segments
+          .filter((s) => s.favorite)
+          .map(async (s) => {
+            const attempts = includedAttempts(
+              s,
+              (await window.cyclelab.getSegmentResults(source, s.id)).attempts,
+            );
+            return {
+              name: s.name,
+              season: attempts.filter(
+                (a) => a.date >= summary.from && a.date < summary.to,
+              ),
+              before: attempts.filter((a) => a.date < summary.from),
+            };
+          }),
+      );
+      const path = await window.cyclelab.saveExport(
+        "html",
+        `CycleLab-temporada-${season}`,
+        seasonReport(summary, segments, p.demo),
+      );
+      return path && `Informe de la temporada ${season} guardado en ${path}`;
+    });
   const years = [
     ...new Set(all.map((a) => new Date(a.date).getUTCFullYear())),
   ].sort((a, b) => b - a);
@@ -270,6 +302,14 @@ export function Activities(
               }
             >
               Exportar CSV
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!!transfer?.busy}
+              onClick={() => void exportSeason()}
+            >
+              Informe {season}
             </Button>
           </div>
           {transfer?.text && (

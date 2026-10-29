@@ -858,3 +858,48 @@ Calidad:
   19–21 km. Al 85 %, 23 grupos y 79 salidas.
 - Garmin nombra casi todas las salidas igual («Santander Ciclismo en ruta»),
   así que los grupos necesitan nombre y revisión del usuario.
+
+## Fase 4.7 — Informe de temporada (29/10/2026)
+
+- Actividades añade «Informe <año>» junto a «Exportar CSV»: la temporada es el
+  año natural del filtro de año, o el actual si no hay ninguno. Guarda un HTML
+  autónomo con el mismo generador de la 3.5 (sin scripts, texto escapado y aviso
+  de demostración).
+- Contenido: volumen (sesiones, tiempo, distancia, desnivel y TSS, con las
+  sesiones sin dato contadas aparte y nunca como cero; «Sin datos» si ninguna
+  lo tiene), sesiones sin potencia o FC, desglose por meses con el mes en curso
+  marcado, tipos de sesión, mejores marcas de potencia con fecha y actividad
+  frente al año anterior, segmentos favoritos (pasos de la temporada, mejor
+  tiempo y mejor anterior, respetando exclusiones) y la lista de actividades
+  de la que sale cada cifra. Un año en curso indica los días cubiertos.
+- El cálculo (`src/domain/season.ts`) reutiliza `total()` del resumen semanal y
+  `periodBests()` de la 3.4.
+
+Validación: lint, typecheck y 184 pruebas unitarias correctas (5 nuevas: año
+completo y en curso, datos ausentes y meses que suman el total, marcas con
+origen y año anterior, informe con escape, demo y segmentos, y dato ausente
+mostrado aparte). Suite Electron completa correcta (25); la nueva marca un
+segmento de la demo como favorito, exporta el informe con el diálogo simulado y
+comprueba el aviso de demostración, el escape del nombre, que el anexo tiene
+una fila por actividad del año y que el filtro de año cambia la temporada.
+`test:visual`: +0,01 % en las capturas con la lista de Actividades (botón
+nuevo); el resto, idéntico.
+
+Ensayo de solo lectura con el histórico real: 2025 (87 sesiones, sin potencia:
+TSS «Sin datos» y sin marcas) y 2026 (86 sesiones, en curso, 302 días; 6 sin
+TSS). En ambos, tiempo, distancia, desnivel y TSS coinciden exactamente con la
+suma de las actividades listadas; menos de 50 ms por informe. No hay segmentos
+favoritos reales; para revisar esa sección se simularon los 3 puertos como
+favoritos. La revisión del texto llevó a mostrar los totales de tiempo como
+«161 h 57» en lugar de «161:56:32». Datos exportados borrados al terminar.
+
+Límites: el informe no sigue el tema de la app; la temporada es siempre el año
+natural UTC; sin gráficos; los segmentos solo aparecen si están marcados como
+favoritos y su búsqueda histórica ha terminado.
+
+## Cierre de la fase 4 (29/10/2026)
+
+Entregadas 4.1, 4.2, 4.3, 4.4, 4.5 y 4.7; la 4.6 se midió y quedó aplazada por
+decisión del propietario. Cierre del bloque D (y de la fase): lint, typecheck,
+184 pruebas unitarias, 25 recorridos Electron, `test:visual`, `npm run package`
+y `test:package` correctos.

@@ -258,6 +258,10 @@ HTML exportable con volumen, marcas y segmentos favoritos, reutilizando el infor
 
 **Terminado cuando:** cada cifra se puede reconstruir desde sus actividades, los periodos parciales y los datos ausentes se indican y la demo queda marcada.
 
+**Completada el 29/10/2026.** Actividades exporta el informe del año elegido: volumen con los datos ausentes aparte, meses, tipos, marcas frente al año anterior, segmentos favoritos y la lista de actividades que respalda cada cifra; marca la temporada en curso y la demo. Con el histórico real, los totales coinciden exactamente con sus actividades. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-47--informe-de-temporada-29102026).
+
+**Fase 4 cerrada el 29/10/2026** con 4.1–4.5 y 4.7 entregadas y la 4.6 medida y aplazada. Evidencia en [VALIDATION.md](VALIDATION.md#cierre-de-la-fase-4-29102026).
+
 ## Fase 5 — Preparar una versión para uso diario y distribución
 
 ### Fiabilidad y rendimiento

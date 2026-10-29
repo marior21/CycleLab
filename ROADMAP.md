@@ -202,6 +202,50 @@ Importar FIT local reutilizando el decodificador; exportar tablas CSV y un infor
 
 Estas ideas deben mostrar limitaciones de medición. Una mejora de tiempo no demuestra por sí sola una mejora fisiológica: pueden influir tráfico, viento, superficie o condiciones que CycleLab aún no registra.
 
+Se entregan en cuatro bloques y en este orden: A parte de lo que ya existe, B analiza la señal, C trabaja sobre la geografía y D resume. Cada entrega se cierra igual: cálculo en `src/domain` con pruebas unitarias que incluyan casos negativos (huecos, pausas, sensores ausentes, cobertura insuficiente, demo); IPC validado si hace falta; una prueba Electron propia con reinicio y aislamiento demo/Garmin; lint, typecheck, pruebas unitarias y suite Electron completas; capturas en ambos temas; ensayo de solo lectura con el histórico real cuando aplique; entrada en `VALIDATION.md` y un commit. Al final de cada bloque se ejecutan además `test:visual`, `package` y `test:package`.
+
+### 4.1. Récords personales al sincronizar · Bloque A · S–M
+
+Al terminar una sincronización o una importación FIT, mostrar las marcas de la curva de potencia que superan el mejor valor anterior, con acceso a la actividad y al tramo. Reutilizar la procedencia de la curva de la fase 3.4.
+
+**Terminado cuando:** una actividad nueva con una marca genera un aviso que abre su tramo; volver a sincronizar o reiniciar no repite el aviso; las actividades sin potencia o con cobertura insuficiente no generan marcas; la primera importación del histórico no inunda de avisos; la demo queda marcada.
+
+### 4.2. Dónde gané tiempo · Bloque A · S
+
+Ampliar la comparación de intentos de la 2.3 con un desglose por tramos (kilómetro o cambio de pendiente) de dónde se ganó o perdió tiempo.
+
+**Terminado cuando:** la suma de los tramos coincide con la diferencia total salvo redondeo; los huecos se excluyen y se señalan; se advierte que viento, tráfico o superficie también influyen.
+
+### 4.3. Deriva cardíaca y resistencia a la fatiga · Bloque B · M
+
+Comparar la relación potencia/FC entre las dos mitades de un tramo estable.
+
+**Terminado cuando:** solo se calcula sobre tramos estables, sin pausas y con cobertura de potencia y FC suficiente; en otro caso se marca como insuficiente y se explica por qué.
+
+### 4.4. Detección de intervalos sin vueltas · Bloque B · M–L
+
+Proponer bloques de trabajo sobre la señal de potencia y permitir corregirlos. El detector actual por vueltas se conserva.
+
+**Terminado cuando:** se valida con señales sintéticas de protocolos variados (4×4, 30/30, 3×20, over-unders) y casos negativos; la corrección manual persiste tras sincronizar y volver a etiquetar.
+
+### 4.5. Sugerir puertos del recorrido · Bloque C · M
+
+Detectar ascensos por perfil suavizado y proponer guardarlos como segmentos, reutilizando la creación y la búsqueda existentes.
+
+**Terminado cuando:** nada se guarda sin confirmación; se valida con altimetría ruidosa y GPS degradado; al guardar, la búsqueda histórica funciona como con un segmento manual.
+
+### 4.6. Rutas habituales · Bloque C · L
+
+Agrupar recorridos completos parecidos y pedir revisión manual. Antes, medir el coste con el histórico real; si no es razonable, recortar el alcance o aplazarla.
+
+**Terminado cuando:** los grupos propuestos se pueden aceptar o corregir, persisten y el tiempo de cálculo con el histórico real está medido y documentado.
+
+### 4.7. Informe de temporada · Bloque D · M
+
+HTML exportable con volumen, marcas y segmentos favoritos, reutilizando el informe de la 3.5.
+
+**Terminado cuando:** cada cifra se puede reconstruir desde sus actividades, los periodos parciales y los datos ausentes se indican y la demo queda marcada.
+
 ## Fase 5 — Preparar una versión para uso diario y distribución
 
 ### Fiabilidad y rendimiento

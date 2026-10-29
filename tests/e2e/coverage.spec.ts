@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from "@playwright/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { quit } from "./quit";
 
 test("coverage follows periods, keeps unknown metrics and offers scoped retries", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cyclelab-coverage-"));
@@ -219,6 +220,6 @@ test("coverage follows periods, keeps unknown metrics and offers scoped retries"
     await page.screenshot({ path: "test-results/coverage-minimum-light.png" });
     expect(errors).toEqual([]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });

@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from "@playwright/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { quit } from "./quit";
 
 test("conversations, cancellation and navigable references in the coach", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cyclelab-chat-"));
@@ -78,7 +79,7 @@ test("conversations, cancellation and navigable references in the coach", async 
     ).toBeVisible();
     expect(errors).toEqual([]);
 
-    await app.close();
+    await quit(app);
     app = await launch();
     page = await app.firstWindow();
     await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
@@ -87,6 +88,6 @@ test("conversations, cancellation and navigable references in the coach", async 
       "Resume mis actividades recientes",
     ]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });

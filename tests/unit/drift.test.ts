@@ -44,23 +44,40 @@ describe("cardiac drift", () => {
     const d = cardiacDrift(rows, 0, 25 * 60);
     expect(d.ok && d.drift).toBeCloseTo(0);
   });
-  it("rejects short, paused and stopped stretches", () => {
+  it("rejects short stretches and pauses or stops over 2 min", () => {
     expect(reason(ride(19 * 60))).toMatch(/al menos 20 min/);
-    const gap = ride(40 * 60).filter((r) => r.x < 600 || r.x > 640);
-    expect(reason(gap)).toMatch(/pausa de 42 s/);
+    const gap = ride(40 * 60).filter((r) => r.x < 600 || r.x > 730);
+    expect(reason(gap)).toMatch(/pausa de 132 s/);
     expect(
-      reason(ride(40 * 60, (x) => (x > 600 && x < 640 ? { v: 0 } : {}))),
-    ).toMatch(/parada/);
-    // Short traffic stops are part of riding.
-    expect(
-      cardiacDrift(ride(40 * 60, (x) => (x > 600 && x < 620 ? { v: 0 } : {})))
-        .ok,
-    ).toBe(true);
+      reason(ride(40 * 60, (x) => (x > 600 && x < 730 ? { v: 0 } : {}))),
+    ).toMatch(/parada de más de 2 min/);
+  });
+  it("leaves pauses and stops up to 2 min out of the calculation", () => {
+    // A 90 s gap and a 100 s stop at 0 W and 100 bpm must not change a steady ride.
+    const rows = ride(42 * 60, (x) =>
+      x > 1500 && x < 1600 ? { v: 0, p: 0, ps: 0, hr: 100 } : {},
+    ).filter((r) => r.x < 600 || r.x > 690);
+    const d = cardiacDrift(rows);
+    expect(d).toMatchObject({ ok: true, vi: 1 });
+    if (!d.ok) return;
+    expect(d.drift).toBeCloseTo(0);
+    expect(d.paused).toBeCloseTo(91 + 100, -1);
+    // Moving time, not elapsed time, must reach 20 min.
+    const short = ride(21 * 60).filter((r) => r.x < 300 || r.x > 400);
+    expect(reason(short)).toMatch(/en movimiento; el tramo tiene 19 min/);
+  });
+  it("splits the halves by moving time", () => {
+    // A 1 min gap at 10 min; heart rate rises at 22 min elapsed, 21 min moving: the midpoint.
+    const rows = ride(42 * 60 + 60, (x) => ({
+      hr: x < 21 * 60 + 60 ? 140 : 150,
+    })).filter((r) => r.x < 600 || r.x > 660);
+    const d = cardiacDrift(rows);
+    expect(d.ok && d.drift).toBeCloseTo((1 - 140 / 150) * 100, 0);
   });
   it("rejects missing sensors", () => {
     expect(
       reason(ride(40 * 60, (x) => (x < 3 * 60 ? { hr: null } : {}))),
-    ).toMatch(/FC registrada en el 92 %/);
+    ).toMatch(/FC registrada en el 92 % del tiempo en movimiento/);
     expect(
       reason(ride(40 * 60, (x) => (x < 3 * 60 ? { p: null, ps: null } : {}))),
     ).toMatch(/Potencia registrada/);

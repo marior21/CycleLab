@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from "@playwright/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { quit } from "./quit";
 
 test("four intervals, comparison and selected segment reach the coach and link back", async () => {
   const app = await electron.launch({
@@ -132,6 +133,6 @@ test("four intervals, comparison and selected segment reach the coach and link b
     expect(segment.rows[0]).toMatchObject({ i0: 10, i1: 30 });
     expect(errors).toEqual([]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });

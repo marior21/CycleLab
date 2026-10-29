@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from "@playwright/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { quit } from "./quit";
 
 test("cardiac drift is shown for steady laps and explained when insufficient", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cyclelab-drift-"));
@@ -22,16 +23,18 @@ test("cardiac drift is shown for steady laps and explained when insufficient", a
         );
         const db = new DB(dir + "/cyclelab.db");
         try {
-          // 45 min steady at 200 W with heart rate 140 → 150, then 15 min easy.
+          // 45 min steady at 200 W with heart rate 140 → 150 and a 90 s stop
+          // at 10 min, then 15 min easy. 1395 s elapsed is half the moving time.
+          const stop = (x: number) => x >= 600 && x < 690;
           const rows = Array.from({ length: 3601 }, (_, x) => ({
             x,
             km: x * 0.008,
-            p: x < 2700 ? 200 : 120,
-            ps: x < 2700 ? 200 : 120,
-            hr: x < 1350 ? 140 : x < 2700 ? 150 : 120,
+            p: stop(x) ? 0 : x < 2700 ? 200 : 120,
+            ps: stop(x) ? 0 : x < 2700 ? 200 : 120,
+            hr: stop(x) ? 110 : x < 1395 ? 140 : x < 2700 ? 150 : 120,
             cad: 90,
             elev: null,
-            v: 29,
+            v: stop(x) ? 0 : 29,
             lat: null,
             lon: null,
           }));
@@ -110,6 +113,7 @@ test("cardiac drift is shown for steady laps and explained when insufficient", a
     await expect(drift).toContainText("6,7");
     await expect(note).toContainText("1,43 W/ppm en la primera mitad");
     await expect(note).toContainText("1,33 W/ppm en la segunda");
+    await expect(note).toContainText("sin contar 0:01:30 de pausas cortas");
     for (const theme of ["dark", "light"]) {
       if ((await page.locator("html").getAttribute("data-theme")) !== theme)
         await page.getByRole("button", { name: "Cambiar tema" }).click();
@@ -121,13 +125,13 @@ test("cardiac drift is shown for steady laps and explained when insufficient", a
     await expect(page.locator(".sel-bar")).toContainText("Vuelta 2");
     await expect(drift).toContainText("Insuficiente");
     await expect(note).toContainText("al menos 20 min");
-    await expect(note).toContainText("dura 15 min");
+    await expect(note).toContainText("el tramo tiene 15 min");
 
     await page.keyboard.press("Escape");
     await expect(drift).toHaveCount(0);
     await expect(note).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });

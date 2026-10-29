@@ -9,6 +9,7 @@ import {
   type RecordMesg,
   type SessionMesg,
 } from "@garmin/fitsdk";
+import { quit } from "./quit";
 
 function ride(start: Date) {
   const encoder = new Encoder();
@@ -150,6 +151,6 @@ test("imports local FIT files without duplicates and exports CSV and reports", a
     expect(readFileSync(report, "utf8")).not.toContain("<script");
     expect(errors).toEqual([]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });

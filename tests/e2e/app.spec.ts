@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from "@playwright/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { quit } from "./quit";
 test("navigation, analysis, settings, chat and persistence", async () => {
   const userData = mkdtempSync(join(tmpdir(), "cyclelab-e2e-"));
   const launch = () =>
@@ -89,7 +90,7 @@ test("navigation, analysis, settings, chat and persistence", async () => {
   await page.getByRole("button", { name: "Ajustes", exact: true }).click();
   await page.getByRole("button", { name: "Demostración", exact: true }).click();
   expect(errors).toEqual([]);
-  await app.close();
+  await quit(app);
   app = await launch();
   page = await app.firstWindow();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
@@ -98,7 +99,7 @@ test("navigation, analysis, settings, chat and persistence", async () => {
     .getByRole("button", { name: "Entrenador IA" })
     .click();
   await expect(page.getByText(/Tu fitness \(CTL\) está/)).toBeVisible();
-  await app.close();
+  await quit(app);
 });
 
 test("IPC validation, sandbox, offline profile and source isolation", async () => {
@@ -190,7 +191,7 @@ test("IPC validation, sandbox, offline profile and source isolation", async () =
       page.getByText("La herramienta falló", { exact: true }),
     ).toBeVisible();
   } finally {
-    await app.close();
+    await quit(app);
   }
 });
 
@@ -246,7 +247,7 @@ test("performance compares rolling periods, traces records and shows zone covera
     ).toBeVisible();
     expect(errors).toEqual([]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });
 
@@ -304,7 +305,7 @@ test("real goals can be created, edited, archived and survive a restart", async 
     await goals.getByRole("button", { name: "Archivar" }).click();
     await expect(goals.getByText("Archivados · 1")).toBeVisible();
     await expect(goals.getByText("Sin objetivos")).toBeVisible();
-    await app.close();
+    await quit(app);
     app = await launch();
     page = await app.firstWindow();
     await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
@@ -337,7 +338,7 @@ test("real goals can be created, edited, archived and survive a restart", async 
       ),
     ).toEqual(["Soplao BTT", "La Cantabrona 2027"]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });
 
@@ -383,11 +384,7 @@ test("Garmin settings accepts the plain JWT token response", async () => {
         .garminConfigured,
     ).toBe(false);
   } finally {
-    // Playwright's close tears the window down first and can stall for minutes
-    // after this flow; quitting like ⌘Q exits in well under a second.
-    const exited = new Promise((r) => app.process().once("exit", r));
-    await app.evaluate(({ app }) => setTimeout(() => app.quit(), 0));
-    await exited;
+    await quit(app);
   }
 });
 
@@ -464,7 +461,7 @@ test("reclassifies saved Garmin activities on restart and exposes the new filter
         athlete: { ftp: null, lthr: null, weight: null },
       }),
     );
-    await app.close();
+    await quit(app);
     app = await launch();
     page = await app.firstWindow();
     await page
@@ -586,7 +583,7 @@ test("reclassifies saved Garmin activities on restart and exposes the new filter
     expect(relabelled?.classification?.reason).toBeTruthy();
     await page.screenshot({ path: "test-results/history-settings-light.png" });
   } finally {
-    await app.close();
+    await quit(app);
   }
 });
 
@@ -687,7 +684,7 @@ test("upgrades stored unlabelled power intervals and explains the detection", as
         athlete: { ftp: null, lthr: null, weight: null },
       }),
     );
-    await app.close();
+    await quit(app);
     app = await launch();
     page = await app.firstWindow();
     await expect(page.locator(".act-item .cl-badge")).toHaveText("Intervalos");
@@ -704,7 +701,7 @@ test("upgrades stored unlabelled power intervals and explains the detection", as
         .activities[0].intervalPattern?.repetitions,
     ).toBe(4);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });
 
@@ -822,7 +819,7 @@ test("manual segments creation, isolation, restart and deletion", async () => {
       })
       .catch(() => ({ rejected: false }));
     expect(validation.rejected).toBe(true);
-    await app.close();
+    await quit(app);
     app = await launch();
     page = await app.firstWindow();
     await expect(
@@ -882,7 +879,7 @@ test("manual segments creation, isolation, restart and deletion", async () => {
       page.getByText("Sin segmentos guardados", { exact: true }),
     ).toBeVisible();
   } finally {
-    await app.close();
+    await quit(app);
   }
 });
 
@@ -980,7 +977,7 @@ test("segment results cover all years, repeated passes, persistence and refreshe
         template,
       },
     );
-    await app.close();
+    await quit(app);
     app = await launch();
     page = await app.firstWindow();
     await expect(
@@ -1239,7 +1236,7 @@ test("segment results cover all years, repeated passes, persistence and refreshe
     await page.getByRole("button", { name: "Cambiar tema" }).click();
     await page.screenshot({ path: "test-results/segment-review-light.png" });
     expect(rendererErrors).toEqual([]);
-    await app.close();
+    await quit(app);
     app = await launch();
     page = await app.firstWindow();
     await expect(
@@ -1324,7 +1321,7 @@ test("segment results cover all years, repeated passes, persistence and refreshe
     }, segment.id);
     expect(isolated).toBe(true);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });
 
@@ -1637,6 +1634,6 @@ test("MapTiler credentials, isolated map resources, real GPS map and selection",
     ).toBeVisible();
     expect(errors).toEqual([]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });

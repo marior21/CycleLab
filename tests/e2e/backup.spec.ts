@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { quit } from "./quit";
 
 const modulePath = resolve("node_modules/better-sqlite3");
 const launch = (dir: string) =>
@@ -106,7 +107,7 @@ test("backup export, clean-profile recovery, invalid files, cancellation and rol
       .locator(".settings-page")
       .screenshot({ path: "test-results/backup-dark.png" });
     expect(errors).toEqual([]);
-    await app.close();
+    await quit(app);
     app = await launch(clean);
     page = await app.firstWindow();
     page.on("pageerror", (e) => errors.push(e.message));
@@ -216,7 +217,7 @@ test("backup export, clean-profile recovery, invalid files, cancellation and rol
         .maptilerConfigured,
     ).toBe(true);
     expect(errors).toEqual([]);
-    await app.close();
+    await quit(app);
     app = await launch(clean);
     page = await app.firstWindow();
     await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
@@ -224,7 +225,7 @@ test("backup export, clean-profile recovery, invalid files, cancellation and rol
       (await page.evaluate(() => window.cyclelab.getState())).segments,
     ).toContainEqual(segment);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });
 
@@ -250,7 +251,7 @@ test("migration preserves a credential-free snapshot before changing v1", async 
       },
       { dir, modulePath },
     );
-    await app.close();
+    await quit(app);
     app = await launch(dir);
     const page = await app.firstWindow();
     await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
@@ -281,7 +282,7 @@ test("migration preserves a credential-free snapshot before changing v1", async 
         .length,
     ).toBeGreaterThan(0);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });
 
@@ -323,7 +324,7 @@ test("large pre-migration backups do not materialize the whole archive", async (
       },
       { dir, modulePath },
     );
-    await app.close();
+    await quit(app);
     app = await launch(dir);
     const page = await app.firstWindow();
     await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();
@@ -349,6 +350,6 @@ test("large pre-migration backups do not materialize the whole archive", async (
     );
     expect(result).toEqual({ version: 8, count: 192 });
   } finally {
-    await app.close();
+    await quit(app);
   }
 });

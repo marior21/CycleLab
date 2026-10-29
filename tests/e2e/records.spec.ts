@@ -3,6 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { Activity } from "../../src/shared/models";
+import { quit } from "./quit";
 
 const launch = (dir: string) =>
   electron.launch({
@@ -127,7 +128,7 @@ test("new power records appear once, open their range and stay dismissed", async
         best: [effort(60, null), effort(300, null)],
       },
     ]);
-    await app.close();
+    await quit(app);
     app = await launch(dir);
     page = await app.firstWindow();
     page.on("pageerror", (e) => errors.push(e.message));
@@ -158,7 +159,7 @@ test("new power records appear once, open their range and stay dismissed", async
     await page.getByRole("button", { name: /^Dashboard/ }).click();
     await panel.getByRole("button", { name: "Entendido" }).click();
     await expect(panel).toHaveCount(0);
-    await app.close();
+    await quit(app);
     app = await launch(dir);
     page = await app.firstWindow();
     page.on("pageerror", (e) => errors.push(e.message));
@@ -185,6 +186,6 @@ test("new power records appear once, open their range and stay dismissed", async
     await expect(page.getByText("Nuevas marcas de potencia")).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });

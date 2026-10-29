@@ -874,7 +874,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
         {drift && (
           <p className="small cl-faint drift-note">
             {drift.ok
-              ? `Deriva Pa:FC: eficiencia de ${number(drift.first, 2)} W/ppm en la primera mitad y ${number(drift.second, 2)} W/ppm en la segunda (VI ${number(drift.vi, 2)}). Positiva: la FC sube para la misma potencia; por debajo del 5 % se suele considerar acoplada. Calor, hidratación o descanso no se registran.`
+              ? `Deriva Pa:FC: eficiencia de ${number(drift.first, 2)} W/ppm en la primera mitad y ${number(drift.second, 2)} W/ppm en la segunda (VI ${number(drift.vi, 2)})${drift.paused ? `, sin contar ${duration(drift.paused)} de pausas cortas` : ""}. Positiva: la FC sube para la misma potencia; por debajo del 5 % se suele considerar acoplada. Calor, hidratación o descanso no se registran.`
               : `Deriva Pa:FC no calculada. ${drift.reason}`}
           </p>
         )}

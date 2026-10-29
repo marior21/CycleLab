@@ -2,6 +2,7 @@ import { test, expect, _electron as electron } from "@playwright/test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { quit } from "./quit";
 
 test("coach shares persisted climb attempts, counts and activity navigation in both themes", async () => {
   const app = await electron.launch({
@@ -130,6 +131,6 @@ test("coach shares persisted climb attempts, counts and activity navigation in b
     ).toEqual({ count: 0, incomplete: false });
     expect(errors).toEqual([]);
   } finally {
-    await app.close();
+    await quit(app);
   }
 });

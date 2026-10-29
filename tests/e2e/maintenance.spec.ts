@@ -8,6 +8,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { quit } from "./quit";
 
 test("maintenance isolates deletion, exports only counters and gates the first real message", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cyclelab-maintenance-"));
@@ -181,7 +182,7 @@ test("maintenance isolates deletion, exports only counters and gates the first r
     expect(errors).toEqual([]);
   } finally {
     await browser.close();
-    await app.close();
+    await quit(app);
   }
   const reopened = await electron.launch({
     args: ["out/main/index.js"],
@@ -196,6 +197,6 @@ test("maintenance isolates deletion, exports only counters and gates the first r
       ),
     ).toBe(true);
   } finally {
-    await reopened.close();
+    await quit(reopened);
   }
 });

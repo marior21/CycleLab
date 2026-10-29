@@ -686,8 +686,13 @@ secuencia de cierre de Playwright.
 La prueba cierra ahora con `app.quit()` y espera a que el proceso termine.
 Repetida 3 veces (menos de 4 s cada una) y suite completa 21 de 21 en 2,8 min,
 sin procesos de Electron colgados. No se ha determinado por qué el cierre de
-Playwright empezó a atascarse en este equipo; el resto de pruebas mantiene
-`app.close()`.
+Playwright empezó a atascarse en este equipo.
+
+Durante la 4.3 el mismo atasco apareció en «navigation, analysis, settings,
+chat and persistence». Todas las pruebas Electron cierran ahora con
+`tests/e2e/quit.ts` (⌘Q y espera a la salida del proceso) en lugar de
+`app.close()`. Suite completa 22 de 22 dos veces seguidas en 3,2–3,3 min (antes
+6,2 min).
 
 ## Fase 4.3 — Deriva cardíaca (29/10/2026)
 
@@ -696,28 +701,36 @@ Playwright empezó a atascarse en este equipo; el resto de pruebas mantiene
   primera y la segunda mitad por tiempo, con ambas eficiencias y el VI en una
   nota. Positiva significa que la FC sube para la misma potencia. La nota
   advierte que calor, hidratación o descanso no se registran.
-- Solo se calcula sobre tramos de al menos 20 min, sin huecos entre muestras de
-  más de 30 s ni paradas (velocidad 0) de más de 30 s, con potencia y FC en al
-  menos el 95 % del tiempo y VI ≤ 1,10. Si no, se muestra «Insuficiente» y el
-  motivo concreto. El VI se juzga redondeado a dos decimales, como se muestra.
+- Las pausas cortas se descuentan: huecos entre muestras de más de 30 s y
+  paradas (velocidad 0) de hasta 2 min no cuentan en el tiempo ni en las medias,
+  y la nota indica cuánto se ha descontado. Una pausa o parada de más de 2 min
+  invalida el tramo. Requisitos sobre el tiempo en movimiento: al menos 20 min,
+  potencia y FC en al menos el 95 % y VI ≤ 1,10 (juzgado redondeado a dos
+  decimales, como se muestra). Las mitades se dividen por tiempo en movimiento.
+  Si no se cumplen, se muestra «Insuficiente» y el motivo concreto.
 
-Validación: lint, typecheck y 160 pruebas unitarias correctas (7 nuevas:
+Validación: lint, typecheck y 162 pruebas unitarias correctas (9 nuevas:
 deriva nula, subida de FC con valor exacto, solo el rango elegido, tramo corto,
-hueco, parada larga frente a parada corta, sensores ausentes, intervalos y VI en
-el límite). Suite Electron completa correcta (22); la nueva siembra una vuelta
-estable de 45 min con la FC de 140 a 150 ppm (6,7 %) y otra de 15 min
-(insuficiente), las recorre con ← → y limpia con Esc. Capturas en ambos temas
-(`test-results/drift-dark.png`, `test-results/drift-light.png`).
+pausa y parada de más de 2 min, pausa y parada cortas descontadas sin alterar
+el resultado, 20 min en movimiento y no transcurridos, mitades por tiempo en
+movimiento, sensores ausentes, intervalos y VI en el límite). Suite Electron
+completa correcta dos veces seguidas (22); la nueva siembra una vuelta estable
+de 45 min con una parada de 90 s y la FC de 140 a 150 ppm (6,7 %, «sin contar
+0:01:30 de pausas cortas») y otra de 15 min (insuficiente), las recorre con
+← → y limpia con Esc. Capturas en ambos temas (`test-results/drift-*.png`).
 
 Ensayo de solo lectura con las 30 últimas actividades reales con potencia y FC
-(30 actividades completas y 32 vueltas de 20 min o más): calculable en 2 vueltas
-(13,5 % y 10,0 %, VI 1,05 y 1,08). Los rechazos son coherentes: 30 por pausas de
-31 a 153 s (semáforos o autopausa), 28 por VI de 1,10 a 1,40 y 2 por paradas.
-El ensayo encontró que una vuelta con VI real 1,104 se rechazaba mostrando
-«VI 1,10»; se corrigió redondeando antes de comparar. No se modificó la base
-del usuario.
+(30 actividades completas y 32 vueltas de 20 min o más). Con la primera versión
+(cualquier pausa de más de 30 s invalidaba el tramo) solo eran calculables 2;
+30 rechazos eran pausas de 31 a 153 s. Descontando las de hasta 2 min, son
+calculables 7 (entre −8,5 % y 14,2 %, VI de 1,04 a 1,10, hasta 63 s
+descontados). Rechazos restantes: 46 por VI de más de 1,10, 8 por pausas de más
+de 2 min y 1 vuelta que queda por debajo de 20 min en movimiento. Hasta 2,3 ms
+por tramo. El primer ensayo encontró además que una vuelta con VI real 1,104 se
+rechazaba mostrando «VI 1,10»; se corrigió redondeando antes de comparar. No se
+modificó la base del usuario.
 
-Límites: con estos requisitos la deriva rara vez sale en salidas completas o
-vueltas automáticas de recorridos con semáforos o terreno ondulado; está pensada
-para seleccionar a mano un tramo estable. No se excluyen las pausas del cálculo
-ni se distingue el calentamiento; el entrenador no recibe el valor.
+Límites: en terreno ondulado el VI sigue descartando la mayoría de tramos; para
+esos casos conviene seleccionar a mano un tramo estable. Una deriva negativa
+(la FC baja para la misma potencia) suele indicar un calentamiento incluido en
+el tramo, que no se detecta. El entrenador no recibe el valor.

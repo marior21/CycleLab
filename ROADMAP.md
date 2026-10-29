@@ -226,7 +226,7 @@ Comparar la relación potencia/FC entre las dos mitades de un tramo estable.
 
 **Terminado cuando:** solo se calcula sobre tramos estables, sin pausas y con cobertura de potencia y FC suficiente; en otro caso se marca como insuficiente y se explica por qué.
 
-**Completada el 29/10/2026.** Al seleccionar un tramo o una vuelta, Actividades muestra la deriva Pa:FC entre mitades con sus eficiencias. Exige 20 min, sin pausas ni paradas de más de 30 s, potencia y FC en el 95 % del tiempo y VI ≤ 1,10; si no, la marca como insuficiente con el motivo. En el histórico real solo 2 de 62 tramos cumplen los requisitos: sirve sobre todo seleccionando a mano un tramo estable. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-43--deriva-cardíaca-29102026).
+**Completada el 29/10/2026.** Al seleccionar un tramo o una vuelta, Actividades muestra la deriva Pa:FC entre mitades con sus eficiencias. Descuenta pausas y paradas de hasta 2 min y exige, en movimiento, 20 min, potencia y FC en el 95 % del tiempo y VI ≤ 1,10; si no, la marca como insuficiente con el motivo. En el histórico real cumplen los requisitos 7 de 62 tramos; en terreno ondulado conviene seleccionar a mano un tramo estable. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-43--deriva-cardíaca-29102026).
 
 ### 4.4. Detección de intervalos sin vueltas · Bloque B · M–L
 

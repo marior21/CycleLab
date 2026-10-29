@@ -1007,3 +1007,65 @@ del Mac sin desfase, demo sin desplazar y lectura del desfase de Garmin
 
 Límites: los textos del entrenador hablan de días locales; los CSV e informes
 muestran la hora local sin indicar la zona.
+
+## Fase 5.5 — Acabado de escritorio (29/10/2026)
+
+- **Primeros pasos:** sobre Actividades, mientras Garmin no haya sincronizado
+  nunca, un panel con cuatro pasos marcados al cumplirse: explorar la demo,
+  conectar Garmin, completar FTP/peso/LTHR y la primera sincronización (botón
+  activo solo con Garmin configurado). Indica que OpenRouter y MapTiler pueden
+  esperar. «Ocultar» lo guarda en los ajustes (`welcomed`, incluido en las
+  copias). Los pasos hechos se anuncian como «(hecho)» al lector de pantalla.
+- **Filtros conservados:** al volver a Actividades desde otra pantalla siguen el
+  periodo, el año, las fechas, los tipos, la búsqueda, las marcadas para
+  comparar y las páginas mostradas; la actividad seleccionada ya se conservaba.
+  Cambiar de origen empieza limpio y un enlace a un periodo los sustituye.
+- **Estados vacíos:** revisados; los de lista vacía, histórico vacío, filtros
+  sin resultados, segmentos, puertos, entrenador sin configurar y errores ya
+  ofrecen una acción. No se añadieron más.
+- Nueva prueba Electron (`desktop.spec.ts`): guía visible y enlazada a Ajustes,
+  filtros y selección conservados tras ir a Rendimiento, «Ocultar» persistente
+  tras reiniciar, y Dashboard, Actividades, Rendimiento, Segmentos y Entrenador
+  a 1200 × 760 y 1440 × 900 en ambos temas sin desplazamiento horizontal, con
+  capturas `test-results/review-*.png` revisadas.
+- `scripts/visual.mjs` oculta la guía antes de comparar con el prototipo, que no
+  la tiene: las 26 comparaciones dan exactamente las mismas cifras que la
+  versión 0.1.3.
+
+Hallazgos de la revisión a 1200 × 760 que quedan pendientes: el título del
+detalle de actividad se parte en una columna estrecha junto a sus tres botones
+y la etiqueta «POT. NORMALIZADA» roza el borde de su celda. No se han hecho una
+revisión con VoiceOver ni con movimiento reducido activado en el sistema;
+siguen las reglas existentes (foco visible, `prefers-reduced-motion`).
+
+Validación: lint, typecheck, 189 pruebas unitarias, 27 recorridos Electron y
+`test:visual`.
+
+## Fase 5.6 — Distribución (29/10/2026)
+
+- Se retira `mac.identity: null`. La release firma con el certificado Developer
+  ID si existen los secretos `MAC_CERTIFICATE` y `MAC_CERTIFICATE_PASSWORD`, y
+  electron-builder notariza si existen `APPLE_ID`,
+  `APPLE_APP_SPECIFIC_PASSWORD` y `APPLE_TEAM_ID`; después se verifican
+  `codesign`, `spctl` y `stapler`. Sin secretos todo sigue sin firmar.
+- Política: macOS 12 o posterior (`minimumSystemVersion`), un instalador por
+  arquitectura (arm64 e x64), Windows compilado pero no soportado.
+- README: secretos necesarios, instalar, actualizar (datos que se conservan y
+  copia previa a migrar), recuperar, y la lista de comprobación en un Mac limpio.
+
+Comprobado: `npm run package` y `test:package` correctos; en este Mac
+electron-builder omite la firma porque no hay ningún certificado Developer ID
+(el único del llavero es «Apple Development» y está caducado), igual que antes.
+
+Pendiente del propietario: alta en el Apple Developer Program y los secretos;
+la primera release firmada y notarizada; la prueba en un Mac limpio; y, después,
+actualizaciones automáticas con notas de versión. Ninguna de estas se ha podido
+verificar aquí.
+
+## Cierre de la fase 5 (29/10/2026)
+
+Entregadas 5.1–5.5 y preparada la 5.6. Lint, typecheck, 189 pruebas unitarias,
+27 recorridos Electron, `test:visual`, `npm run package` y `test:package`
+correctos. La fase no queda **terminada** según su criterio («se puede
+instalar, actualizar y recuperar datos en un entorno limpio») hasta la firma
+real y la prueba en un Mac limpio.

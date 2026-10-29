@@ -30,6 +30,8 @@ jobs:
             arch: x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    env:
+      SIGNED: ${{ secrets.MAC_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,11 +45,24 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      # shortcut: unsigned installers; configure certificates before public distribution.
+      # Signs and notarizes the Mac builds only when the owner's secrets exist;
+      # without them the installers stay unsigned. Windows is never signed.
       - name: Build installers
         run: npm run dist -- --${{ matrix.platform }} --${{ matrix.arch }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          CSC_LINK: ${{ matrix.platform == 'mac' && secrets.MAC_CERTIFICATE || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_CERTIFICATE_PASSWORD || '' }}
+          APPLE_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+      - name: Check signature and notarization
+        if: matrix.platform == 'mac' && env.SIGNED == 'true'
+        run: |
+          app=$(find dist -maxdepth 2 -name CycleLab.app -print -quit)
+          codesign --verify --deep --strict "$app"
+          spctl --assess --type execute --verbose "$app"
+          xcrun stapler validate "$app"
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ matrix.platform }}-${{ matrix.arch }}

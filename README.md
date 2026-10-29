@@ -68,11 +68,34 @@ No necesitas crear un token personal para el pipeline: usa el `GITHUB_TOKEN` aut
 
 ### Firma y validación de los instaladores
 
-Los instaladores iniciales **no llevan firma de distribución**. macOS puede bloquear una descarga sin firma/notarización y Windows puede mostrar avisos de SmartScreen. Para distribución pública configura Developer ID y notarización de Apple, y firma de código para Windows mediante los secretos de Actions. En Mac habrá que retirar `build.mac.identity: null` y configurar las credenciales; no basta con añadir secretos mientras la firma siga desactivada. Consulta la [guía de firma de electron-builder](https://www.electron.build/docs/features/code-signing/).
+La firma de Mac se activa sola cuando existen estos secretos de Actions; sin ellos los instaladores salen **sin firmar**, como hasta ahora:
 
-Para compilar instaladores localmente: `npm run dist` (plataforma y arquitectura del equipo). Este pipeline no añade actualizaciones automáticas ni ejecuta pruebas visuales o de instalación. La interfaz se diseñó para Mac: valida instalación, controles de ventana, teclado, credenciales y reapertura de datos en un Windows real antes de dar soporte a esa plataforma.
+| Secreto | Contenido |
+| --- | --- |
+| `MAC_CERTIFICATE` | Certificado «Developer ID Application» exportado como `.p12` y codificado en base64 |
+| `MAC_CERTIFICATE_PASSWORD` | Contraseña de ese `.p12` |
+| `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | Cuenta del Apple Developer Program, contraseña de app y Team ID para notarizar |
+
+Con ellos, electron-builder firma con runtime endurecido, notariza y grapa el ticket; el workflow comprueba después `codesign`, `spctl` y `stapler`. En un Mac propio, `npm run dist` usa el certificado Developer ID del llavero si existe y notariza si exportas esas tres variables de Apple. Requiere una cuenta de pago del Apple Developer Program. Windows no se firma: SmartScreen avisará al instalar.
+
+### Arquitecturas y requisitos
+
+- macOS 12 Monterey o posterior (`minimumSystemVersion`), el mínimo de la versión de Electron usada.
+- Un instalador por arquitectura: `arm64` para Apple Silicon y `x64` para Intel. No hay binario universal: SQLite se compila de forma nativa en cada runner.
+- Windows x64 se compila, pero no está soportado: la interfaz y las pruebas son de Mac.
+
+### Instalar, actualizar y recuperar
+
+- **Instalar:** abre el `.dmg` y arrastra CycleLab a Aplicaciones. Sin firma, la primera vez hay que abrirla con clic derecho → Abrir (o desde Ajustes del Sistema → Privacidad y seguridad).
+- **Actualizar:** sustituye la app por la nueva versión. Los datos están en `~/Library/Application Support/CycleLab` y no se tocan. Si la versión nueva cambia el esquema, guarda antes una copia automática `antes-de-migrar-v<n>` en la carpeta `backups` de esos datos. Una versión anterior no abre una base migrada: avisa y no la modifica.
+- **Recuperar:** Ajustes → Copias de seguridad → Restaurar copia, desde una copia exportada o automática. Las claves de Garmin, OpenRouter y MapTiler no viajan en las copias: hay que volver a introducirlas.
+- No hay actualizaciones automáticas: en Mac necesitan la app firmada. Llegarán después de la primera versión firmada, con sus notas de versión.
+
+**Prueba en un Mac limpio antes de publicar** (usuario nuevo de macOS o máquina sin CycleLab): instalar el `.dmg` de su arquitectura; abrir sin avisos de Gatekeeper si está firmado; recorrer la primera ejecución con la demo; conectar Garmin y sincronizar; exportar una copia; instalar encima la versión siguiente y comprobar que abre los mismos datos; borrar la carpeta de datos, restaurar la copia y volver a introducir las claves. Anota el resultado en `VALIDATION.md`.
 
 ## Configurar las conexiones
+
+Al empezar, «Primeros pasos» en Actividades resume estos pasos y marca los que ya están hechos; desaparece tras la primera sincronización o con «Ocultar».
 
 1. Abre **Ajustes**, al pie de la barra lateral.
 2. Introduce la **API key de Garmin Connect Personal** y pulsa **Guardar y comprobar**. Cambia a **Mis datos** para iniciar la importación; también puedes usar **Sincronizar ahora**. No se admite una clave del programa empresarial de Garmin.
@@ -148,7 +171,7 @@ En **Mis datos**, Actividades se abre con **Todo** seleccionado. **30 d / 90 d**
 
 ### Buscar por año o fechas
 
-En **Actividades**, el selector **Año** ofrece los años presentes en el histórico descargado. **Desde** y **Hasta** permiten un rango personalizado: ambos días están incluidos y cualquiera de los extremos puede quedar vacío. Las fechas siguen el mismo calendario UTC usado por las fechas de actividad mostradas en la app.
+En **Actividades**, el selector **Año** ofrece los años presentes en el histórico descargado. **Desde** y **Hasta** permiten un rango personalizado: ambos días están incluidos y cualquiera de los extremos puede quedar vacío. Cada actividad se fecha con el día y la hora locales del lugar donde se grabó (el desfase horario que indican Garmin o el archivo FIT); si no hay desfase, con la zona horaria del Mac. Filtros, semanas, meses, temporadas y la carga usan ese mismo día local.
 
 Elegir un año limpia el rango personalizado; escribir una fecha limpia el año y desactiva los accesos rápidos. **30 d**, **90 d**, **Todo** y **Limpiar fechas** sustituyen los filtros de fecha sin borrar el texto de búsqueda ni la selección de tipos. Los contadores de los tipos respetan el periodo seleccionado. Un rango invertido muestra un mensaje para corregirlo. **Restablecer filtros** limpia todos los filtros.
 
@@ -209,7 +232,7 @@ en una ubicación segura. Las copias automáticas se conservan hasta que las bor
 
 ## Historial del perfil
 
-En Ajustes, «Perfil del atleta» permite guardar FTP, peso y LTHR con una fecha de vigencia UTC. El historial se aplica a «Mis datos» y se incluye en las copias de seguridad. Puedes corregir una fecha existente; un campo vacío registra un valor desconocido desde ese día.
+En Ajustes, «Perfil del atleta» permite guardar FTP, peso y LTHR con una fecha de vigencia (día local, como las actividades). El historial se aplica a «Mis datos» y se incluye en las copias de seguridad. Puedes corregir una fecha existente; un campo vacío registra un valor desconocido desde ese día.
 
 Zonas y W/kg utilizan los valores vigentes en la fecha de la actividad. Los valores anteriores sin fecha no se aplican al pasado. IF/TSS importados se conservan sin recálculo. En Rendimiento, W/kg corresponde a cada marca en vatios dividida por su peso histórico; el tooltip indica peso y fecha. Las referencias al FTP actual se etiquetan como tales.
 

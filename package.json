@@ -68,7 +68,7 @@
     ],
     "mac": {
       "category": "public.app-category.healthcare-fitness",
-      "identity": null,
+      "minimumSystemVersion": "12.0",
       "target": [
         "dmg",
         "zip"

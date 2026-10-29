@@ -688,3 +688,36 @@ Repetida 3 veces (menos de 4 s cada una) y suite completa 21 de 21 en 2,8 min,
 sin procesos de Electron colgados. No se ha determinado por qué el cierre de
 Playwright empezó a atascarse en este equipo; el resto de pruebas mantiene
 `app.close()`.
+
+## Fase 4.3 — Deriva cardíaca (29/10/2026)
+
+- Al seleccionar un tramo o una vuelta en Actividades, la barra de selección
+  muestra «Deriva Pa:FC»: desacoplamiento entre la eficiencia (W/ppm) de la
+  primera y la segunda mitad por tiempo, con ambas eficiencias y el VI en una
+  nota. Positiva significa que la FC sube para la misma potencia. La nota
+  advierte que calor, hidratación o descanso no se registran.
+- Solo se calcula sobre tramos de al menos 20 min, sin huecos entre muestras de
+  más de 30 s ni paradas (velocidad 0) de más de 30 s, con potencia y FC en al
+  menos el 95 % del tiempo y VI ≤ 1,10. Si no, se muestra «Insuficiente» y el
+  motivo concreto. El VI se juzga redondeado a dos decimales, como se muestra.
+
+Validación: lint, typecheck y 160 pruebas unitarias correctas (7 nuevas:
+deriva nula, subida de FC con valor exacto, solo el rango elegido, tramo corto,
+hueco, parada larga frente a parada corta, sensores ausentes, intervalos y VI en
+el límite). Suite Electron completa correcta (22); la nueva siembra una vuelta
+estable de 45 min con la FC de 140 a 150 ppm (6,7 %) y otra de 15 min
+(insuficiente), las recorre con ← → y limpia con Esc. Capturas en ambos temas
+(`test-results/drift-dark.png`, `test-results/drift-light.png`).
+
+Ensayo de solo lectura con las 30 últimas actividades reales con potencia y FC
+(30 actividades completas y 32 vueltas de 20 min o más): calculable en 2 vueltas
+(13,5 % y 10,0 %, VI 1,05 y 1,08). Los rechazos son coherentes: 30 por pausas de
+31 a 153 s (semáforos o autopausa), 28 por VI de 1,10 a 1,40 y 2 por paradas.
+El ensayo encontró que una vuelta con VI real 1,104 se rechazaba mostrando
+«VI 1,10»; se corrigió redondeando antes de comparar. No se modificó la base
+del usuario.
+
+Límites: con estos requisitos la deriva rara vez sale en salidas completas o
+vueltas automáticas de recorridos con semáforos o terreno ondulado; está pensada
+para seleccionar a mano un tramo estable. No se excluyen las pausas del cálculo
+ni se distingue el calentamiento; el entrenador no recibe el valor.

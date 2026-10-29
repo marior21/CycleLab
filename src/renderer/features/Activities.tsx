@@ -23,6 +23,7 @@ import {
   percentChange,
   routeSelection,
 } from "../../domain/analysis";
+import { cardiacDrift } from "../../domain/drift";
 import {
   Badge,
   Button,
@@ -560,6 +561,10 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
   const selected = range ? stats(rows, ...range) : null;
+  const drift = useMemo(
+    () => (range ? cardiacDrift(rows, ...range) : null),
+    [rows, range],
+  );
   const distAvailable = rows.length > 0 && rows.every((r) => r.km !== null);
   const common = {
     data: rows,
@@ -856,7 +861,22 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
               value={number(selected.dist, 1)}
               unit="km"
             />
+            <Metric
+              size="s"
+              label="Deriva Pa:FC"
+              accent="heart"
+              value={drift?.ok ? number(drift.drift, 1) : "–"}
+              unit={drift?.ok ? "%" : undefined}
+              sub={drift?.ok ? undefined : "Insuficiente"}
+            />
           </div>
+        )}
+        {drift && (
+          <p className="small cl-faint drift-note">
+            {drift.ok
+              ? `Deriva Pa:FC: eficiencia de ${number(drift.first, 2)} W/ppm en la primera mitad y ${number(drift.second, 2)} W/ppm en la segunda (VI ${number(drift.vi, 2)}). Positiva: la FC sube para la misma potencia; por debajo del 5 % se suele considerar acoplada. Calor, hidratación o descanso no se registran.`
+              : `Deriva Pa:FC no calculada. ${drift.reason}`}
+          </p>
         )}
         {rows.length ? (
           <div className="stack-charts">

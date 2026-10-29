@@ -1,5 +1,6 @@
 import { profileAt, profileNote } from "../../domain/athlete";
 import { Coverage } from "./Coverage";
+import { ActivityFeel } from "./ActivityFeel";
 import { filterActivitiesByDate } from "../../domain/activityFilters";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -573,12 +574,14 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           ? "IF/TSS de demostración."
           : "IF/TSS importados de Garmin; umbral de origen no verificado."}
       </p>
-      {a.classification && (
+      {(a.classification || a.automaticType) && (
         <div className="small cl-faint">
-          {a.classification.estimated
-            ? "Clasificación estimada"
-            : "Clasificación automática"}{" "}
-          · {a.classification.reason}
+          {a.automaticType
+            ? `Etiqueta manual · automática: ${TYPES[a.automaticType].label}`
+            : a.classification?.estimated
+              ? "Clasificación estimada"
+              : "Clasificación automática"}
+          {a.classification && ` · ${a.classification.reason}`}
         </div>
       )}
       <div className="strip tight-metrics">
@@ -624,6 +627,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
         />
         <Metric size="s" label="Trabajo" value={number(a.kj)} unit="kJ" />
       </div>
+      <ActivityFeel key={a.id} a={a} source={p.demo ? "demo" : "garmin"} />
       <div className="row">
         <Panel
           className="grow"

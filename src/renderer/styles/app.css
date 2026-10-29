@@ -310,7 +310,8 @@ input.cl-check {
   gap: var(--space-2);
 }
 input,
-select {
+select,
+textarea {
   color: var(--ink);
   background: var(--bg-100);
   border: var(--border-width) solid var(--line-strong);
@@ -400,6 +401,14 @@ input.cl-check {
   font-weight: 500;
 }
 
+.feel-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.feel-notes textarea {
+  resize: vertical;
+}
 .activity-year {
   display: flex;
   align-items: center;

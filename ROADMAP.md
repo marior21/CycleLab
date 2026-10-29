@@ -159,6 +159,8 @@ Añadir RPE, notas y una valoración simple de fatiga por sesión; permitir corr
 
 **Terminado cuando:** la sincronización y «Volver a etiquetar todo» conservan las decisiones manuales, y el entrenador distingue sensaciones declaradas de métricas registradas.
 
+**Completada el 29/10/2026.** Cada actividad admite RPE, fatiga, notas y una etiqueta manual que conserva la automática y su motivo. Se guardan aparte del resumen sincronizado, por lo que la sincronización y «Volver a etiquetar todo» no las tocan, y entran en las copias de seguridad. El entrenador las recibe como sensaciones declaradas, separadas de las métricas. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-32--sensaciones-y-corrección-manual-29102026).
+
 ### 3.3. Objetivos reales · P1 · M
 
 Los objetivos actuales pertenecen a la demo. Añadir nombre, fecha, tipo de prueba y objetivo personal, visibles en Dashboard y disponibles para el entrenador.

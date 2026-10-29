@@ -1,5 +1,10 @@
 import { detectIntervalPattern } from "./intervalPattern";
-import type { Activity, ActivityDetail, ActivityType } from "../shared/models";
+import type {
+  Activity,
+  ActivityDetail,
+  ActivityFeel,
+  ActivityType,
+} from "../shared/models";
 
 const normalized = (s: string) =>
   s
@@ -146,4 +151,11 @@ export function weeklyActivityTotals(activities: Activity[]) {
     hours: activities.reduce((n, a) => n + a.dur / 3600, 0),
     complete: activities.every((a) => a.tss !== null),
   };
+}
+// A manual label replaces the type but keeps the automatic one and its reason.
+export function withFeel(a: Activity, feel?: ActivityFeel): Activity {
+  if (!feel) return a;
+  return feel.type
+    ? { ...a, feel, type: feel.type, automaticType: a.type }
+    : { ...a, feel };
 }

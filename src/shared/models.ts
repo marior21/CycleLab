@@ -9,6 +9,14 @@ export type Screen =
   | "settings";
 export type ActivityType =
   "endurance" | "intervals" | "climb" | "mtb" | "indoor" | "gravel" | "cycling";
+export type Fatigue = "fresh" | "normal" | "tired";
+// Declared by the user and stored apart from the synced summary.
+export interface ActivityFeel {
+  rpe: number | null;
+  fatigue: Fatigue | null;
+  notes: string;
+  type: ActivityType | null;
+}
 export interface ProfileEntry {
   date: string;
   metric: "ftp" | "weight" | "lthr";
@@ -35,6 +43,8 @@ export interface Activity {
     recoveryWatts: number;
   };
   classification?: { reason: string; estimated: boolean };
+  feel?: ActivityFeel;
+  automaticType?: ActivityType;
   device: string;
   dur: number;
   dist: number | null;
@@ -361,6 +371,11 @@ export interface CycleLabAPI {
   sync(): Promise<void>;
   retryDownloads(ids: string[]): Promise<void>;
   reclassifyActivities(): Promise<number>;
+  saveActivityFeel(
+    source: Source,
+    id: string,
+    feel: ActivityFeel | null,
+  ): Promise<void>;
   sendMessage(
     text: string,
     context: CoachContext,

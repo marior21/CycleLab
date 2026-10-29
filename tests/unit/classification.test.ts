@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   classifyActivity,
   weeklyActivityTotals,
+  withFeel,
 } from "../../src/domain/classification";
 import { normalizeActivity } from "../../src/main/garmin";
 import type { Activity, Lap } from "../../src/shared/models";
@@ -93,5 +94,23 @@ describe("automatic activity classification", () => {
     expect(totals.indoor).toBe(10);
     expect(totals.cycling).toBe(10);
     expect(weeklyActivityTotals([{ ...base, tss: null }]).complete).toBe(false);
+  });
+  it("keeps the automatic label and reason under a manual one", () => {
+    const auto = classify({ name: "Intervalos 4x8" }),
+      feel = { rpe: 7, fatigue: null, notes: "", type: "climb" as const };
+    expect(withFeel(auto)).toBe(auto);
+    expect(withFeel(auto, feel)).toMatchObject({
+      type: "climb",
+      automaticType: auto.type,
+      classification: auto.classification,
+      feel,
+    });
+    expect(withFeel(auto, { ...feel, type: null })).toMatchObject({
+      type: auto.type,
+      feel: { rpe: 7 },
+    });
+    expect(withFeel(auto, { ...feel, type: null }).automaticType).toBe(
+      undefined,
+    );
   });
 });

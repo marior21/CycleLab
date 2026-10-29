@@ -7,6 +7,7 @@ import { maintenance, deleteLocal, diagnostic } from "./maintenance";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { activityFeelSchema } from "../shared/activityFeel";
 import { settingsSchema } from "../shared/settings";
 import { writeBackup, restoreBackup } from "./backup";
 import { createSegment, includedAttempts } from "../domain/segments";
@@ -411,6 +412,14 @@ async function boot() {
     const count = store.reclassifyActivities();
     changed();
     return count;
+  });
+  register("activity-feel", (rawSource, rawId, rawFeel) => {
+    store.saveFeel(
+      sourceSchema.parse(rawSource),
+      z.string().min(1).max(100).parse(rawId),
+      activityFeelSchema.nullable().parse(rawFeel),
+    );
+    changed();
   });
   register("models", () => openrouter().models());
   register("retry-downloads", async (rawIds) => {

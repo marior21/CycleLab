@@ -34,6 +34,8 @@ const api: CycleLabAPI = {
   sync: () => call("sync"),
   retryDownloads: (ids) => call("retry-downloads", ids),
   reclassifyActivities: () => call("reclassify"),
+  saveActivityFeel: (source, id, feel) =>
+    call("activity-feel", source, id, feel),
   sendMessage: (text, ctx, conversationId) =>
     call("message", text, ctx, conversationId),
   cancelMessage: () => call("message-cancel"),

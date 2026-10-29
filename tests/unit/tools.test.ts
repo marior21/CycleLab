@@ -51,6 +51,36 @@ describe("coach tools", () => {
       tools.run("buscar_actividades", {}, { screen: "coach" }).rows.length,
     ).toBeLessThanOrEqual(20);
   });
+  it("labels declared feelings apart from recorded metrics", () => {
+    const activity = {
+      ...demoDataset.activities[0],
+      type: "climb" as const,
+      automaticType: "intervals" as const,
+      feel: {
+        rpe: 9,
+        fatigue: "tired" as const,
+        notes: "Dormí mal",
+        type: "climb" as const,
+      },
+    };
+    const store = {
+      dataset: () => ({ ...demoDataset, activities: [activity] }),
+    } as unknown as Store;
+    expect(
+      new AnalysisTools(store, "demo").run(
+        "buscar_actividades",
+        {},
+        { screen: "coach" },
+      ).rows[0],
+    ).toMatchObject({
+      NP: activity.np,
+      tipo: "climb",
+      tipoAutomatico: "intervals",
+      rpeDeclarado: 9,
+      fatigaDeclarada: "cansado",
+      notasDeclaradas: "Dormí mal",
+    });
+  });
 });
 
 describe("persisted segment comparisons", () => {

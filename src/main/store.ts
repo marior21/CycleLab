@@ -1,13 +1,14 @@
 import { withProfileEntries } from "../domain/athlete";
 import { sampleCoverage } from "../domain/coverage";
 import type { SampleCoverage } from "../shared/models";
-import { classifyActivity } from "../domain/classification";
+import { classifyActivity, withFeel } from "../domain/classification";
 import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { automaticBackup, schemaVersion } from "./backup";
 import type {
   Activity,
   ActivityDetail,
+  ActivityFeel,
   ChatMessage,
   Conversation,
   Settings,
@@ -34,7 +35,7 @@ export class Store {
     this.db.pragma("foreign_keys = ON");
     this.db.transaction(() => {
       this.db.exec(
-        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS conversations (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 6;`,
+        `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS activities (source TEXT NOT NULL, id TEXT NOT NULL, date REAL NOT NULL, summary TEXT NOT NULL, detail TEXT, best TEXT, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS messages (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS secrets (provider TEXT PRIMARY KEY, value BLOB NOT NULL); CREATE TABLE IF NOT EXISTS segments (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS segment_results (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS conversations (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); CREATE TABLE IF NOT EXISTS activity_feel (source TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,id)); PRAGMA user_version = 7;`,
       );
       if (version === 1)
         this.db.exec(
@@ -171,6 +172,24 @@ export class Store {
         .all(source) as { summary: string }[]
     ).map((r) => JSON.parse(r.summary) as Activity);
   }
+  saveFeel(source: Source, id: string, feel: ActivityFeel | null) {
+    if (
+      !this.db
+        .prepare("SELECT 1 FROM activities WHERE source=? AND id=?")
+        .get(source, id)
+    )
+      throw new Error("La actividad ya no está disponible en este origen.");
+    if (feel)
+      this.db
+        .prepare(
+          "INSERT INTO activity_feel VALUES (?,?,?) ON CONFLICT(source,id) DO UPDATE SET payload=excluded.payload",
+        )
+        .run(source, id, JSON.stringify(feel));
+    else
+      this.db
+        .prepare("DELETE FROM activity_feel WHERE source=? AND id=?")
+        .run(source, id);
+  }
   detail(source: Source, id: string): ActivityDetail | null {
     const r = this.db
       .prepare("SELECT detail FROM activities WHERE source=? AND id=?")
@@ -202,7 +221,17 @@ export class Store {
     })();
   }
   dataset(source: Source) {
-    const activities = this.activities(source);
+    const feel = new Map(
+      (
+        this.db
+          .prepare("SELECT id, payload FROM activity_feel WHERE source=?")
+          .all(source) as { id: string; payload: string }[]
+      ).map((r) => [r.id, JSON.parse(r.payload) as ActivityFeel]),
+    );
+    // Sync and relabeling write raw summaries; manual input is merged only here.
+    const activities = this.activities(source).map((a) =>
+      withFeel(a, feel.get(a.id)),
+    );
     const coverage = Object.fromEntries(
       activities.map((a) => {
         const key = `${source}:${a.id}`;

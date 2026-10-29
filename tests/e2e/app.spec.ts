@@ -413,9 +413,26 @@ test("reclassifies saved Garmin activities on restart and exposes the new filter
         await page.evaluate(() => window.cyclelab.getState())
       ).dataset.activities.find((a) => a.id === "saved-1")?.type,
     ).toBe("intervals");
+    await page.evaluate(() =>
+      window.cyclelab.saveActivityFeel("garmin", "saved-1", {
+        rpe: 8,
+        fatigue: "tired",
+        notes: "Piernas pesadas",
+        type: "climb",
+      }),
+    );
     expect(
       await page.evaluate(() => window.cyclelab.reclassifyActivities()),
     ).toBe(3);
+    const relabelled = (
+      await page.evaluate(() => window.cyclelab.getState())
+    ).dataset.activities.find((a) => a.id === "saved-1");
+    expect(relabelled).toMatchObject({
+      type: "climb",
+      automaticType: "intervals",
+      feel: { rpe: 8, fatigue: "tired", notes: "Piernas pesadas" },
+    });
+    expect(relabelled?.classification?.reason).toBeTruthy();
     await page.screenshot({ path: "test-results/history-settings-light.png" });
   } finally {
     await app.close();

@@ -472,3 +472,25 @@ parcial, datos ausentes, semana vacía y media de cuatro semanas. Revisión en l
 app con la demo en ambos temas, sin errores en consola; el esfuerzo de 20 min
 abre «3×12′ sweet spot» con su tramo marcado. Sin validar con datos reales de
 Garmin ni con la suite Electron completa.
+
+## Fase 3.2 — Sensaciones y corrección manual (29/10/2026)
+
+- Panel «Sensaciones» en el detalle de cada actividad: RPE (1–10), fatiga
+  (fresco, normal o cansado), notas y etiqueta. «Automática» deja la
+  clasificación calculada; elegir otro tipo la sustituye.
+- Las sensaciones se guardan en la tabla `activity_feel` (esquema 7), separada
+  del resumen sincronizado. La sincronización y «Volver a etiquetar todo» solo
+  reescriben el resumen; la decisión manual se aplica al leer, así que nunca se
+  pierde. Con etiqueta manual se muestra «Etiqueta manual · automática: …» junto
+  al motivo original.
+- El entrenador recibe `tipo`, `tipoAutomatico`, `rpeDeclarado`,
+  `fatigaDeclarada` y `notasDeclaradas` en la búsqueda y la selección, y el
+  prompt le indica que son sensaciones declaradas, no métricas registradas.
+- Las copias de seguridad incluyen las sensaciones (las anteriores se restauran
+  sin ellas) y «Borrar todo» de un origen también las elimina.
+
+Validación: typecheck, lint y 135 pruebas unitarias correctos, incluidos la
+fusión de la etiqueta manual y los campos declarados del entrenador. Pruebas
+Electron de app, copias y mantenimiento (12) correctas; el reetiquetado conserva
+tipo manual, RPE, fatiga y notas. Revisión en la app con la demo en ambos temas.
+Sin validar con datos reales de Garmin ni con una conversación real de OpenRouter.

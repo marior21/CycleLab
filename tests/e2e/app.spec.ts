@@ -1151,6 +1151,26 @@ test("segment results cover all years, repeated passes, persistence and refreshe
     await comparison.focus();
     await page.keyboard.press("Escape");
     await expect(comparison.locator(".cl-sel")).toHaveCount(0);
+    const sectors = comparison.locator("table").filter({
+      has: page.getByRole("columnheader", { name: "A − B" }),
+    });
+    const sector = sectors.locator("tbody tr").first();
+    await expect(sector).toContainText(/km/);
+    await expect(comparison).toContainText("Total A − B");
+    await expect(comparison).toContainText("Viento, tráfico");
+    await sector.click();
+    await expect(sector).toHaveAttribute("aria-selected", "true");
+    await expect(comparison.locator(".cl-sel")).toHaveCount(4);
+    await sector.press("Escape");
+    await expect(comparison.locator(".cl-sel")).toHaveCount(0);
+    for (const theme of ["light", "dark", "light"]) {
+      if ((await page.locator("html").getAttribute("data-theme")) !== theme)
+        await page.getByRole("button", { name: "Cambiar tema" }).click();
+      await sectors.scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: `test-results/segment-sectors-${theme}.png`,
+      });
+    }
     await comparison.getByRole("button", { name: /^B ·/ }).click();
     await expect(
       page.getByRole("heading", { name: "Actividades", exact: true }),

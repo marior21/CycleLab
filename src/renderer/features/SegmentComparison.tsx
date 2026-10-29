@@ -4,9 +4,12 @@ import type {
   SegmentAttempt,
   Source,
 } from "../../shared/models";
-import { compareSegmentAttempts } from "../../domain/segmentComparison";
+import {
+  compareSegmentAttempts,
+  timeSectors,
+} from "../../domain/segmentComparison";
 import { LineChart } from "../components/charts";
-import { Button, Panel, StateBlock } from "../components/ui";
+import { Badge, Button, DataTable, Panel, StateBlock } from "../components/ui";
 import { date, duration, number } from "../format";
 
 export function SegmentComparison(p: {
@@ -55,6 +58,12 @@ export function SegmentComparison(p: {
         : [],
     [details, a.i0, a.i1, b.i0, b.i1],
   );
+  const sectors = useMemo(() => {
+    const total = rows.findLast((r) => r.delta !== null)?.x ?? 0;
+    return timeSectors(rows, total >= 2 ? 1 : 0.25);
+  }, [rows]);
+  const seconds = (v: number) =>
+    (v < -0.05 ? "−" : v > 0.05 ? "+" : "±") + number(Math.abs(v), 1) + " s";
   const shared = {
     data: rows,
     xFormat: (v: number) => `${number(v, 2)} km`,
@@ -171,6 +180,61 @@ export function SegmentComparison(p: {
               ]}
               refLines={[{ value: 0, label: "Igual tiempo" }]}
             />
+            <h3 className="label">Dónde se ganó o perdió tiempo</h3>
+            <DataTable
+              compact
+              rowKey="from"
+              rows={sectors}
+              selected={
+                sectors.find(
+                  (s) => s.from === selection?.[0] && s.to === selection?.[1],
+                )?.from
+              }
+              onSelect={(_key, s) => setSelection([s.from, s.to])}
+              onEscape={() => setSelection(null)}
+              columns={[
+                {
+                  key: "from",
+                  label: "Tramo",
+                  render: (s) => `${number(s.from, 2)}–${number(s.to, 2)} km`,
+                },
+                {
+                  key: "change",
+                  label: "A − B",
+                  align: "right",
+                  render: (s) => seconds(s.change),
+                },
+                {
+                  key: "result",
+                  label: "Resultado",
+                  render: (s) =>
+                    Math.abs(s.change) <= 0.05
+                      ? "Igual"
+                      : s.change < 0
+                        ? `A gana ${number(-s.change, 1)} s`
+                        : `A pierde ${number(s.change, 1)} s`,
+                },
+                {
+                  key: "gap",
+                  label: "Datos",
+                  render: (s) =>
+                    s.gap ? (
+                      <Badge tone="warning">Con hueco</Badge>
+                    ) : (
+                      "Continuos"
+                    ),
+                },
+              ]}
+            />
+            <p className="small cl-faint">
+              Total A − B ={" "}
+              {seconds(sectors.reduce((sum, s) => sum + s.change, 0))}, suma de
+              los tramos hasta la última distancia común con tiempo conocido. Un
+              tramo con hueco usa solo los tiempos medidos en sus extremos; si
+              un límite cae dentro de un hueco, se une al tramo siguiente.
+              Viento, tráfico, superficie o paradas no se registran: una
+              diferencia de tiempo no demuestra por sí sola un cambio de forma.
+            </p>
           </>
         )}
       </Panel>

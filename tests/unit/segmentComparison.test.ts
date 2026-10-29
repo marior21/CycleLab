@@ -1,5 +1,8 @@
-import { expect, it } from "vitest";
-import { compareSegmentAttempts } from "../../src/domain/segmentComparison";
+import { describe, expect, it } from "vitest";
+import {
+  compareSegmentAttempts,
+  timeSectors,
+} from "../../src/domain/segmentComparison";
 import type { Sample } from "../../src/shared/models";
 const sample = (
   x: number,
@@ -84,4 +87,57 @@ it("does not turn subtraction noise from different distance origins into time di
   expect(rows.filter((r) => r.delta !== null).every((r) => r.delta === 0)).toBe(
     true,
   );
+});
+
+describe("time sectors", () => {
+  const row = (x: number, delta: number | null) => ({ x, delta });
+  it("splits the cumulative difference and adds up to the total", () => {
+    const rows = [
+      row(0, 0),
+      row(0.5, -2),
+      row(1, -3),
+      row(1.5, 1),
+      row(2.4, 4),
+    ];
+    const sectors = timeSectors(rows, 1);
+    expect(sectors.map((s) => [s.from, s.to])).toEqual([
+      [0, 1],
+      [1, 2],
+      [2, 2.4],
+    ]);
+    expect(sectors[0].change).toBeCloseTo(-3);
+    // 2 km lies between 1.5 (1) and 2.4 (4): interpolated to 1 + 3 × 5/9.
+    expect(sectors[1].change).toBeCloseTo(17 / 3);
+    expect(sectors[2].change).toBeCloseTo(4 / 3);
+    expect(sectors.reduce((s, x) => s + x.change, 0)).toBeCloseTo(4);
+  });
+  it("merges stretches whose boundary falls in a gap and flags them", () => {
+    const rows = [
+      row(0, 0),
+      row(0.9, 2),
+      row(1.05, null),
+      row(1.2, 3),
+      row(3, 5),
+    ];
+    const sectors = timeSectors(rows, 1);
+    expect(sectors.map((s) => [s.from, s.to, s.gap])).toEqual([
+      [0, 2, true],
+      [2, 3, false],
+    ]);
+    expect(sectors.reduce((s, x) => s + x.change, 0)).toBeCloseTo(5);
+  });
+  it("stops at the last known difference and rejects unusable input", () => {
+    const rows = [row(0, 0), row(1.5, -1), row(2, null)];
+    expect(timeSectors(rows, 1).at(-1)).toMatchObject({ to: 1.5 });
+    expect(timeSectors([], 1)).toEqual([]);
+    expect(timeSectors([row(0, 0)], 1)).toEqual([]);
+    expect(timeSectors([row(0, null), row(1, 2)], 1)).toEqual([]);
+  });
+  it("works on real comparison rows", () => {
+    const a = Array.from({ length: 31 }, (_, i) => sample(i * 10, i * 0.1));
+    const b = Array.from({ length: 31 }, (_, i) => sample(i * 11, i * 0.1));
+    const sectors = timeSectors(compareSegmentAttempts(a, b), 1);
+    expect(sectors).toHaveLength(3);
+    for (const s of sectors) expect(s.change).toBeCloseTo(-10);
+  });
 });

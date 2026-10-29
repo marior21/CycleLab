@@ -102,3 +102,53 @@ export function compareSegmentAttempts(a: Sample[], b: Sample[]) {
       };
     });
 }
+
+export interface TimeSector {
+  from: number;
+  to: number;
+  /** Seconds A − B added in this stretch: negative means A gained time. */
+  change: number;
+  /** The stretch contains a gap; only its measured ends are used. */
+  gap: boolean;
+}
+/**
+ * Splits the cumulative A − B difference into fixed-distance stretches.
+ * Each change is the difference at its end minus at its start, so they add up
+ * to the total exactly; a boundary inside a gap merges its two stretches.
+ */
+export function timeSectors(
+  rows: { x: number; delta: number | null }[],
+  size: number,
+): TimeSector[] {
+  const end = rows.findLast((r) => r.delta !== null);
+  if (!end || end.x <= 0 || rows[0]?.delta == null) return [];
+  const at = (km: number) => {
+    const i = rows.findIndex((r) => r.x >= km),
+      right = rows[i];
+    if (right.x === km) return right.delta;
+    const left = rows[i - 1];
+    if (left.delta === null || right.delta === null) return null;
+    return (
+      left.delta +
+      ((right.delta - left.delta) * (km - left.x)) / (right.x - left.x)
+    );
+  };
+  const out: TimeSector[] = [];
+  let from = rows[0].x,
+    start = rows[0].delta;
+  for (let k = 1; ; k++) {
+    const to = Math.min(rows[0].x + k * size, end.x),
+      d = to === end.x ? end.delta! : at(to);
+    if (d !== null) {
+      out.push({
+        from,
+        to,
+        change: d - start,
+        gap: rows.some((r) => r.x > from && r.x < to && r.delta === null),
+      });
+      from = to;
+      start = d;
+    }
+    if (to === end.x) return out;
+  }
+}

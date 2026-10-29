@@ -625,3 +625,46 @@ Límites: una actividad importada con fecha anterior a la última revisión no
 genera aviso; un pico aislado del medidor puede aparecer como marca de 1 s o
 5 s, sin filtrado de valores atípicos; la demo no tiene marcas recientes, por
 lo que el panel no aparece en ella; el entrenador no recibe el aviso.
+
+## Fase 4.2 — Dónde gané tiempo (29/10/2026)
+
+- La comparación de dos intentos de un segmento añade «Dónde se ganó o perdió
+  tiempo»: tramos de 1 km (de 250 m si el segmento mide menos de 2 km) con el
+  cambio A − B, el resultado en palabras y si contienen un hueco. Pulsar un
+  tramo selecciona esa distancia en los cuatro gráficos; Esc la limpia.
+- El cambio de cada tramo es la diferencia acumulada al final menos al inicio,
+  calculada sobre las mismas filas alineadas de la 2.3, así que la suma de los
+  tramos es el total. Un límite que cae dentro de un hueco no se interpola:
+  sus dos tramos se unen y se marcan «Con hueco». El desglose termina en la
+  última distancia común con tiempo conocido. El texto advierte que viento,
+  tráfico, superficie o paradas no se registran.
+
+Validación: lint, typecheck y 153 pruebas unitarias correctas (4 nuevas: suma
+igual al total con interpolación en el límite, unión y marca de huecos, final
+en la última diferencia conocida y entradas no válidas, y filas reales de
+`compareSegmentAttempts`). La prueba Electron de resultados de segmentos
+comprueba la tabla, la selección compartida en los cuatro gráficos y Esc, con
+capturas en ambos temas (`test-results/segment-sectors-*.png`).
+
+Ensayo de solo lectura con los dos intentos más rápidos de los 4 segmentos
+reales: la suma de tramos coincide con la diferencia final en todos (Alisas por
+Arredondo −118,1 s en 8,23 km, Sierrapando −34,3 s, Presillas −20,2 s, Series
+Pérez Galdós −6,9 s), entre 5 y 25 ms por comparación. La diferencia final
+puede separarse unos segundos de la resta de duraciones porque la alineación
+por distancia termina en la última distancia común y los tiempos son
+aproximados entre muestras.
+
+Cierre del bloque A: `npm run package` y `test:package` correctos. Pendiente:
+- `test:visual` no se pudo ejecutar: con la pantalla del portátil como
+  principal (2560 × 1600), la ventana de 1440 × 900 queda en unos 803 px de
+  alto y las capturas no tienen el tamaño de la referencia. Hay que repetirlo
+  con un monitor externo como pantalla principal.
+- Suite Electron: 20 de 21. «Garmin settings accepts the plain JWT token
+  response» completa todos sus pasos, pero la app no se cierra después de
+  pulsar «Cambiar clave». También falla con la versión 4.1 ya publicada, que
+  pasó la misma prueba una hora antes; no lo causa este cambio y queda sin
+  diagnosticar.
+
+Límites: tramos de distancia fija, no por cambios de pendiente (las filas
+alineadas no incluyen elevación); un tramo con hueco reparte el tiempo solo
+entre sus extremos medidos.

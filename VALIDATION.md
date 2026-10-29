@@ -654,11 +654,15 @@ puede separarse unos segundos de la resta de duraciones porque la alineación
 por distancia termina en la última distancia común y los tiempos son
 aproximados entre muestras.
 
-Cierre del bloque A: `npm run package` y `test:package` correctos. Pendiente:
-- `test:visual` no se pudo ejecutar: con la pantalla del portátil como
-  principal (2560 × 1600), la ventana de 1440 × 900 queda en unos 803 px de
-  alto y las capturas no tienen el tamaño de la referencia. Hay que repetirlo
-  con un monitor externo como pantalla principal.
+Cierre del bloque A: `npm run package` y `test:package` correctos.
+`test:visual` ejecutado con una pantalla principal de 1920 × 1080 (con la del
+portátil, de 2560 × 1600, la ventana se queda en unos 803 px de alto y no se
+puede comparar). Las 26 capturas coinciden al 0,00 % con las del commit
+anterior a la fase 4 (`fa27962`), ejecutado en el mismo equipo. Valores
+actuales entre 0,86 % (entrenador) y 6,02 % (Dashboard); el aumento respecto a
+la tabla del 27/10 procede de las ampliaciones de las fases 1–3. El panel de la
+4.1 no aparece en la demo y la tabla de la 4.2 no está en las pantallas del
+prototipo; ambos se revisan con sus capturas propias.
 - Suite Electron: 21 de 21 tras corregir la prueba de clave de Garmin (ver
   abajo).
 

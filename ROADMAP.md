@@ -218,7 +218,7 @@ Ampliar la comparación de intentos de la 2.3 con un desglose por tramos (kilóm
 
 **Terminado cuando:** la suma de los tramos coincide con la diferencia total salvo redondeo; los huecos se excluyen y se señalan; se advierte que viento, tráfico o superficie también influyen.
 
-**Completada el 29/10/2026.** La comparación de intentos desglosa la diferencia A − B en tramos de 1 km (250 m en segmentos cortos) que suman exactamente el total; los límites dentro de un hueco unen sus tramos y los marcan, y cada tramo selecciona su distancia en los gráficos. Queda pendiente repetir `test:visual` con un monitor externo como pantalla principal. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-42--dónde-gané-tiempo-29102026).
+**Completada el 29/10/2026.** La comparación de intentos desglosa la diferencia A − B en tramos de 1 km (250 m en segmentos cortos) que suman exactamente el total; los límites dentro de un hueco unen sus tramos y los marcan, y cada tramo selecciona su distancia en los gráficos. Con ella se cierra el bloque A: `test:visual`, `package` y `test:package` correctos, sin cambios visuales frente a la fase 3. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-42--dónde-gané-tiempo-29102026).
 
 ### 4.3. Deriva cardíaca y resistencia a la fatiga · Bloque B · M
 

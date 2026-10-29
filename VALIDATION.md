@@ -831,3 +831,30 @@ Límites: valores sobre el perfil suavizado (una subida de 2 km al 6 % se
 muestra como 1,9 km al 5,9 %); subidas cortas y muy duras (menos de 0,5 km) o
 tendidas (menos del 3 %) no se proponen; «Ya guardado» depende de que la
 búsqueda histórica del segmento haya terminado; sin nombre sugerido.
+
+## Fase 4.6 — Rutas habituales: medición previa (29/10/2026)
+
+Medición de viabilidad, sin cambios en la aplicación. Prototipo fuera del
+repositorio sobre una exportación de solo lectura de las 241 actividades reales
+(todas con GPS; 180 MB de detalle), borrada al terminar.
+
+Método: firma de un punto GPS cada 200 m (media de 218 puntos); comparación de
+pares con longitud parecida (±25 %) y zonas que se solapan; similitud = mínimo
+de la fracción de puntos de cada salida a menos de 100 m de la otra, con una
+rejilla espacial.
+
+Coste (en frío, todo el histórico): lectura 0,1–0,4 s, parseo 0,8 s, firmas y
+rejilla 25 ms, comparación 1,5 s (5.709 de 28.920 pares pasan el filtro);
+20 MB de memoria con solo las firmas. Una salida nueva frente a las existentes
+se compara en milisegundos. El coste no es un obstáculo.
+
+Calidad:
+- Unir pares similares en cadena no sirve: al 80 % agrupa 94 salidas en 17
+  grupos, pero el mayor (32 salidas, 19–34 km) tiene una similitud mínima
+  interna de 0,44: mezcla recorridos distintos.
+- Agrupar alrededor de un representante (la primera salida del grupo) sí: al
+  80 %, 26 grupos con 91 salidas (38 % del histórico), similitud mínima interna
+  de 0,75–1,0 en todos salvo dos (0,66 y 0,75), con rangos de 14–19 km o
+  19–21 km. Al 85 %, 23 grupos y 79 salidas.
+- Garmin nombra casi todas las salidas igual («Santander Ciclismo en ruta»),
+  así que los grupos necesitan nombre y revisión del usuario.

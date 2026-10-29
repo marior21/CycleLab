@@ -977,3 +977,33 @@ los runners de macOS admite `safeStorage` sin intervención.
   SDK de Garmin: no se versionan archivos de entrenamientos reales.
 
 Validación: lint, typecheck, 185 pruebas unitarias y 26 recorridos Electron.
+
+## Fase 5.4 — Día local de cada actividad (29/10/2026)
+
+Decisión: una actividad pertenece al día en que se hizo **en el lugar donde se
+hizo**. `date` sigue guardando el instante real (la deduplicación entre FIT y
+Garmin, la sincronización y las copias no cambian) y cada actividad guarda
+además `utcOffset`, el desfase de ese momento: Garmin lo da como
+`startTimeLocal − startTimeGMT` y el FIT como `local_timestamp` del mensaje
+`activity`, redondeados a cuartos de hora. Al construir los datos de las
+pantallas y del entrenador, `date` pasa a ser la hora local escrita como UTC,
+así que filtros, semanas, meses, temporadas, carga, perfil vigente e intentos de
+segmentos leen el día local con el código de calendario que ya existía. «Hoy»
+es el día del Mac. Sin desfase registrado se usa la zona del Mac en ese
+instante; la demo ya está escrita en hora local y no se desplaza.
+
+Migración (`calendarVersion` 1, sin cambio de esquema): sube la revisión de
+actividades para volver a buscar los segmentos con fechas locales y desplaza
+el límite de récords vistos para que no reaparezcan avisos. Las actividades de
+Garmin anteriores reciben su desfase en la siguiente sincronización completa;
+hasta entonces usan la zona del Mac. Una copia anterior restaurada vuelve a
+migrar.
+
+Pruebas unitarias: salida a las 23:30 UTC que en Madrid es domingo a las 00:30
+(filtro por día, semana de lunes a domingo), Nochevieja que se queda en la
+temporada anterior, cambio al horario de verano del 29/03/2026, uso de la zona
+del Mac sin desfase, demo sin desplazar y lectura del desfase de Garmin
+(positivo, negativo de 4 h 30 min y ausente) y de un FIT.
+
+Límites: los textos del entrenador hablan de días locales; los CSV e informes
+muestran la hora local sin indicar la zona.

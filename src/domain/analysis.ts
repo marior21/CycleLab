@@ -8,6 +8,7 @@ import type {
   Dataset,
   Effort,
   Sample,
+  Source,
   Stats,
 } from "../shared/models";
 export const DAY = 86400000;
@@ -164,12 +165,24 @@ export function zones(rows: Sample[], key: "p" | "hr", ref: number | null) {
   });
   return out;
 }
+/**
+ * Wall-clock time where the ride happened, written as a UTC timestamp so calendar
+ * code (filters, weeks, months, seasons) reads the local day with UTC getters.
+ * Without a recorded offset it uses the Mac's time zone at that instant.
+ */
+export const localTime = (date: number, utcOffset?: number) =>
+  date + (utcOffset ?? -new Date(date).getTimezoneOffset() * 60) * 1000;
+/** Demo fixtures are already written in local time. */
+export const calendarDate = (
+  source: Source,
+  a: Pick<Activity, "date" | "utcOffset">,
+) => (source === "demo" ? a.date : localTime(a.date, a.utcOffset));
 export function realDataset(
   activities: Activity[],
   details: ActivityDetail[],
   athlete: Athlete,
 ): Dataset {
-  const today = Date.now(),
+  const today = localTime(Date.now()),
     dated = activities
       .filter((a) => a.tss !== null)
       .sort((a, b) => a.date - b.date);

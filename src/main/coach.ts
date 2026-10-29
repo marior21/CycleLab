@@ -65,9 +65,9 @@ export const toolNames: ToolName[] = [
   "carga_entrenamiento",
 ];
 const descriptions = [
-  "Busca todo el histórico: actividad filtra por ID exacto; texto busca por nombre o ID exacto. Devuelve el resumen (fecha, duración, km, NP y TSS). También filtra por desde/hasta (fechas UTC inclusivas) y tipos. Devuelve 20 por página, total y siguiente offset; indica al usuario si hay más resultados.",
+  "Busca todo el histórico: actividad filtra por ID exacto; texto busca por nombre o ID exacto. Devuelve el resumen (fecha, duración, km, NP y TSS). También filtra por desde/hasta (días locales inclusivos) y tipos. Devuelve 20 por página, total y siguiente offset; indica al usuario si hay más resultados.",
   "Analiza vueltas e intervalos registrados de una actividad.",
-  "Consulta segmentos guardados y compara sus dos últimos intentos por fecha. Sin puerto, lista los segmentos disponibles; usa su ID o nombre exacto. desde/hasta filtran fechas UTC inclusivas.",
+  "Consulta segmentos guardados y compara sus dos últimos intentos por fecha. Sin puerto, lista los segmentos disponibles; usa su ID o nombre exacto. desde/hasta filtran días locales inclusivos.",
   "Obtiene las mejores potencias por duración y temporada. Con dias, compara los últimos N días con los N anteriores o, con referencia hace_un_ano, con los mismos días de hace un año: cada marca indica su actividad y tramo, e incluye el ajuste CP/W′ o por qué no es fiable.",
   "Obtiene CTL, ATL y TSB del histórico importado.",
 ];

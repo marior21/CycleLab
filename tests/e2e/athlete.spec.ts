@@ -23,7 +23,7 @@ test("profile history persists and exposes dated references in both themes", asy
       weight: string,
       lthr: string,
     ) => {
-      await page.getByLabel("Vigente desde (UTC)", { exact: true }).fill(date);
+      await page.getByLabel("Vigente desde", { exact: true }).fill(date);
       await page.getByLabel("FTP (W)", { exact: true }).fill(ftp);
       await page.getByLabel("Peso (kg)", { exact: true }).fill(weight);
       await page

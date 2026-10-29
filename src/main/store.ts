@@ -19,7 +19,7 @@ import type {
   SyncState,
 } from "../shared/models";
 import { demoDataset, DemoGarminSource } from "../data/demo/provider";
-import { realDataset } from "../domain/analysis";
+import { calendarDate, localTime, realDataset } from "../domain/analysis";
 export class Store {
   readonly db: Database.Database;
   private coverageCache = new Map<string, SampleCoverage>();
@@ -77,6 +77,18 @@ export class Store {
         .run(conversation.id, source);
     }
     if (this.get("classificationVersion", 0) < 2) this.reclassifyActivities();
+    // Segment attempts saved before local calendar days carry UTC dates: search again.
+    if (this.get("calendarVersion", 0) < 1) {
+      for (const source of ["demo", "garmin"])
+        this.set(
+          `activityRevision:${source}`,
+          this.get(`activityRevision:${source}`, 0) + 1,
+        );
+      // The records boundary is compared with activity dates: move it too.
+      const since = this.get<number | null>("recordsSince:garmin", null);
+      if (since !== null) this.set("recordsSince:garmin", localTime(since));
+      this.set("calendarVersion", 1);
+    }
     const old = this.get<SyncState | null>("sync", null);
     if (old?.state === "syncing")
       this.set("sync", {
@@ -258,7 +270,8 @@ export class Store {
     const activities = this.activities(source).map((a) => {
       const merged = withFeel(a, feel.get(a.id)),
         manual = blocks.get(a.id);
-      return manual ? { ...merged, blocks: manual } : merged;
+      const local = { ...merged, date: calendarDate(source, a) };
+      return manual ? { ...local, blocks: manual } : local;
     });
     const coverage = Object.fromEntries(
       activities.map((a) => {

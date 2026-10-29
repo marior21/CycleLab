@@ -14,6 +14,7 @@ import type {
 } from "../shared/models";
 import {
   bestEfforts,
+  calendarDate,
   smoothPower,
   stats,
   projectRoute,
@@ -48,6 +49,12 @@ export function normalizeActivity(value: unknown): Activity {
   );
   if (!Number.isFinite(date))
     throw new Error("Garmin devolvió una fecha no válida.");
+  const local =
+    typeof a.startTimeLocal === "string"
+      ? Date.parse(a.startTimeLocal.replace(" ", "T") + "Z")
+      : NaN;
+  // Real offsets are whole quarter hours and within ±14 h.
+  const offset = Math.round((local - date) / 900000) * 900;
   const dur = z.number().nonnegative().parse(a.duration);
   const dist = num(a.distance),
     p = num(a.avgPower);
@@ -58,6 +65,7 @@ export function normalizeActivity(value: unknown): Activity {
         ? a.activityName
         : "Actividad de ciclismo",
     date,
+    ...(Math.abs(offset) <= 50400 ? { utcOffset: offset } : {}),
     type: "cycling",
     garminType: typeof type.typeKey === "string" ? type.typeKey : undefined,
     device: typeof a.deviceName === "string" ? a.deviceName : "Garmin",
@@ -189,6 +197,16 @@ export function fitActivity(
     throw new Error("No es una actividad de ciclismo.");
   const summary = stats(detail.rows);
   const serial = num(file.serialNumber);
+  // FIT local timestamps count seconds from 1989-12-31 in the rider's time zone.
+  const record = messages.activityMesgs?.[0] ?? {},
+    offset =
+      typeof record.localTimestamp === "number" &&
+      record.timestamp instanceof Date
+        ? Math.round(
+            (record.localTimestamp + 631065600 - +record.timestamp / 1000) /
+              900,
+          ) * 900
+        : NaN;
   const device =
     typeof file.garminProduct === "string"
       ? file.garminProduct
@@ -204,6 +222,7 @@ export function fitActivity(
           fileName.replace(/\.(fit|zip)$/i, "").slice(0, 100) ||
           "Actividad importada",
         date: start * 1000,
+        ...(Math.abs(offset) <= 50400 ? { utcOffset: offset } : {}),
         type: "cycling",
         garminType: FIT_SPORTS[String(session.subSport)] ?? "cycling",
         device,
@@ -488,7 +507,7 @@ export class GarminSync {
                   .map((metric) => ({
                     metric,
                     value: thresholds[metric],
-                    date: utcDay(latest.date),
+                    date: utcDay(calendarDate("garmin", latest)),
                     origin: "Garmin",
                   })),
               ),

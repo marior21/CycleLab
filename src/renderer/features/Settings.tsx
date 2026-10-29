@@ -462,7 +462,7 @@ export function Settings(p: Props) {
       </Panel>
       <Panel
         title="Perfil del atleta"
-        subtitle="Valores con fecha de vigencia para «Mis datos». Calendario UTC, igual que las actividades."
+        subtitle="Valores con fecha de vigencia para «Mis datos». Día local, igual que las actividades."
       >
         <form
           onSubmit={(e) => {
@@ -488,7 +488,7 @@ export function Settings(p: Props) {
           </p>
           <div className="profile-fields">
             <label>
-              Vigente desde (UTC)
+              Vigente desde
               <input
                 type="date"
                 required
@@ -548,7 +548,7 @@ export function Settings(p: Props) {
             .reverse()
             .map((e) => ({ ...e, id: e.date + e.metric }))}
           columns={[
-            { key: "date", label: "Vigente desde (UTC)" },
+            { key: "date", label: "Vigente desde" },
             {
               key: "metric",
               label: "Magnitud",

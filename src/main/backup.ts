@@ -91,6 +91,7 @@ const activity = z.object({
   id: z.string(),
   name: z.string(),
   date: num,
+  utcOffset: num.optional(),
   type: z.enum([
     "endurance",
     "intervals",
@@ -240,6 +241,7 @@ const settingSchemas: Record<string, z.ZodType> = {
   garminAutoSync: z.boolean(),
   demoSeeded: z.boolean(),
   classificationVersion: num.int().nonnegative(),
+  calendarVersion: num.int().nonnegative(),
   "activityRevision:demo": num.int().nonnegative(),
   "activityRevision:garmin": num.int().nonnegative(),
   "recordsSince:demo": num,

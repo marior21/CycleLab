@@ -18,6 +18,8 @@ const effort = (t: number, p: number | null, i0 = 0) => ({
   i1: i0 + t - 1,
 });
 
+// Activity dates reach the app as local wall-clock time.
+const local = (t: number) => t - new Date(t).getTimezoneOffset() * 60000;
 test("new power records appear once, open their range and stay dismissed", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cyclelab-records-"));
   let app = await launch(dir);
@@ -112,7 +114,10 @@ test("new power records appear once, open their range and stay dismissed", async
     await expect(page.getByText("Nuevas marcas de potencia")).toHaveCount(0);
     expect(
       (await page.evaluate(() => window.cyclelab.getState())).recordsSince,
-    ).toBe(now - 20 * day);
+      // Activity dates reach the app as local wall-clock time.
+    ).toBe(
+      now - 20 * day - new Date(now - 20 * day).getTimezoneOffset() * 60000,
+    );
 
     await seed([
       {
@@ -171,7 +176,7 @@ test("new power records appear once, open their range and stay dismissed", async
 
     // Demo keeps its own mark and never sees the Garmin records.
     const after = await page.evaluate(() => window.cyclelab.getState());
-    expect(after.recordsSince).toBe(now - 1 * day);
+    expect(after.recordsSince).toBe(local(now - 1 * day));
     const demo = await page.evaluate(
       (settings) =>
         window.cyclelab.saveSettings({
@@ -182,7 +187,7 @@ test("new power records appear once, open their range and stay dismissed", async
         }),
       after.settings,
     );
-    expect(demo.recordsSince).not.toBe(now - 1 * day);
+    expect(demo.recordsSince).not.toBe(local(now - 1 * day));
     await expect(page.getByText("Nuevas marcas de potencia")).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {

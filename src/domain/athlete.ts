@@ -1,8 +1,10 @@
 import type { Athlete, ProfileEntry } from "../shared/models";
 
 export const profileMetrics = ["ftp", "weight", "lthr"] as const;
-export const utcDay = (date = Date.now()) =>
-  new Date(date).toISOString().slice(0, 10);
+// Without a date: today on the Mac's calendar, like activities without an offset.
+export const utcDay = (
+  date = Date.now() - new Date().getTimezoneOffset() * 60000,
+) => new Date(date).toISOString().slice(0, 10);
 
 export function profileAt(athlete: Athlete, date: number): Athlete {
   const day = utcDay(date);

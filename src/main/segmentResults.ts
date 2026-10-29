@@ -6,6 +6,7 @@ import {
   segmentReference,
   segmentStats,
 } from "../domain/segmentMatching";
+import { calendarDate } from "../domain/analysis";
 import type { Store } from "./store";
 
 export class SegmentResults {
@@ -114,7 +115,7 @@ export class SegmentResults {
           id: `${activity.id}:${segment.i0}:${segment.i1}`,
           activityId: activity.id,
           activityName: activity.name,
-          date: activity.date,
+          date: calendarDate(source, activity),
           i0: segment.i0,
           i1: segment.i1,
           original: true,
@@ -136,7 +137,7 @@ export class SegmentResults {
             id: `${activity.id}:${i0}:${i1}`,
             activityId: activity.id,
             activityName: activity.name,
-            date: activity.date,
+            date: calendarDate(source, activity),
             i0,
             i1,
             original: false,

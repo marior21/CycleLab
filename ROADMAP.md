@@ -298,6 +298,10 @@ Cada entrega se cierra como en la fase 4: lint, typecheck, pruebas unitarias y s
 | 5.5. Acabado de escritorio | Volver a Actividades conserva filtros y selección; la primera ejecución ofrece demo, conexión Garmin, perfil y primera sincronización; los estados vacíos tienen una acción útil; revisado a 1200 × 760 y 1440 × 900 en ambos temas. |
 | 5.6. Distribución | La firma y notarización se activan con los secretos del propietario sin tocar el código; la política de arquitecturas y la prueba en un Mac limpio están documentadas. La firma real, el instalador firmado y las actualizaciones automáticas dependen de las credenciales del propietario. |
 
+**5.1–5.3 completadas el 29/10/2026.** Medición reproducible con `npm run measure`; la caché de mejores esfuerzos y la lista paginada bajan el refresco de 840 a 24–39 ms con 1.000 actividades. CI en cada push y pull request. Migraciones desde los esquemas 4–8 y FIT difíciles con prueba. Evidencia en [VALIDATION.md](VALIDATION.md#fase-51--medición-con-un-histórico-grande-29102026).
+
+**5.4 completada el 29/10/2026.** Las actividades se fechan con el día local del lugar donde se grabaron, a partir del desfase de Garmin o del FIT, con la zona del Mac como respaldo. Evidencia en [VALIDATION.md](VALIDATION.md#fase-54--día-local-de-cada-actividad-29102026).
+
 ## Qué dejaría fuera por ahora
 
 - Red social, clasificaciones públicas y cuentas propias en la nube.

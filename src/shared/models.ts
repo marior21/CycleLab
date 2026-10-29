@@ -33,6 +33,8 @@ export interface Activity {
   id: string;
   name: string;
   date: number;
+  /** Seconds east of UTC where the ride was recorded, from Garmin or the FIT file. */
+  utcOffset?: number;
   type: ActivityType;
   garminType?: string;
   structuredIntervals?: boolean;

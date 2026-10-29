@@ -1,5 +1,5 @@
 import { coachContextSchema } from "../shared/coachContext";
-import { withProfileEntries } from "../domain/athlete";
+import { profileAt, withProfileEntries } from "../domain/athlete";
 import { MapTilerSource } from "./maptiler";
 import { app, BrowserWindow, ipcMain, shell, dialog } from "electron";
 import { join } from "node:path";
@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { activityFeelSchema } from "../shared/activityFeel";
 import { goalInputSchema } from "../shared/goal";
+import { periodZones } from "../domain/powerCurve";
 import { settingsSchema } from "../shared/settings";
 import { writeBackup, restoreBackup } from "./backup";
 import { createSegment, includedAttempts } from "../domain/segments";
@@ -421,6 +422,22 @@ async function boot() {
       activityFeelSchema.nullable().parse(rawFeel),
     );
     changed();
+  });
+  register("period-zones", (rawSource, rawFrom, rawTo) => {
+    const source = sourceSchema.parse(rawSource),
+      from = z.number().int().parse(rawFrom),
+      to = z.number().int().min(from).parse(rawTo);
+    const data = store.dataset(source);
+    // shortcut: loads every detail in the period on demand; cache per revision if long periods get slow.
+    return periodZones(
+      data.activities
+        .filter((a) => a.date >= from && a.date < to)
+        .map((activity) => ({
+          activity,
+          detail: store.detail(source, activity.id),
+          ftp: profileAt(data.athlete, activity.date).ftp,
+        })),
+    );
   });
   register("goal-save", (rawSource, rawGoal) => {
     if (sourceSchema.parse(rawSource) !== "garmin")

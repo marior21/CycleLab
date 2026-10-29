@@ -194,6 +194,62 @@ test("IPC validation, sandbox, offline profile and source isolation", async () =
   }
 });
 
+test("performance compares rolling periods, traces records and shows zone coverage", async () => {
+  const app = await electron.launch({
+    args: ["out/main/index.js"],
+    env: {
+      ...process.env,
+      CYCLELAB_USER_DATA: mkdtempSync(join(tmpdir(), "cyclelab-performance-")),
+    },
+  });
+  try {
+    const page = await app.firstWindow();
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page
+      .getByRole("navigation")
+      .getByRole("button", { name: /Rendimiento/ })
+      .click();
+    await expect(page.getByText(/Modelo 5–20 min · R²/)).toBeVisible();
+    await page.getByRole("button", { name: "42 días", exact: true }).click();
+    await expect(
+      page.getByText(
+        "Últimos 42 días frente a 42 días anteriores · abre cada marca",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        /de \d+ actividades con muestras de potencia y FTP de su fecha/,
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Tiempo en zonas · Últimos 42 días" }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Hace un año", exact: true })
+      .click();
+    await expect(
+      page.getByText("Sin modelo en Mismos días hace un año"),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Periodo anterior", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Abrir la actividad de la marca de 20 min" })
+      .first()
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Actividades", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Analizar este tramo" }),
+    ).toBeVisible();
+    expect(errors).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});
+
 test("real goals can be created, edited, archived and survive a restart", async () => {
   const userData = mkdtempSync(join(tmpdir(), "cyclelab-goals-"));
   const launch = () =>

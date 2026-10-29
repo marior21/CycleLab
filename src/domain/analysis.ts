@@ -233,10 +233,7 @@ export function realDataset(
       activities.map((a, i) => [a.id, sampleCoverage(details[i] ?? null)]),
     ),
     efforts: Object.fromEntries(
-      activities.map((a, i) => [
-        a.id,
-        (details[i]?.best ?? []).filter((e) => WEEK_EFFORTS.includes(e.t)),
-      ]),
+      activities.map((a, i) => [a.id, details[i]?.best ?? []]),
     ),
     today,
     athlete,

@@ -52,6 +52,43 @@ describe("coach tools", () => {
       tools.run("buscar_actividades", {}, { screen: "coach" }).rows.length,
     ).toBeLessThanOrEqual(20);
   });
+  it("compares rolling power periods with traceable records", () => {
+    const store = { dataset: () => demoDataset } as unknown as Store;
+    const tools = new AnalysisTools(store, "demo");
+    const result = tools.run(
+      "curva_potencia",
+      { dias: 42 },
+      { screen: "performance" },
+    );
+    const row = result.rows.find((r) => r.x === 1200)!;
+    const record = demoDataset.activities
+      .filter(
+        (a) => a.date >= Math.floor(demoDataset.today / DAY) * DAY - 41 * DAY,
+      )
+      .flatMap((a) =>
+        demoDataset.efforts[a.id]
+          .filter((e) => e.t === 1200)
+          .map((e) => ({ id: a.id, p: e.p, i0: e.i0 })),
+      )
+      .sort((a, b) => b.p! - a.p!)[0];
+    expect(row).toMatchObject({
+      actual: record.p,
+      activityId: record.id,
+      i0: record.i0,
+      tramo: "Mejor 20 min",
+    });
+    expect(result.note).toMatch(/CP \d+ W|sin modelo fiable/);
+    expect(
+      tools.run(
+        "curva_potencia",
+        { dias: 42, referencia: "hace_un_ano" },
+        { screen: "performance" },
+      ).title,
+    ).toContain("hace un año");
+    expect(() =>
+      tools.run("curva_potencia", { referencia: "otra" }, { screen: "coach" }),
+    ).toThrow();
+  });
   it("passes only active goals and marks their origin", () => {
     const goals = [
       {

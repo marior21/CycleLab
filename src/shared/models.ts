@@ -215,7 +215,7 @@ export interface SampleCoverage {
 }
 export interface Dataset {
   sampleCoverage: Record<string, SampleCoverage>;
-  /** Activity id → best efforts at WEEK_EFFORTS durations, with sample range. */
+  /** Activity id → best efforts per duration, with sample range. */
   efforts: Record<string, Effort[]>;
   today: number;
   athlete: Athlete;
@@ -334,7 +334,18 @@ export interface MaintenanceInfo {
     segments: number;
   }[];
 }
+export interface PeriodZones {
+  zones: { label: string; name: string; value: number; color: string }[];
+  coverage: {
+    activities: number;
+    counted: number;
+    noSamples: number;
+    noPower: number;
+    noFtp: number;
+  };
+}
 export interface CycleLabAPI {
+  periodZones(source: Source, from: number, to: number): Promise<PeriodZones>;
   maintenance(): Promise<MaintenanceInfo>;
   stopSync(action: "pause" | "cancel"): Promise<void>;
   deleteLocal(source: Source, scope: "messages" | "all"): Promise<boolean>;

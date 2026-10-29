@@ -1,7 +1,7 @@
 import { profileMetrics } from "../../domain/athlete";
 import { sampleCoverage } from "../../domain/coverage";
-import { WEEK_EFFORTS } from "../../domain/analysis";
 import type { GarminSource } from "../../domain/providers";
+import { DURATIONS } from "../../domain/analysis";
 import type { Dataset } from "../../shared/models";
 import {
   ACTS,
@@ -32,12 +32,7 @@ export const demoDataset: Dataset = {
   sampleCoverage: Object.fromEntries(
     ACTS.map((a, i) => [a.id, sampleCoverage(streams[i])]),
   ),
-  efforts: Object.fromEntries(
-    ACTS.map((a, i) => [
-      a.id,
-      streams[i].best.filter((e) => WEEK_EFFORTS.includes(e.t)),
-    ]),
-  ),
+  efforts: Object.fromEntries(ACTS.map((a, i) => [a.id, streams[i].best])),
   today: TODAY,
   athlete: {
     ...ATH,
@@ -53,12 +48,14 @@ export const demoDataset: Dataset = {
   climbs: CLIMBS,
   curve: [
     ...CURVE,
-    ...KEY_DUR.filter((d) => !CURVE.some((r) => r.x === d.t)).map((d) => ({
-      x: d.t,
-      s2026: mmp(d.t, 2026),
-      s2025: mmp(d.t, 2025),
-      s2024: mmp(d.t, 2024),
-    })),
+    ...[...new Set([...KEY_DUR.map((d) => d.t), ...DURATIONS])]
+      .filter((t) => !CURVE.some((r) => r.x === t))
+      .map((t) => ({
+        x: t,
+        s2026: mmp(t, 2026),
+        s2025: mmp(t, 2025),
+        s2024: mmp(t, 2024),
+      })),
   ]
     .sort((a, b) => a.x - b.x)
     .map((r) => ({

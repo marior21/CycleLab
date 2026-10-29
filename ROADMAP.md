@@ -180,6 +180,8 @@ La primera versión debe servir para contextualizar el seguimiento. No hace falt
 
 **Terminado cuando:** cada récord es trazable; el modelo se oculta o se marca como insuficiente cuando los esfuerzos disponibles no permiten un ajuste defendible. Evitar convertir una estimación de FTP en un valor configurado sin intervención del usuario.
 
+**Completada el 29/10/2026.** Rendimiento compara los últimos 42/90 días con el periodo anterior o con hace un año, cada marca abre su actividad y tramo, y el tiempo en zonas del periodo usa el FTP de cada fecha e indica su cobertura. CP y W′ salen de un modelo trabajo-tiempo con 5, 10 y 20 min y se marcan insuficientes cuando el ajuste no es defendible; el FTP configurado no cambia. Evidencia y límites en [VALIDATION.md](VALIDATION.md#fase-34--rendimiento-con-referencias-útiles-29102026).
+
 ### 3.5. Importación y exportación manual · P2 · M–L
 
 Importar FIT local reutilizando el decodificador; exportar tablas CSV y un informe sencillo de actividad o comparación. Resolver identidad, duplicados y procedencia antes de mezclar archivos con Garmin. Empezar por FIT y CSV; otros formatos solo si hay una necesidad concreta.

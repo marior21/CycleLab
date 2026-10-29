@@ -1,7 +1,8 @@
 import { profileNote } from "../domain/athlete";
 import { coverageNote } from "../domain/coverage";
 import { includedAttempts } from "../domain/segments";
-import { DAY, stats, percentChange } from "../domain/analysis";
+import { DAY, DURATIONS, stats, percentChange } from "../domain/analysis";
+import { criticalPower, periodBests } from "../domain/powerCurve";
 import { z } from "zod";
 import type { CoachProvider } from "../domain/providers";
 import type {
@@ -40,6 +41,7 @@ const toolArgs = z
       .optional(),
     offset: z.number().int().nonnegative().max(1000000).optional(),
     dias: z.number().int().min(1).max(3650).optional(),
+    referencia: z.enum(["anterior", "hace_un_ano"]).optional(),
   })
   .strict()
   .refine(
@@ -66,7 +68,7 @@ const descriptions = [
   "Busca todo el histórico: actividad filtra por ID exacto; texto busca por nombre o ID exacto. Devuelve el resumen (fecha, duración, km, NP y TSS). También filtra por desde/hasta (fechas UTC inclusivas) y tipos. Devuelve 20 por página, total y siguiente offset; indica al usuario si hay más resultados.",
   "Analiza vueltas e intervalos registrados de una actividad.",
   "Consulta segmentos guardados y compara sus dos últimos intentos por fecha. Sin puerto, lista los segmentos disponibles; usa su ID o nombre exacto. desde/hasta filtran fechas UTC inclusivas.",
-  "Obtiene las mejores potencias por duración y temporada.",
+  "Obtiene las mejores potencias por duración y temporada. Con dias, compara los últimos N días con los N anteriores o, con referencia hace_un_ano, con los mismos días de hace un año: cada marca indica su actividad y tramo, e incluye el ajuste CP/W′ o por qué no es fiable.",
   "Obtiene CTL, ATL y TSB del histórico importado.",
 ];
 const definitions = toolNames.map((name, i) => ({
@@ -106,6 +108,12 @@ const definitions = toolNames.map((name, i) => ({
         desde: { type: "string", format: "date" },
         hasta: { type: "string", format: "date" },
         dias: { type: "integer", minimum: 1, maximum: 3650 },
+        referencia: {
+          type: "string",
+          enum: ["anterior", "hace_un_ano"],
+          description:
+            "Solo curva_potencia con dias: comparar con los N días anteriores (por defecto) o con los mismos días de hace un año.",
+        },
       },
       additionalProperties: false,
     },
@@ -362,6 +370,77 @@ export class AnalysisTools {
           coverageNote(
             data,
             data.activities.filter((a) => a.id === id),
+            this.source,
+          ),
+      };
+    }
+    if (name === "curva_potencia" && args.dias) {
+      const end = Math.floor(data.today / DAY) * DAY + DAY,
+        d = args.dias,
+        year = args.referencia === "hace_un_ano";
+      const periods = [
+        [end - d * DAY, end],
+        year
+          ? [end - (365 + d) * DAY, end - 365 * DAY]
+          : [end - 2 * d * DAY, end - d * DAY],
+      ];
+      const baseLabel = year
+        ? "Mismos días hace un año"
+        : `${d} días anteriores`;
+      const [now, before] = periods.map(([from, to]) =>
+        periodBests(data, from, to),
+      );
+      const name = (id: string | undefined) =>
+        data.activities.find((a) => a.id === id)?.name ?? null;
+      const rows = DURATIONS.filter((t) => now.has(t) || before.has(t)).map(
+        (t) => {
+          const a = now.get(t),
+            b = before.get(t);
+          return {
+            x: t,
+            actual: a?.p ?? null,
+            anterior: b?.p ?? null,
+            activityId: a?.activityId ?? null,
+            actividad: name(a?.activityId),
+            fecha: a ? new Date(a.date).toISOString().slice(0, 10) : null,
+            tramo: `Mejor ${t < 60 ? t + " s" : t < 3600 ? t / 60 + " min" : t / 3600 + " h"}`,
+            i0: a?.i0 ?? null,
+            i1: a?.i1 ?? null,
+            activityIdAnterior: b?.activityId ?? null,
+            fechaAnterior: b
+              ? new Date(b.date).toISOString().slice(0, 10)
+              : null,
+          };
+        },
+      );
+      const fit = (m: Map<number, { p: number }>) => {
+        const f = criticalPower((t) => m.get(t)?.p ?? null);
+        return f.ok
+          ? `CP ${f.cp} W, W′ ${(f.wPrime / 1000).toFixed(1)} kJ (R² ${f.r2.toFixed(3)})`
+          : `sin modelo fiable: ${f.reason}`;
+      };
+      return {
+        ...base,
+        kind: "line",
+        xType: "log",
+        title: `Curva de potencia · últimos ${d} días frente a ${baseLabel.toLowerCase()}`,
+        rows,
+        series: [
+          { key: "actual", label: `Últimos ${d} días`, color: "brand-ink" },
+          {
+            key: "anterior",
+            label: baseLabel,
+            color: "muted",
+            dash: true,
+          },
+        ],
+        note:
+          `Potencias en W, calculadas localmente desde los mejores esfuerzos de cada actividad. Modelo de 2 parámetros (trabajo-tiempo) con 5, 10 y 20 min: actual ${fit(now)}; anterior ${fit(before)}. ` +
+          coverageNote(
+            data,
+            data.activities.filter((a) =>
+              periods.some(([from, to]) => a.date >= from && a.date < to),
+            ),
             this.source,
           ),
       };

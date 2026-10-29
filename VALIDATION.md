@@ -519,3 +519,36 @@ objetivo desde la interfaz, reinicia, comprueba que persiste, lo restaura y
 verifica que la demo conserva solo sus objetivos ficticios. Revisión del panel en
 ambos temas sin errores en consola. Sin validar con una conversación real de
 OpenRouter.
+
+## Fase 3.4 — Rendimiento con referencias útiles (29/10/2026)
+
+- Rendimiento compara «Temporadas» (como antes) o los últimos 42 o 90 días
+  frente al periodo anterior de igual duración o los mismos días de hace un
+  año. Las curvas de periodo se calculan localmente con los mejores esfuerzos de
+  cada actividad (`efforts` incluye ahora todas las duraciones).
+- Cada marca de «Duraciones clave» abre su actividad con el tramo
+  seleccionado. En temporadas reales también; la curva por temporadas de la demo
+  es sintética y no enlaza.
+- «Tiempo en zonas de potencia» suma el periodo (o la temporada principal)
+  aplicando a cada actividad el FTP vigente en su fecha. Indica cuántas
+  actividades cuentan y cuántas se excluyen por falta de muestras, de potencia o
+  de FTP; las excluidas no suman tiempo.
+- Potencia crítica y W′: modelo de 2 parámetros trabajo-tiempo (W = CP·t + W′)
+  ajustado por mínimos cuadrados con los mejores 5, 10 y 20 min del periodo.
+  Solo se muestra si existen los tres, bajan con la duración, R² ≥ 0,98 y W′
+  está entre 3 y 40 kJ; si no, «Insuficiente» con el motivo. Sustituye a los
+  valores fijos que mostraba la demo. El FTP configurado no cambia nunca por
+  este cálculo.
+- `curva_potencia` admite `dias` y `referencia` (`anterior` o `hace_un_ano`):
+  devuelve cada marca con su actividad y tramo, que aparecen como referencias
+  navegables, y el ajuste CP/W′ o por qué no es fiable.
+
+Validación: typecheck, lint y 140 pruebas unitarias correctos, incluidos el
+origen de cada marca, el ajuste con datos ideales, faltantes, no decrecientes o
+submáximos, las zonas con cobertura parcial y la comparación del entrenador.
+Suite Electron completa correcta (19); una nueva cambia a 42 días, comprueba la
+cobertura de zonas y la referencia sin datos de hace un año, y abre la actividad
+de la marca de 20 min con su tramo. Revisión visual en ambos temas sin errores
+en consola. Límites: el tiempo en zonas lee las muestras de todo el periodo en
+cada consulta; el modelo no puede saber si un esfuerzo fue máximo; sin validar
+con datos reales de Garmin.

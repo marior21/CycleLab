@@ -87,9 +87,9 @@ Con ellos, electron-builder firma con runtime endurecido, notariza y grapa el ti
 ### Instalar, actualizar y recuperar
 
 - **Instalar:** abre el `.dmg` y arrastra CycleLab a Aplicaciones. Sin firma, la primera vez hay que abrirla con clic derecho → Abrir (o desde Ajustes del Sistema → Privacidad y seguridad).
-- **Actualizar:** sustituye la app por la nueva versión. Los datos están en `~/Library/Application Support/CycleLab` y no se tocan. Si la versión nueva cambia el esquema, guarda antes una copia automática `antes-de-migrar-v<n>` en la carpeta `backups` de esos datos. Una versión anterior no abre una base migrada: avisa y no la modifica.
+- **Actualizar:** CycleLab busca versiones nuevas en las releases publicadas de GitHub al abrirse y cada seis horas, las descarga en segundo plano y las instala al cerrar (o con «Reiniciar y actualizar» en Ajustes → Actualizaciones). Las releases en borrador no se ofrecen hasta que las publicas. También puedes sustituir la app a mano. Los datos están en `~/Library/Application Support/CycleLab` y no se tocan. Si la versión nueva cambia el esquema, guarda antes una copia automática `antes-de-migrar-v<n>` en la carpeta `backups` de esos datos. Una versión anterior no abre una base migrada: avisa y no la modifica.
 - **Recuperar:** Ajustes → Copias de seguridad → Restaurar copia, desde una copia exportada o automática. Las claves de Garmin, OpenRouter y MapTiler no viajan en las copias: hay que volver a introducirlas.
-- No hay actualizaciones automáticas: en Mac necesitan la app firmada. Llegarán después de la primera versión firmada, con sus notas de versión.
+- En Mac, la actualización automática solo funciona con la app firmada y notarizada; sin firma, Ajustes muestra un error y hay que actualizar a mano. En Windows funciona sin firma.
 
 **Prueba en un Mac limpio antes de publicar** (usuario nuevo de macOS o máquina sin CycleLab): instalar el `.dmg` de su arquitectura; abrir sin avisos de Gatekeeper si está firmado; recorrer la primera ejecución con la demo; conectar Garmin y sincronizar; exportar una copia; instalar encima la versión siguiente y comprobar que abre los mismos datos; borrar la carpeta de datos, restaurar la copia y volver a introducir las claves. Anota el resultado en `VALIDATION.md`.
 

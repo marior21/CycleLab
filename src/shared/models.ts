@@ -326,6 +326,15 @@ export interface AppState {
   recordsSince: number | null;
   messages: ChatMessage[];
   conversations: Conversation[];
+  update: UpdateState;
+}
+export interface UpdateState {
+  /** "disabled" outside the packaged app (development and tests). */
+  status: "disabled" | "idle" | "checking" | "downloading" | "ready" | "error";
+  current: string;
+  next?: string;
+  percent?: number;
+  message?: string;
 }
 export type MapResource =
   | { kind: "json"; data: Record<string, unknown> }
@@ -435,6 +444,8 @@ export interface CycleLabAPI {
   cancelMessage(): Promise<void>;
   renameConversation(id: string, title: string): Promise<void>;
   deleteConversation(id: string): Promise<void>;
+  checkUpdate(): Promise<void>;
+  installUpdate(): Promise<void>;
   onChange(callback: () => void): () => void;
 }
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };

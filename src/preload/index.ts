@@ -48,6 +48,8 @@ const api: CycleLabAPI = {
   cancelMessage: () => call("message-cancel"),
   renameConversation: (id, title) => call("conversation-rename", id, title),
   deleteConversation: (id) => call("conversation-delete", id),
+  checkUpdate: () => call("update-check"),
+  installUpdate: () => call("update-install"),
   onChange: (callback) => {
     ipcRenderer.on("cyclelab:changed", callback);
     return () => ipcRenderer.removeListener("cyclelab:changed", callback);

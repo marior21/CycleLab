@@ -63,6 +63,10 @@ jobs:
           codesign --verify --deep --strict "$app"
           spctl --assess --type execute --verbose "$app"
           xcrun stapler validate "$app"
+      # Both Mac jobs write latest-mac.yml; keep them apart until the release job merges them.
+      - name: Name update metadata by architecture
+        if: matrix.platform == 'mac'
+        run: mv dist/latest-mac.yml dist/latest-mac-${{ matrix.arch }}.yml
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ matrix.platform }}-${{ matrix.arch }}
@@ -70,6 +74,8 @@ jobs:
             dist/*.dmg
             dist/*.zip
             dist/*.exe
+            dist/*.blockmap
+            dist/latest*.yml
           if-no-files-found: error
           retention-days: 14
 
@@ -81,11 +87,18 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
       - uses: actions/download-artifact@v4
         with:
           pattern: installers-*
           path: installers
           merge-multiple: true
+      - name: Merge Mac update metadata
+        run: |
+          node scripts/merge-latest-mac.mjs installers/latest-mac-arm64.yml installers/latest-mac-x64.yml installers/latest-mac.yml
+          rm installers/latest-mac-*.yml
       - name: Upload installers to draft
         env:
           GH_TOKEN: ${{ github.token }}

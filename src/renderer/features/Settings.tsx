@@ -16,6 +16,7 @@ import {
   Button,
   DataTable,
   Panel,
+  Progress,
   Segmented,
   StateBlock,
 } from "../components/ui";
@@ -26,7 +27,7 @@ interface Props {
   save: (patch: Partial<SettingsValue>) => Promise<void>;
 }
 export function Settings(p: Props) {
-  const { settings: s, sync } = p.state;
+  const { settings: s, sync, update } = p.state;
   const [maintenance, setMaintenance] = useState<MaintenanceInfo | null>(null);
   const [maintenanceBusy, setMaintenanceBusy] = useState(false);
   useEffect(() => {
@@ -244,6 +245,50 @@ export function Settings(p: Props) {
           datos. En otro Mac, configura de nuevo Garmin, OpenRouter y MapTiler.
           La copia contiene datos personales: guárdala en un lugar seguro.
         </p>
+      </Panel>
+      <Panel
+        title="Actualizaciones"
+        subtitle="CycleLab busca versiones nuevas al abrirse y cada seis horas, y las instala al cerrar la app."
+      >
+        <div className="toolbar">
+          <Badge tone={update.status === "ready" ? "success" : "neutral"}>
+            Versión {update.current}
+          </Badge>
+          {update.status === "ready" ? (
+            <Button
+              onClick={() => void maintain(window.cyclelab.installUpdate)}
+            >
+              Reiniciar y actualizar a {update.next}
+            </Button>
+          ) : (
+            <Button
+              disabled={update.status !== "idle" && update.status !== "error"}
+              onClick={() => void maintain(window.cyclelab.checkUpdate)}
+            >
+              Buscar actualizaciones
+            </Button>
+          )}
+          <span role="status" className="small cl-muted">
+            {
+              {
+                disabled: "No disponible en la versión de desarrollo.",
+                idle: "",
+                checking: "Buscando…",
+                downloading: "",
+                ready: `La versión ${update.next} está lista.`,
+                error: update.message,
+              }[update.status]
+            }
+          </span>
+        </div>
+        {update.status === "downloading" && (
+          <Progress
+            label={`Descargando la versión ${update.next}`}
+            valueLabel={`${update.percent ?? 0} %`}
+            value={update.percent ?? 0}
+            max={100}
+          />
+        )}
       </Panel>
       <Panel
         title="Garmin Connect Personal"

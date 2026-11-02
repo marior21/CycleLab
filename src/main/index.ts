@@ -16,6 +16,7 @@ import { writeBackup, restoreBackup } from "./backup";
 import { createSegment, includedAttempts } from "../domain/segments";
 import { SegmentResults } from "./segmentResults";
 import { Store } from "./store";
+import { check, install, startUpdater, updateState } from "./updater";
 import { Credentials } from "./credentials";
 import {
   GarminPersonalSource,
@@ -94,6 +95,7 @@ function state() {
     conversations: store.conversations(settings.source),
     sync,
     recordsSince: recordsSince(settings, dataset.activities, sync),
+    update: updateState(),
   };
 }
 /** Date up to which new power records were already shown; null until the first full import. */
@@ -180,6 +182,8 @@ async function boot() {
     ),
   );
   register("state", () => state());
+  register("update-check", () => check());
+  register("update-install", () => install());
   register("maintenance", () => maintenance(store));
   register("sync-stop", async (action) => {
     await sync.stop(z.enum(["pause", "cancel"]).parse(action));
@@ -798,6 +802,7 @@ async function boot() {
     win.on("closed", () => (win = null));
   }
   createWindow();
+  startUpdater(changed);
   app.on("activate", () => {
     if (!win) createWindow();
   });

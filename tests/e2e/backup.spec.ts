@@ -96,7 +96,9 @@ test("backup export, clean-profile recovery, invalid files, cancellation and rol
     await page
       .getByRole("button", { name: "Exportar copia", exact: true })
       .click();
-    await expect(page.getByRole("status")).toContainText("Copia guardada");
+    await expect(
+      page.getByRole("status").filter({ hasText: "Copia guardada" }),
+    ).toBeVisible();
     const text = readFileSync(path, "utf8");
     expect(text).not.toContain("PRIVATE-SENTINEL");
     expect(JSON.parse(JSON.parse(text).data)).not.toHaveProperty("secrets");
@@ -138,7 +140,9 @@ test("backup export, clean-profile recovery, invalid files, cancellation and rol
     await page
       .getByRole("button", { name: "Restaurar copia", exact: true })
       .click();
-    await expect(page.getByRole("status")).toContainText("Copia restaurada");
+    await expect(
+      page.getByRole("status").filter({ hasText: "Copia restaurada" }),
+    ).toBeVisible();
     const restored = await page.evaluate(() => window.cyclelab.getState());
     expect(restored.segments).toContainEqual(segment);
     expect(restored.messages).toHaveLength(2);

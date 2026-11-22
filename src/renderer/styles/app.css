@@ -642,8 +642,10 @@ input.cl-check {
 }
 .list-pane > .coverage {
   overflow: auto;
-  flex-shrink: 0;
-  max-height: 50%;
+}
+.list-pane > .coverage[open] {
+  flex: 1;
+  min-height: 0;
 }
 .coverage .cl-table th,
 .coverage .cl-table td {

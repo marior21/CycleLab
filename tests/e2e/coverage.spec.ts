@@ -12,6 +12,9 @@ test("coverage follows periods, keeps unknown metrics and offers scoped retries"
   });
   try {
     const page = await app.firstWindow();
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].setContentSize(1200, 760),
+    );
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.getByRole("button", { name: "Ajustes", exact: true }).waitFor();

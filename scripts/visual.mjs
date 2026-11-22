@@ -19,8 +19,10 @@ const browser = await chromium.launch();
 try {
   const actual = await app.firstWindow(),
     reference = await browser.newPage({
-      viewport: { width: 1440, height: 900 },
-      deviceScaleFactor: 2,
+      viewport: await actual.evaluate(() => ({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      })),
     });
   await reference.goto(pathToFileURL(resolve("design/prototype.html")).href);
   await reference.locator(".cl-nav-item").first().waitFor();
@@ -47,8 +49,8 @@ try {
     );
     const a = join(dir, name + "-app.png"),
       b = join(dir, name + "-reference.png");
-    await actual.screenshot({ path: a });
-    await reference.screenshot({ path: b });
+    await actual.screenshot({ path: a, scale: "css" });
+    await reference.screenshot({ path: b, scale: "css" });
     const ap = PNG.sync.read(readFileSync(a)),
       bp = PNG.sync.read(readFileSync(b));
     const diff = new PNG({ width: ap.width, height: ap.height });

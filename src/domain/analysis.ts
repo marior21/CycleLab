@@ -47,10 +47,14 @@ export function smoothPower(rows: Sample[]) {
   }
   return rows;
 }
-export function stats(rows: Sample[], i0 = 0, i1 = rows.length - 1): Stats {
+export function stats(
+  rows: Sample[],
+  i0 = 0,
+  i1 = rows.length - 1,
+): Stats & { avgSpeed: number | null } {
   const selected = rows.slice(i0, i1 + 1),
     weights = selected.map((_, i) => sampleDuration(rows, i + i0));
-  const weighted = (key: "p" | "hr" | "cad") => {
+  const weighted = (key: "p" | "hr" | "cad" | "v") => {
     let sum = 0,
       w = 0;
     selected.forEach((r, i) => {
@@ -70,7 +74,11 @@ export function stats(rows: Sample[], i0 = 0, i1 = rows.length - 1): Stats {
     if (a !== null && b !== null) gain = (gain ?? 0) + Math.max(0, b - a);
   }
   const first = selected[0]?.km,
-    last = selected.at(-1)?.km;
+    last = selected.at(-1)?.km,
+    dist = first != null && last != null ? last - first : null,
+    elapsed = selected.length
+      ? selected[selected.length - 1].x - selected[0].x
+      : 0;
   return {
     dur: weights.reduce((a, b) => a + b, 0),
     avgP: round(weighted("p")),
@@ -81,7 +89,11 @@ export function stats(rows: Sample[], i0 = 0, i1 = rows.length - 1): Stats {
       ? power.reduce((a, b) => Math.max(a, b), -Infinity)
       : null,
     gain: round(gain),
-    dist: first != null && last != null ? last - first : null,
+    dist,
+    avgSpeed:
+      dist !== null && dist >= 0 && elapsed > 0
+        ? (dist * 3600) / elapsed
+        : weighted("v"),
   };
 }
 export function bestEfforts(rows: Sample[], durations = DURATIONS): Effort[] {

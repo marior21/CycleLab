@@ -26,6 +26,22 @@ describe("analysis without invented readings", () => {
       true,
     );
   });
+  it("uses the selected distance and elapsed time for average speed", () => {
+    const rows = [
+      sample(0, null, 0),
+      sample(10, null, 1),
+      sample(30, null, 1.2),
+    ];
+    expect(stats(rows, 1, 2).avgSpeed).toBeCloseTo(36);
+  });
+  it("weights recorded speeds by time when distance is missing", () => {
+    const rows = [0, 10, 30].map((x, i) => ({
+      ...sample(x, null, null),
+      v: [0, 30, null][i],
+    }));
+    expect(stats(rows).avgSpeed).toBe(20);
+    expect(stats(rows, 2, 2).avgSpeed).toBeNull();
+  });
   it("preserves the selected sample when switching axes", () => {
     const rows = [
       sample(0, 100, 0),

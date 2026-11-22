@@ -950,6 +950,13 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
             />
             <Metric
               size="s"
+              label="Velocidad media"
+              accent="speed"
+              value={number(selected.avgSpeed, 1)}
+              unit={selected.avgSpeed === null ? undefined : "km/h"}
+            />
+            <Metric
+              size="s"
               label="Deriva Pa:FC"
               accent="heart"
               value={drift?.ok ? number(drift.drift, 1) : "–"}

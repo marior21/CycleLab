@@ -32,7 +32,9 @@ test("profile history persists and exposes dated references in both themes", asy
       await page
         .getByRole("button", { name: "Guardar perfil", exact: true })
         .click();
-      await expect(page.getByRole("status")).toContainText("Ajustes guardados");
+      await expect(
+        page.getByRole("status").filter({ hasText: "Ajustes guardados" }),
+      ).toBeVisible();
     };
     await fill("2024-01-01", "240", "75", "170");
     await fill(new Date().toISOString().slice(0, 10), "300", "80", "180");
@@ -146,6 +148,46 @@ test("profile history persists and exposes dated references in both themes", asy
     expect(
       (await page.evaluate(() => window.cyclelab.getState())).settings.athlete,
     ).toEqual(settings.athlete);
+  } finally {
+    await quit(app);
+  }
+});
+
+test("custom HR zones persist across restarts and can return to Coggan", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "cyclelab-zones-"));
+  const launch = () =>
+    electron.launch({
+      args: ["out/main/index.js"],
+      env: { ...process.env, CYCLELAB_USER_DATA: dir },
+    });
+  let app = await launch();
+  try {
+    let page = await app.firstWindow();
+    await page.getByRole("button", { name: "Ajustes", exact: true }).click();
+    const start = page.getByLabel("Inicio de Z2 (ppm)");
+    await start.fill("200");
+    await page.getByRole("button", { name: "Guardar zonas" }).click();
+    await expect(page.locator('input[name="hrStart"]:invalid')).toHaveCount(1);
+    await start.fill("110");
+    await page.getByRole("button", { name: "Guardar zonas" }).click();
+    await expect(
+      page.getByRole("button", { name: "Restablecer Coggan" }),
+    ).toBeVisible();
+    await quit(app);
+    app = await launch();
+    page = await app.firstWindow();
+    await page
+      .getByRole("group", { name: "Métrica de zonas" })
+      .getByRole("button", { name: "FC" })
+      .click();
+    await expect(
+      page.getByText(/FC personalizada · Z2–Z5 desde 110/),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Ajustes", exact: true }).click();
+    await page.getByRole("button", { name: "Restablecer Coggan" }).click();
+    await expect(
+      page.getByText("Andy Coggan · 5 zonas según el umbral de cada actividad"),
+    ).toBeVisible();
   } finally {
     await quit(app);
   }

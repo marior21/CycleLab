@@ -1,3 +1,5 @@
+import { cogganHrStarts } from "../../domain/analysis";
+import { hrZoneStartsSchema } from "../../shared/settings";
 import {
   profileAt,
   profileMetrics,
@@ -585,6 +587,74 @@ export function Settings(p: Props) {
             fecha de la actividad. Añadir o corregir una fecha pasada actualiza
             esas referencias de forma explícita.
           </p>
+        </form>
+      </Panel>
+      <Panel
+        title="Zonas de frecuencia cardiaca"
+        subtitle={
+          s.hrZoneStarts
+            ? "Límites personalizados en ppm"
+            : "Andy Coggan · 5 zonas según el umbral de cada actividad"
+        }
+      >
+        <p className="small cl-muted">
+          Introduce la primera pulsación de cada zona. La Z1 abarca las
+          pulsaciones inferiores al inicio de Z2. Al guardar, estos límites
+          fijos se aplican a todas las actividades, incluidas las anteriores.
+        </p>
+        <form
+          key={JSON.stringify([s.hrZoneStarts, p.state.dataset.athlete.lthr])}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const starts = new FormData(form).getAll("hrStart").map(Number);
+            if (!hrZoneStartsSchema.safeParse(starts).success) {
+              const invalid = starts.findIndex(
+                (v, i) => i > 0 && v <= starts[i - 1],
+              );
+              const input = form.querySelectorAll("input")[invalid];
+              if (input) {
+                input.setCustomValidity(
+                  "El límite debe superar al de la zona anterior.",
+                );
+                input.reportValidity();
+              }
+              return;
+            }
+            void save({ hrZoneStarts: starts });
+          }}
+          onInput={(e) => {
+            for (const input of e.currentTarget.querySelectorAll("input"))
+              input.setCustomValidity("");
+          }}
+        >
+          <div className="profile-fields">
+            {(
+              s.hrZoneStarts ??
+              (p.state.dataset.athlete.lthr
+                ? cogganHrStarts(p.state.dataset.athlete.lthr)
+                : [null, null, null, null])
+            ).map((start, i) => (
+              <label key={i}>
+                Inicio de Z{i + 2} (ppm)
+                <input
+                  type="number"
+                  name="hrStart"
+                  required
+                  min={1}
+                  max={250}
+                  step={1}
+                  defaultValue={start ?? ""}
+                />
+              </label>
+            ))}
+          </div>
+          <Button type="submit">Guardar zonas</Button>
+          {s.hrZoneStarts && (
+            <Button onClick={() => void save({ hrZoneStarts: null })}>
+              Restablecer Coggan
+            </Button>
+          )}
         </form>
       </Panel>
       <Panel title="Historial del perfil" flush>

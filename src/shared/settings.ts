@@ -19,8 +19,17 @@ const profileEntry = z
     "Valor de perfil fuera de rango",
   );
 
+export const hrZoneStartsSchema = z
+  .array(z.number().int().min(1).max(250))
+  .length(4)
+  .refine(
+    (starts) => starts.every((value, i) => i === 0 || value > starts[i - 1]),
+    "Cada zona debe empezar por encima de la anterior.",
+  );
+
 export const settingsSchema = z
   .object({
+    hrZoneStarts: hrZoneStartsSchema.nullable().optional(),
     theme: z.enum(["dark", "light"]),
     source: z.enum(["demo", "garmin"]),
     model: z.string().max(200).nullable(),

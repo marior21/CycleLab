@@ -120,15 +120,16 @@ export function bestEfforts(rows: Sample[], durations = DURATIONS): Effort[] {
     };
   });
 }
-export function zones(rows: Sample[], key: "p" | "hr", ref: number | null) {
-  const bounds =
-    key === "p"
-      ? [0.55, 0.75, 0.9, 1.05, 1.2, 1.5, Infinity]
-      : [0.81, 0.9, 0.94, 1, 1.03, 1.06, Infinity];
-  const labels =
-    key === "p"
-      ? ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"]
-      : ["Z1", "Z2", "Z3", "Z4", "Z5a", "Z5b", "Z5c"];
+// Intervals.icu floors the first bpm of each Coggan HR zone.
+export function cogganHrStarts(lthr: number) {
+  return [0.685, 0.835, 0.945, 1.055].map((ratio) => Math.floor(lthr * ratio));
+}
+export function zones(
+  rows: Sample[],
+  key: "p" | "hr",
+  ref: number | null,
+  hrStarts?: number[] | null,
+) {
   const names =
     key === "p"
       ? [
@@ -141,25 +142,29 @@ export function zones(rows: Sample[], key: "p" | "hr", ref: number | null) {
           "Neuromuscular",
         ]
       : [
-          "Recuperación",
-          "Aeróbico",
-          "Tempo",
-          "Subumbral",
-          "Supraumbral",
+          "Recuperación activa",
           "Capacidad aeróbica",
-          "Anaeróbico",
+          "Tempo",
+          "Umbral",
+          "VO₂máx",
         ];
-  const out = labels.map((label, i) => ({
-    label,
-    name: names[i],
+  const out = names.map((name, i) => ({
+    label: `Z${i + 1}`,
+    name,
     value: 0,
     color: `z${i + 1}`,
   }));
-  if (!ref) return out;
+  const hrBounds =
+    key === "hr" ? (hrStarts ?? (ref ? cogganHrStarts(ref) : null)) : null;
+  if (!ref && !hrBounds) return out;
+  const bounds = hrBounds
+    ? [...hrBounds, Infinity]
+    : [0.55, 0.75, 0.9, 1.05, 1.2, 1.5, Infinity];
   rows.forEach((r, i) => {
     const v = r[key];
     if (v !== null) {
-      const z = bounds.findIndex((b) => v / ref < b);
+      const value = hrBounds ? v : v / ref!;
+      const z = bounds.findIndex((b) => value < b);
       out[z].value += sampleDuration(rows, i);
     }
   });

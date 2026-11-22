@@ -681,8 +681,9 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
         rows,
         zone === "power" ? "p" : "hr",
         zone === "power" ? historical.ftp : historical.lthr,
+        p.hrZoneStarts,
       ),
-    [rows, zone, historical],
+    [rows, zone, historical, p.hrZoneStarts],
   );
   const ftp = historical.ftp;
   const charts = [
@@ -1214,7 +1215,9 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
           subtitle={
             zone === "power"
               ? `Potencia · FTP ${number(ftp)} W`
-              : `Frecuencia cardíaca · LTHR ${number(historical.lthr)} ppm`
+              : p.hrZoneStarts
+                ? `FC personalizada · Z2–Z5 desde ${p.hrZoneStarts.join(" / ")} ppm`
+                : `FC · Coggan (5 zonas) · LTHR ${number(historical.lthr)} ppm`
           }
           actions={
             <Segmented
@@ -1233,7 +1236,7 @@ function Analysis(p: PageProps & { a: Activity; detail: Detail }) {
               title="Sin muestras para calcular zonas"
               detail="El tiempo en zonas es desconocido para este canal."
             />
-          ) : (zone === "power" ? ftp : historical.lthr) ? (
+          ) : (zone === "power" ? ftp : p.hrZoneStarts || historical.lthr) ? (
             <ZoneBar zones={zoneRows} format={shortDuration} />
           ) : (
             <StateBlock

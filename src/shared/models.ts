@@ -238,6 +238,8 @@ export interface Settings {
   theme: "dark" | "light";
   source: Source;
   model: string | null;
+  /** Inclusive lower bounds of Z2–Z5 in bpm; null selects Coggan. */
+  hrZoneStarts?: number[] | null;
   /** Maximum USD per coach request; null means no limit. */
   coachLimit?: number | null;
   /** The first steps were hidden. */
@@ -412,7 +414,13 @@ export interface CycleLabAPI {
   saveSettings(
     settings: Pick<
       Settings,
-      "theme" | "source" | "model" | "coachLimit" | "welcomed" | "athlete"
+      | "theme"
+      | "source"
+      | "model"
+      | "coachLimit"
+      | "welcomed"
+      | "athlete"
+      | "hrZoneStarts"
     >,
   ): Promise<AppState>;
   saveCredential(

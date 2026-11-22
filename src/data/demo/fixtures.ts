@@ -136,15 +136,6 @@ export const PZ = [
   { l: "Z6", n: "Anaeróbico", lo: 1.2, hi: 1.5 },
   { l: "Z7", n: "Neuromuscular", lo: 1.5, hi: 9 },
 ];
-export const HZ = [
-  { l: "Z1", n: "Recuperación", lo: 0, hi: 0.81 },
-  { l: "Z2", n: "Aeróbico", lo: 0.81, hi: 0.9 },
-  { l: "Z3", n: "Tempo", lo: 0.9, hi: 0.94 },
-  { l: "Z4", n: "Subumbral", lo: 0.94, hi: 1 },
-  { l: "Z5a", n: "Supraumbral", lo: 1, hi: 1.03 },
-  { l: "Z5b", n: "Capacidad aeróbica", lo: 1.03, hi: 1.06 },
-  { l: "Z5c", n: "Anaeróbico", lo: 1.06, hi: 9 },
-];
 const R = rng(11);
 export const ACTS: DemoActivity[] = [];
 export const ATTEMPTS: Attempt[] = [];

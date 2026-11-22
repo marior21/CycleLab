@@ -41,6 +41,34 @@ describe("analysis without invented readings", () => {
     rows[20].p = null;
     expect(bestEfforts(rows, [60])[0].p).toBeNull();
   });
+  it("starts each Intervals.icu Coggan HR zone at its integer bpm boundary", () => {
+    expect(zones([], "hr", 170).map((z) => z.label)).toEqual([
+      "Z1",
+      "Z2",
+      "Z3",
+      "Z4",
+      "Z5",
+    ]);
+    const starts = [116, 141, 160, 179];
+    starts.forEach((start, i) => {
+      for (const [hr, zone] of [
+        [start - 1, i],
+        [start, i + 1],
+      ]) {
+        const rows = [0, 1].map((x) => ({ ...sample(x, null), hr }));
+        expect(zones(rows, "hr", 170)[zone].value).toBe(2);
+      }
+    });
+  });
+  it("uses inclusive custom bpm limits without a historical threshold", () => {
+    const rows = [99, 100, 119, 120, 139, 140, 159, 160].map((hr, x) => ({
+      ...sample(x, null),
+      hr,
+    }));
+    expect(
+      zones(rows, "hr", null, [100, 120, 140, 160]).map((z) => z.value),
+    ).toEqual([1, 2, 2, 2, 1]);
+  });
   it("uses elapsed time for zone durations and smoothing", () => {
     const rows = [sample(0, 100), sample(10, 200), sample(20, 300)];
     smoothPower(rows);

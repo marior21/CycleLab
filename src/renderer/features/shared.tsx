@@ -22,6 +22,7 @@ export interface PageProps {
   syncing: boolean;
   /** Date of the last acknowledged power record; null before the first full import. */
   recordsSince: number | null;
+  hrZoneStarts?: number[] | null;
   maptilerConfigured: boolean;
   theme: "dark" | "light";
   openActivity: (id: string, range?: [number, number]) => void;

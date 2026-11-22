@@ -116,6 +116,7 @@ export default function App() {
       model: s.model,
       coachLimit: s.coachLimit ?? null,
       welcomed: s.welcomed,
+      hrZoneStarts: s.hrZoneStarts,
       athlete: s.athlete,
     });
     await refresh();
@@ -188,6 +189,7 @@ export default function App() {
       onContext: setSelectionContext,
       segments: state.segments,
       maptilerConfigured: state.settings.maptilerConfigured,
+      hrZoneStarts: state.settings.hrZoneStarts,
       theme: state.settings.theme,
       data: state.dataset,
       demo,

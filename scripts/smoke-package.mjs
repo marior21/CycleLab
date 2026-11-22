@@ -23,6 +23,9 @@ try {
     .waitFor();
   const state = await page.evaluate(() => window.cyclelab.getState());
   assert.equal(state.dataset.activities.length, 84);
+  if (process.platform === "darwin")
+    assert.equal(state.update.status, "idle", state.update.message);
+
   const encryption = await app.evaluate(({ safeStorage }) => {
     if (!safeStorage.isEncryptionAvailable()) return false;
     const test = "cyclelab-test-only";

@@ -19,7 +19,7 @@ npm run preview
 npm run package
 ```
 
-El último comando genera y comprueba el arranque de `dist/mac-arm64/CycleLab.app` en un Mac Apple Silicon (la arquitectura depende del equipo). La aplicación no está firmada ni notarizada.
+El último comando genera y comprueba el arranque de `dist/mac-arm64/CycleLab.app` en un Mac Apple Silicon (la arquitectura depende del equipo). La compilación personal usa firma ad hoc gratuita.
 
 ## GitHub y releases
 
@@ -68,7 +68,24 @@ No necesitas crear un token personal para el pipeline: usa el `GITHUB_TOKEN` aut
 
 ### Firma y validación de los instaladores
 
-La firma de Mac se activa sola cuando existen estos secretos de Actions; sin ellos los instaladores salen **sin firmar**, como hasta ahora:
+Las actualizaciones de macOS usan Sparkle 2. La app incluye la clave pública Ed25519 de CycleLab y un feed por arquitectura. Sparkle verifica la firma del feed y del ZIP antes de extraerlo. El empaquetado descarga el SDK oficial, verifica su SHA-256 y compila el puente nativo con las herramientas de Xcode y las cabeceras de Node.
+
+La clave privada está en el llavero de macOS, en la cuenta `CycleLab` de Sparkle. Para publicar desde GitHub Actions, configura una sola vez el secreto de repositorio `SPARKLE_PRIVATE_KEY` con la clave exportada de esa cuenta. Con GitHub CLI autenticado y después de empaquetar en el Mac que contiene la clave:
+
+```sh
+(
+  set -eu
+  umask 077
+  key_dir=$(mktemp -d)
+  trap 'rm -f "$key_dir/key"; rmdir "$key_dir"' EXIT
+  node_modules/.cache/cyclelab-sparkle/2.10.1/bin/generate_keys --account CycleLab -x "$key_dir/key"
+  gh secret set SPARKLE_PRIVATE_KEY --repo marior21/CycleLab < "$key_dir/key"
+)
+```
+
+Conserva una copia segura de esa clave para futuras versiones. Las etiquetas generan `appcast-arm64.xml` y `appcast-x64.xml` junto con sus ZIP. Se sirven desde la última release pública de GitHub. La firma ad hoc del paquete y la firma de Sparkle son gratuitas.
+
+La notarización con Developer ID es opcional. Actions la activa cuando existen estos secretos:
 
 | Secreto | Contenido |
 | --- | --- |
@@ -76,7 +93,7 @@ La firma de Mac se activa sola cuando existen estos secretos de Actions; sin ell
 | `MAC_CERTIFICATE_PASSWORD` | Contraseña de ese `.p12` |
 | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | Cuenta del Apple Developer Program, contraseña de app y Team ID para notarizar |
 
-Con ellos, electron-builder firma con runtime endurecido, notariza y grapa el ticket; el workflow comprueba después `codesign`, `spctl` y `stapler`. En un Mac propio, `npm run dist` usa el certificado Developer ID del llavero si existe y notariza si exportas esas tres variables de Apple. Requiere una cuenta de pago del Apple Developer Program. Windows no se firma: SmartScreen avisará al instalar.
+Con ellos, electron-builder firma con runtime endurecido, notariza y grapa el ticket; el workflow comprueba después `codesign`, `spctl` y `stapler`. Solo esta opción requiere una cuenta de pago del Apple Developer Program. Windows no se firma: SmartScreen avisará al instalar.
 
 ### Arquitecturas y requisitos
 
@@ -87,9 +104,9 @@ Con ellos, electron-builder firma con runtime endurecido, notariza y grapa el ti
 ### Instalar, actualizar y recuperar
 
 - **Instalar:** abre el `.dmg` y arrastra CycleLab a Aplicaciones. Sin firma, la primera vez hay que abrirla con clic derecho → Abrir (o desde Ajustes del Sistema → Privacidad y seguridad).
-- **Actualizar:** CycleLab busca versiones nuevas en las releases publicadas de GitHub al abrirse y cada seis horas, las descarga en segundo plano y las instala al cerrar (o con «Reiniciar y actualizar» en Ajustes → Actualizaciones). Las releases en borrador no se ofrecen hasta que las publicas. También puedes sustituir la app a mano. Los datos están en `~/Library/Application Support/CycleLab` y no se tocan. Si la versión nueva cambia el esquema, guarda antes una copia automática `antes-de-migrar-v<n>` en la carpeta `backups` de esos datos. Una versión anterior no abre una base migrada: avisa y no la modifica.
+- **Actualizar:** En Mac, Sparkle comprueba las releases al abrir CycleLab y cada seis horas. El aviso nativo permite descargar la versión nueva, instalarla y volver a abrir la app. Puedes abrir el diálogo desde Ajustes → Actualizaciones → Buscar actualizaciones. En Windows se mantiene la descarga en segundo plano y la instalación al cerrar. Las releases en borrador no se ofrecen hasta que las publicas. También puedes sustituir la app a mano. Los datos están en `~/Library/Application Support/CycleLab` y no se tocan. Si la versión nueva cambia el esquema, guarda antes una copia automática `antes-de-migrar-v<n>` en la carpeta `backups` de esos datos. Una versión anterior no abre una base migrada: avisa y no la modifica.
 - **Recuperar:** Ajustes → Copias de seguridad → Restaurar copia, desde una copia exportada o automática. Las claves de Garmin, OpenRouter y MapTiler no viajan en las copias: hay que volver a introducirlas.
-- En Mac, la actualización automática solo funciona con la app firmada y notarizada; sin firma, Ajustes muestra un error y hay que actualizar a mano. En Windows funciona sin firma.
+- Para migrar desde la 0.1.7 o una versión anterior, instala una vez el DMG con Sparkle en Aplicaciones. Las siguientes versiones se instalan desde CycleLab.
 
 **Prueba en un Mac limpio antes de publicar** (usuario nuevo de macOS o máquina sin CycleLab): instalar el `.dmg` de su arquitectura; abrir sin avisos de Gatekeeper si está firmado; recorrer la primera ejecución con la demo; conectar Garmin y sincronizar; exportar una copia; instalar encima la versión siguiente y comprobar que abre los mismos datos; borrar la carpeta de datos, restaurar la copia y volver a introducir las claves. Anota el resultado en `VALIDATION.md`.
 

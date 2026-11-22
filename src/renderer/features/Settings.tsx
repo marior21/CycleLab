@@ -250,7 +250,7 @@ export function Settings(p: Props) {
       </Panel>
       <Panel
         title="Actualizaciones"
-        subtitle="CycleLab busca versiones nuevas al abrirse y cada seis horas, y las instala al cerrar la app."
+        subtitle="CycleLab busca versiones nuevas al abrirse y cada seis horas. Cuando haya una disponible, podrás instalarla desde el aviso."
       >
         <div className="toolbar">
           <Badge tone={update.status === "ready" ? "success" : "neutral"}>

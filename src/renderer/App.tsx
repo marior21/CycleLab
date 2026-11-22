@@ -351,6 +351,38 @@ export default function App() {
             </Button>
           )}
         </div>
+        {state.update.next && (
+          <div className="banner">
+            <span role="status">
+              {state.update.status === "downloading"
+                ? `Descargando CycleLab ${state.update.next}…`
+                : state.update.status === "ready"
+                  ? `CycleLab ${state.update.next} está listo para instalar.`
+                  : `CycleLab ${state.update.next} está disponible para descargar.`}
+            </span>
+            {state.update.status === "error" && (
+              <a
+                href={`https://github.com/marior21/CycleLab/releases/tag/v${encodeURIComponent(state.update.next)}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Descargar actualización
+              </a>
+            )}
+            {state.update.status === "ready" && screen !== "settings" && (
+              <Button
+                size="sm"
+                onClick={() =>
+                  void window.cyclelab
+                    .installUpdate()
+                    .catch((e) => setError(e.message))
+                }
+              >
+                Reiniciar y actualizar
+              </Button>
+            )}
+          </div>
+        )}
         {(error || state.sync.error) && (
           <div className="banner" role="alert">
             <Icon name="alert" />

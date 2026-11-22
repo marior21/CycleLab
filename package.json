@@ -1,6 +1,6 @@
 {
   "name": "cyclelab",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "description": "Análisis local de ciclismo con Garmin y OpenRouter",
   "main": "out/main/index.js",
@@ -78,12 +78,25 @@
       "target": [
         "dmg",
         "zip"
+      ],
+      "extendInfo": {
+        "SUPublicEDKey": "ah+z5IWZ9k27ygJbLdRhkIV8Yjo28MdmGpJ1W3Y0hKw=",
+        "SUEnableAutomaticChecks": true,
+        "SUScheduledCheckInterval": 21600,
+        "SURequireSignedFeed": true,
+        "SUVerifyUpdateBeforeExtraction": true
+      },
+      "identity": "-",
+      "hardenedRuntime": false,
+      "signIgnore": [
+        "/Sparkle\\.framework(/|$)"
       ]
     },
     "win": {
       "target": [
         "nsis"
       ]
-    }
+    },
+    "afterPack": "./scripts/pack-sparkle.mjs"
   }
 }

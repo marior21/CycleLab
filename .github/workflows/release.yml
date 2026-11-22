@@ -45,14 +45,19 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      # Signs and notarizes the Mac builds only when the owner's secrets exist;
-      # without them the installers stay unsigned. Windows is never signed.
+      # Mac uses ad hoc signing unless a Developer ID is supplied.
       - name: Build installers
         shell: bash
         run: |
           # An empty CSC_LINK is interpreted as a certificate file path.
-          if [ -z "$CSC_LINK" ]; then unset CSC_LINK CSC_KEY_PASSWORD; fi
-          npm run dist -- --${{ matrix.platform }} --${{ matrix.arch }}
+          signing=()
+          if [ -z "$CSC_LINK" ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD
+          else
+            export CSC_IDENTITY_AUTO_DISCOVERY=true
+            signing+=("-c.mac.identity=" "-c.mac.hardenedRuntime=true" "-c.mac.signIgnore=")
+          fi
+          npm run dist -- --${{ matrix.platform }} --${{ matrix.arch }} "${signing[@]}"
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
           CSC_LINK: ${{ matrix.platform == 'mac' && secrets.MAC_CERTIFICATE || '' }}
@@ -60,6 +65,20 @@ jobs:
           APPLE_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_ID || '' }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
           APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+      - name: Generate signed Sparkle feed
+        if: matrix.platform == 'mac' && startsWith(github.ref, 'refs/tags/')
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          : "${SPARKLE_PRIVATE_KEY:?Configura el secreto SPARKLE_PRIVATE_KEY de CycleLab}"
+          mkdir -p "$RUNNER_TEMP/sparkle-feed"
+          cp dist/*.zip "$RUNNER_TEMP/sparkle-feed/"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | node_modules/.cache/cyclelab-sparkle/2.10.1/bin/generate_appcast \
+            --ed-key-file - --maximum-deltas 0 \
+            --download-url-prefix "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/" \
+            -o "dist/appcast-$ARCH.xml" "$RUNNER_TEMP/sparkle-feed"
+          grep -q 'sparkle:edSignature=' "dist/appcast-$ARCH.xml"
       - name: Check signature and notarization
         if: matrix.platform == 'mac' && env.SIGNED == 'true'
         run: |
@@ -80,6 +99,7 @@ jobs:
             dist/*.exe
             dist/*.blockmap
             dist/latest*.yml
+            dist/appcast-*.xml
           if-no-files-found: error
           retention-days: 14
 
